@@ -38,7 +38,7 @@ func ParseEnd() {
 	filePathUTXO := "/data/utxo.bsv"
 	fileUTXO, err := os.OpenFile(filePathUTXO, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		log.Print("文件打开失败", err)
+		return
 	}
 	defer fileUTXO.Close()
 
@@ -46,10 +46,6 @@ func ParseEnd() {
 
 	log.Printf("len utxo: %d", len(utxo))
 	for keyStr, value := range utxo {
-		if value == 0 {
-			continue
-		}
-
 		key := []byte(keyStr)
 
 		write.WriteString(fmt.Sprintf("%s %d %d\n",
@@ -124,7 +120,7 @@ func dumpUtxo(block *Block) {
 
 	for _, tx := range txs {
 		for idx, output := range tx.TxOuts {
-			if output.Value == 0 || !output.ScriptIsOnlyEqual {
+			if output.Value == 0 || !output.LockingScriptMatch {
 				continue
 			}
 
@@ -147,7 +143,7 @@ func dumpTxoSpendBy(block *Block) {
 			if _, ok := utxo[input.InputOutpointKey]; !ok {
 				continue
 			}
-			utxo[input.InputOutpointKey] = 0
+			delete(utxo, input.InputOutpointKey)
 
 			fmt.Printf("spend %s %d %s %d\n",
 				input.InputHashHex,

@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 )
@@ -45,7 +44,7 @@ func NewBlockFetcher(path string, magic [4]byte) (bf *BlockFetcher, err error) {
 
 	fileWriteHeader, err := os.OpenFile(filePathHeader, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		log.Print("文件打开失败", err)
+		return
 	}
 
 	bf.HeaderFileA = fileWriteHeader
@@ -53,7 +52,7 @@ func NewBlockFetcher(path string, magic [4]byte) (bf *BlockFetcher, err error) {
 	return
 }
 
-func (bf *BlockFetcher) GetLastRawBlockHeader() (rawblockheader []byte, err error) {
+func (bf *BlockFetcher) GetCacheRawBlockHeader() (rawblockheader []byte, err error) {
 	rawblockheader = make([]byte, 80)
 	_, err = bf.HeaderFile.Read(rawblockheader[:])
 	if err != nil {
@@ -62,7 +61,7 @@ func (bf *BlockFetcher) GetLastRawBlockHeader() (rawblockheader []byte, err erro
 	return
 }
 
-func (bf *BlockFetcher) SetLastRawBlockHeader(rawblockheader []byte) (err error) {
+func (bf *BlockFetcher) SetCacheRawBlockHeader(rawblockheader []byte) (err error) {
 	_, err = bf.HeaderFileWriter.Write(rawblockheader[:])
 	if err != nil {
 		return
@@ -110,7 +109,7 @@ func (bf *BlockFetcher) FetchNextBlock(skipTxs bool) (rawblock []byte, err error
 
 	if !bytes.Equal(buf[:], bf.Magic[:]) {
 		err = errors.New("Bad magic")
-		log.Printf("read blk%d[%d] failed: %v, %v != %v", bf.CurrentId, bf.Offset, err, buf[:], bf.Magic[:])
+		// log.Printf("read blk%d[%d] failed: %v, %v != %v", bf.CurrentId, bf.Offset, err, buf[:], bf.Magic[:])
 		return
 	}
 

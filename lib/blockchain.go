@@ -27,40 +27,20 @@ func NewBlockchain(path string, magic [4]byte) (bc *Blockchain, err error) {
 }
 
 func (bc *Blockchain) ParseLongestChain() {
-	doneParse := make(chan struct{}, 0)
+	bc.InitLongestChainHeader()
+	bc.BF.SkipTo(0, 0)
+
 	blocksReady := make(chan *Block, 32)
-	// 按顺序消费解码后的区块
-	go func() {
-		nextBlockHeight := 0
-		maxBlockHeight := len(bc.BlocksOfChain)
-		blockParseBufferBlock := make([]*Block, maxBlockHeight)
-		for block := range blocksReady {
-			// 暂存block
-			blockParseBufferBlock[block.Height] = block
-			// 按序
-			if block.Height != nextBlockHeight {
-				continue
-			}
-			for nextBlockHeight < maxBlockHeight {
-				block = blockParseBufferBlock[nextBlockHeight]
-				if block == nil { // 检查是否准备好
-					break
-				}
 
-				// 分析区块
-				ParseBlock(block)
+	go bc.InitLongestChainBlock(blocksReady)
 
-				block.Txs = nil
-				nextBlockHeight++
-			}
-		}
+	bc.ParseLongestChainBlock(blocksReady)
 
-		ParseEnd()
+	ParseEnd()
+}
 
-		doneParse <- struct{}{}
-	}()
-
-	// 解码区块，生产者
+// InitLongestChainBlock 解码区块，生产者
+func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block) {
 	var wg sync.WaitGroup
 	parsers := make(chan struct{}, 30)
 	for {
@@ -101,11 +81,36 @@ func (bc *Blockchain) ParseLongestChain() {
 	wg.Wait()
 
 	close(blocksReady)
-
-	<-doneParse
 }
 
-func (bc *Blockchain) InitLongestChain() {
+// ParseLongestChainBlock 按顺序消费解码后的区块
+func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *Block) {
+	nextBlockHeight := 0
+	maxBlockHeight := len(bc.BlocksOfChain)
+	blockParseBufferBlock := make([]*Block, maxBlockHeight)
+	for block := range blocksReady {
+		// 暂存block
+		blockParseBufferBlock[block.Height] = block
+		// 按序
+		if block.Height != nextBlockHeight {
+			continue
+		}
+		for nextBlockHeight < maxBlockHeight {
+			block = blockParseBufferBlock[nextBlockHeight]
+			if block == nil { // 检查是否准备好
+				break
+			}
+
+			// 分析区块
+			ParseBlock(block)
+
+			block.Txs = nil
+			nextBlockHeight++
+		}
+	}
+}
+
+func (bc *Blockchain) InitLongestChainHeader() {
 	bc.LoadAllBlockHeaders(true)
 	bc.BF.HeaderFile.Close()
 
@@ -139,7 +144,7 @@ func (bc *Blockchain) InitLongestChain() {
 	bc.SelectLongestChain()
 }
 
-func (bc *Blockchain) LoadAllBlockHeaders(loadLastHeader bool) {
+func (bc *Blockchain) LoadAllBlockHeaders(loadCacheHeader bool) {
 	// 读取所有的rawBlock
 	parsers := make(chan struct{}, 30)
 	var wg sync.WaitGroup
@@ -147,8 +152,8 @@ func (bc *Blockchain) LoadAllBlockHeaders(loadLastHeader bool) {
 		// 获取所有Block Header字节，不要求有序返回或属于主链
 		var rawblock []byte
 		var err error
-		if loadLastHeader {
-			rawblock, err = bc.BF.GetLastRawBlockHeader()
+		if loadCacheHeader {
+			rawblock, err = bc.BF.GetCacheRawBlockHeader()
 		} else {
 			rawblock, err = bc.BF.GetRawBlockHeader()
 		}
@@ -169,8 +174,8 @@ func (bc *Blockchain) LoadAllBlockHeaders(loadLastHeader bool) {
 			bc.m.Lock()
 			if _, ok := bc.Blocks[block.HashHex]; !ok {
 				bc.Blocks[block.HashHex] = block
-				if !loadLastHeader {
-					bc.BF.SetLastRawBlockHeader(rawblock)
+				if !loadCacheHeader {
+					bc.BF.SetCacheRawBlockHeader(rawblock)
 				}
 			}
 			bc.m.Unlock()
