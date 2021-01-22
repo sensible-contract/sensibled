@@ -26,7 +26,7 @@ type Block struct {
 	NextHex     string  `json:"next_block"` // 32 bytes
 }
 
-func NewBlock(rawblock []byte) (block *Block, err error) {
+func NewBlock(rawblock []byte) (block *Block) {
 	block = new(Block)
 
 	block.HashHex = HashString(GetShaString(rawblock[:80]))
@@ -40,10 +40,10 @@ func NewBlock(rawblock []byte) (block *Block, err error) {
 	block.Nonce = binary.LittleEndian.Uint32(rawblock[76:80])
 	block.Size = uint32(len(rawblock))
 
-	return
+	return block
 }
 
-func ParseTxs(txsraw []byte) (txs []*Tx, err error) {
+func ParseTxs(txsraw []byte) (txs []*Tx) {
 	offset := uint(0)
 	txcnt, txcnt_size := DecodeVariableLengthInteger(txsraw[offset:])
 	offset += txcnt_size
@@ -67,5 +67,5 @@ func ParseTxs(txsraw []byte) (txs []*Tx, err error) {
 		// other init:
 		initTx(txs[i])
 	}
-	return
+	return txs
 }

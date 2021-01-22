@@ -89,8 +89,8 @@ func ParseBlockCount(block *Block) {
 	countValueTx := CountValueOfTxsInBlock(txs)
 	countZeroValueTx := CountZeroValueOfTxsInBlock(txs)
 
-	log.Printf("%d %d Time: %d blk: %s size: %d nTx: %d %d %d %d value: %d",
-		block.FileIdx, block.Height,
+	log.Printf("%d Time: %d blk: %s size: %d nTx: %d %d %d %d value: %d",
+		block.Height,
 		block.BlockTime,
 		block.HashHex,
 		block.Size, len(txs),

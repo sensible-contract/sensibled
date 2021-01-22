@@ -23,8 +23,9 @@ func main() {
 	}
 
 	// go func() {
+
 	blockchain.InitLongestChain()
-	blockchain.SkipTo(0, 0)
+	blockchain.BF.SkipTo(0, 0)
 	blockchain.ParseLongestChain()
 	log.Printf("finished")
 	// }()
