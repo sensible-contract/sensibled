@@ -102,7 +102,7 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *Block) {
 			}
 
 			// 分析区块
-			ParseBlock(block)
+			ParseBlock(block, maxBlockHeight)
 
 			block.Txs = nil
 			nextBlockHeight++
@@ -183,7 +183,7 @@ func (bc *Blockchain) LoadAllBlockHeaders(loadCacheHeader bool) {
 			<-parsers
 		}(rawblock)
 
-		ParseBlockSpeed(0, idx)
+		ParseBlockSpeed(0, idx, 0)
 	}
 	wg.Wait()
 }

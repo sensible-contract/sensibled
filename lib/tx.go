@@ -35,8 +35,10 @@ type TxOut struct {
 	Pkscript []byte
 
 	// other:
-	OutpointKey        string // 32 + 4
-	LockingScriptMatch bool
+	OutpointKey          string // 32 + 4
+	LockingScriptType    []byte
+	LockingScriptTypeHex string
+	LockingScriptMatch   bool
 }
 
 type TxWit struct {

@@ -2,6 +2,7 @@ package blkparser
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 )
 
 func initTx(tx *Tx) {
@@ -16,6 +17,9 @@ func initTx(tx *Tx) {
 		output.OutpointKey = string(key)
 
 		// test locking script
+		output.LockingScriptType = getLockingScriptType(output.Pkscript)
+		output.LockingScriptTypeHex = hex.EncodeToString(output.LockingScriptType)
+
 		output.LockingScriptMatch = true
 
 		// if isLockingScriptOnlyEqual(output.Pkscript) {
@@ -40,4 +44,29 @@ func isLockingScriptOnlyEqual(pkscript []byte) bool {
 		return true
 	}
 	return false
+}
+
+func getLockingScriptType(pkscript []byte) (scriptType []byte) {
+	length := len(pkscript)
+	if length == 0 {
+		return
+	}
+	scriptType = make([]byte, 0)
+
+	lenType := 0
+	p := uint(0)
+	e := uint(length)
+
+	for p < e && lenType < 32 {
+		c := pkscript[p]
+		if 0 < c && c < 79 {
+			cnt, cntsize := SafeDecodeVariableLengthInteger(pkscript[p:])
+			p += cnt + cntsize
+		} else {
+			p += 1
+		}
+		scriptType = append(scriptType, c)
+		lenType += 1
+	}
+	return
 }
