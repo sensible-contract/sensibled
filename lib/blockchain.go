@@ -30,7 +30,7 @@ func (bc *Blockchain) ParseLongestChain() {
 	bc.InitLongestChainHeader()
 	bc.BF.SkipTo(0, 0)
 
-	blocksReady := make(chan *Block, 32)
+	blocksReady := make(chan *Block, 1024)
 
 	go bc.InitLongestChainBlock(blocksReady)
 
@@ -69,7 +69,8 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block) {
 		go func(block *Block) {
 			defer wg.Done()
 
-			txs := ParseTxs(block.Raw[80:])
+			// 先并行分析交易
+			txs := ParseTxsParallel(block.Raw[80:])
 			block.Txs = txs
 			block.Raw = nil
 
@@ -101,8 +102,8 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *Block) {
 				break
 			}
 
-			// 分析区块
-			ParseBlock(block, maxBlockHeight)
+			// 再串行分析区块
+			ParseBlockSerial(block, maxBlockHeight)
 
 			block.Txs = nil
 			nextBlockHeight++

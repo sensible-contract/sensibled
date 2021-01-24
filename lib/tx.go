@@ -59,7 +59,7 @@ func NewTx(rawtx []byte) (tx *Tx, offset uint) {
 		offset += 2
 	}
 
-	txincnt, txincntsize := DecodeVariableLengthInteger(rawtx[offset:])
+	txincnt, txincntsize := DecodeVarInt(rawtx[offset:])
 	offset += txincntsize
 
 	tx.TxInCnt = uint32(txincnt)
@@ -72,7 +72,7 @@ func NewTx(rawtx []byte) (tx *Tx, offset uint) {
 
 	}
 
-	txoutcnt, txoutcntsize := DecodeVariableLengthInteger(rawtx[offset:])
+	txoutcnt, txoutcntsize := DecodeVarInt(rawtx[offset:])
 	offset += txoutcntsize
 
 	tx.TxOutCnt = uint32(txoutcnt)
@@ -98,11 +98,11 @@ func NewTx(rawtx []byte) (tx *Tx, offset uint) {
 
 func NewTxWit(txwitraw []byte) (txwit *TxWit, offset uint) {
 	txwit = new(TxWit)
-	txWitcnt, txWitcntsize := DecodeVariableLengthInteger(txwitraw[0:])
+	txWitcnt, txWitcntsize := DecodeVarInt(txwitraw[0:])
 	offset = txWitcntsize
 
 	for witIndex := uint(0); witIndex < txWitcnt; witIndex++ {
-		txWitScriptcnt, txWitScriptcntsize := DecodeVariableLengthInteger(txwitraw[offset:])
+		txWitScriptcnt, txWitScriptcntsize := DecodeVarInt(txwitraw[offset:])
 		offset += txWitScriptcntsize
 
 		// txwit.Pkscript = txwitraw[offset : offset+pkscript]
@@ -118,7 +118,7 @@ func NewTxIn(txinraw []byte) (txin *TxIn, offset uint) {
 	txin.InputVout = binary.LittleEndian.Uint32(txinraw[32:36])
 	offset = 36
 
-	scriptsig, scriptsigsize := DecodeVariableLengthInteger(txinraw[offset:])
+	scriptsig, scriptsigsize := DecodeVarInt(txinraw[offset:])
 	offset += scriptsigsize
 
 	// txin.ScriptSig = txinraw[offset : offset+scriptsig]
@@ -127,7 +127,7 @@ func NewTxIn(txinraw []byte) (txin *TxIn, offset uint) {
 	txin.Sequence = binary.LittleEndian.Uint32(txinraw[offset : offset+4])
 	offset += 4
 
-	// other init
+	// process Parallel
 	txin.InputOutpointKey = string(txinraw[0:36])
 	return
 }
@@ -137,7 +137,7 @@ func NewTxOut(txoutraw []byte) (txout *TxOut, offset uint) {
 	txout.Value = binary.LittleEndian.Uint64(txoutraw[0:8])
 	offset = 8
 
-	pkscript, pkscriptsize := DecodeVariableLengthInteger(txoutraw[offset:])
+	pkscript, pkscriptsize := DecodeVarInt(txoutraw[offset:])
 	offset += pkscriptsize
 
 	txout.Pkscript = txoutraw[offset : offset+pkscript]

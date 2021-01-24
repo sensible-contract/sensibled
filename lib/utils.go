@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 )
 
-func DecodeVariableLengthInteger(raw []byte) (cnt uint, cnt_size uint) {
+func DecodeVarInt(raw []byte) (cnt uint, cnt_size uint) {
 	if raw[0] < 0xfd {
 		return uint(raw[0]), 1
 	}
@@ -19,60 +19,34 @@ func DecodeVariableLengthInteger(raw []byte) (cnt uint, cnt_size uint) {
 	return uint(binary.LittleEndian.Uint64(raw[1:9])), 9
 }
 
-func SafeDecodeVariableLengthInteger(raw []byte) (cnt uint, cnt_size uint) {
+func SafeDecodeVarIntForScript(raw []byte) (cnt uint, cnt_size uint) {
 	if len(raw) < 1 {
 		return 0, 0
 	}
-	if raw[0] < 0xfd {
+	if raw[0] < 0x4c {
 		return uint(raw[0]), 1
 	}
 
-	if raw[0] == 0xfd {
+	if raw[0] == 0x4c {
+		if len(raw) < 2 {
+			return 0, 0
+		}
+		return uint(raw[1]), 2
+
+	} else if raw[0] == 0x4d {
 		if len(raw) < 3 {
 			return 0, 0
 		}
 		return uint(binary.LittleEndian.Uint16(raw[1:3])), 3
 
-	} else if raw[0] == 0xfe {
+	} else if raw[0] == 0x4e {
 		if len(raw) < 5 {
 			return 0, 0
 		}
 		return uint(binary.LittleEndian.Uint32(raw[1:5])), 5
 	}
 
-	if len(raw) < 9 {
-		return 0, 0
-	}
-	return uint(binary.LittleEndian.Uint64(raw[1:9])), 9
-}
-
-// Get the Tx count, decode the variable length integer
-// https://en.bitcoin.it/wiki/Protocol_specification#Variable_length_integer
-func DecodeVariableLengthIntegerOrigin(raw []byte) (cnt int, cnt_size int) {
-	if raw[0] < 0xfd {
-		return int(raw[0]), 1
-	}
-
-	// if raw[0] == 0xfd {
-	// 	return int(binary.LittleEndian.Uint16(raw[1:3])), 3
-	// } else if raw[0] == 0xfe {
-	// 	return int(binary.LittleEndian.Uint32(raw[1:5])), 5
-	// } else {
-	// 	return int(binary.LittleEndian.Uint64(raw[1:9])), 9
-	// }
-
-	cnt_size = 1 + (2 << (2 - (0xff - raw[0])))
-	if len(raw) < 1+cnt_size {
-		return
-	}
-
-	res := uint64(0)
-	for i := 1; i < cnt_size; i++ {
-		res |= (uint64(raw[i]) << uint64(8*(i-1)))
-	}
-
-	cnt = int(res)
-	return
+	return 0, 0
 }
 
 func GetShaString(data []byte) (hash []byte) {

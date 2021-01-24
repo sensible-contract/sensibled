@@ -43,9 +43,9 @@ func NewBlock(rawblock []byte) (block *Block) {
 	return block
 }
 
-func ParseTxs(txsraw []byte) (txs []*Tx) {
+func ParseTxsParallel(txsraw []byte) (txs []*Tx) {
 	offset := uint(0)
-	txcnt, txcnt_size := DecodeVariableLengthInteger(txsraw[offset:])
+	txcnt, txcnt_size := DecodeVarInt(txsraw[offset:])
 	offset += txcnt_size
 
 	txs = make([]*Tx, txcnt)
@@ -64,8 +64,8 @@ func ParseTxs(txsraw []byte) (txs []*Tx) {
 		txs[i].Size = uint32(txoffset)
 		offset += txoffset
 
-		// other init:
-		initTx(txs[i])
+		isCoinbase := (i == 0)
+		parseTxParallel(txs[i], isCoinbase)
 	}
 	return txs
 }
