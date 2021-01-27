@@ -70,7 +70,7 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block) {
 			defer wg.Done()
 
 			// 先并行分析交易
-			txs := ParseTxsParallel(block.Raw[80:])
+			txs := ParseTxsParallel(block.Raw[80:], block.Height)
 			block.Txs = txs
 			block.Raw = nil
 

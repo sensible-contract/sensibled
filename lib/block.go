@@ -43,7 +43,7 @@ func NewBlock(rawblock []byte) (block *Block) {
 	return block
 }
 
-func ParseTxsParallel(txsraw []byte) (txs []*Tx) {
+func ParseTxsParallel(txsraw []byte, blockHeight int) (txs []*Tx) {
 	offset := uint(0)
 	txcnt, txcnt_size := DecodeVarInt(txsraw[offset:])
 	offset += txcnt_size
@@ -65,7 +65,7 @@ func ParseTxsParallel(txsraw []byte) (txs []*Tx) {
 		offset += txoffset
 
 		isCoinbase := (i == 0)
-		parseTxParallel(txs[i], isCoinbase)
+		parseTxParallel(txs[i], isCoinbase, blockHeight)
 	}
 	return txs
 }

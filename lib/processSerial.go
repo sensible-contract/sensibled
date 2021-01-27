@@ -36,31 +36,30 @@ func ParseEnd() {
 	}.Build()
 	defer loggerMap.Sync()
 
-	// logger.Info("end",
-	// 	zap.Int("dataMap", len(calcMap)),
-	// )
+	logger.Info("end",
+		zap.Int("dataMap", len(calcMap)),
+	)
 
 	ParseEndDumpUtxo(loggerMap)
 	// ParseEndDumpScriptType(loggerMap)
 }
 
 func ParseEndDumpUtxo(log *zap.Logger) {
-	utxoMap.Range(func(keyStr, value interface{}) bool {
-		if _, ok := utxoMissingMap.Load(keyStr); ok {
-			return true
+	for keyStr, data := range utxoMap {
+		if _, ok := utxoMissingMap[keyStr]; ok {
+			continue
 		}
-		key := []byte(keyStr.(string))
-		data := value.(*CalcData)
+		key := []byte(keyStr)
 
 		log.Info("utxo",
+			zap.Int("h", data.BlockHeight),
 			zap.String("tx", HashString(key[:32])),
 			zap.Uint32("i", binary.LittleEndian.Uint32(key[32:])),
 			zap.Uint64("v", data.Value),
 			zap.String("type", data.ScriptType),
 			zap.Int("n", len(data.ScriptType)),
 		)
-		return true
-	})
+	}
 }
 
 func ParseEndDumpScriptType(log *zap.Logger) {
@@ -96,8 +95,9 @@ func ParseBlockSpeed(nTx int, nextBlockHeight, maxBlockHeight int) {
 			zap.Int("bps", nextBlockHeight-lastBlockHeight),
 			zap.Int("tps", lastBlockTxCount),
 			zap.Int("time", timeLeft),
-			zap.Int("dataMap", len(calcMap)),
-			// zap.Duration("backoff", time.Second),
+			zap.Int("calc", len(calcMap)),
+			zap.Int("utxo", len(utxoMap)),
+			zap.Int("utxoMissing", len(utxoMissingMap)),
 		)
 
 		lastBlockHeight = nextBlockHeight
@@ -125,13 +125,11 @@ func ParseBlockCount(block *Block) {
 		zap.Int("wit", countWitTx),
 		zap.Uint64("zero", countZeroValueTx),
 		zap.Uint64("v", countValueTx),
-		// zap.Duration("backoff", time.Second),
 	)
 }
 
 // dumpBlock block id
 func dumpBlock(block *Block) {
-
 	logger.Info("blkid",
 		zap.String("id", block.HashHex),
 		zap.Int("height", block.Height),

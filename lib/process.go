@@ -8,23 +8,26 @@ import (
 )
 
 type CalcData struct {
-	Value      uint64
-	ScriptType string
+	Value       uint64
+	ScriptType  string
+	BlockHeight int
 }
 
 var (
-	calcMap   map[string]*CalcData
+	calcMap   map[string]CalcData
 	calcMutex sync.Mutex
 
-	utxoMissingMap sync.Map
-	utxoMap        sync.Map
+	utxoMap        map[string]CalcData
+	utxoMissingMap map[string]bool
 
 	logger    *zap.Logger
 	loggerErr *zap.Logger
 )
 
 func init() {
-	calcMap = make(map[string]*CalcData, 0)
+	calcMap = make(map[string]CalcData, 0)
+	utxoMap = make(map[string]CalcData, 50000000)
+	utxoMissingMap = make(map[string]bool, 1000000)
 
 	// logger, _ = zap.NewProduction()
 	logger, _ = zap.Config{
