@@ -30,7 +30,7 @@ func (bc *Blockchain) ParseLongestChain() {
 	bc.InitLongestChainHeader()
 	bc.BF.SkipTo(0, 0)
 
-	blocksReady := make(chan *Block, 1024)
+	blocksReady := make(chan *Block, 256)
 
 	go bc.InitLongestChainBlock(blocksReady)
 
@@ -42,7 +42,7 @@ func (bc *Blockchain) ParseLongestChain() {
 // InitLongestChainBlock 解码区块，生产者
 func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block) {
 	var wg sync.WaitGroup
-	parsers := make(chan struct{}, 30)
+	parsers := make(chan struct{}, 32)
 	for {
 		// 获取所有Block字节，不要求有序返回或属于主链
 		// 但由于未分析的区块需要暂存，无序遍历会增加内存消耗
@@ -70,7 +70,13 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block) {
 			defer wg.Done()
 
 			// 先并行分析交易
-			txs := ParseTxsParallel(block.Raw[80:], block.Height)
+			processBlock := &ProcessBlock{
+				Height:         block.Height,
+				UtxoMap:        make(map[string]CalcData, 1),
+				UtxoMissingMap: make(map[string]bool, 1),
+			}
+			txs := ParseTxsParallel(block.Raw[80:], processBlock)
+			block.ParseData = processBlock
 			block.Txs = txs
 			block.Raw = nil
 

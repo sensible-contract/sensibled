@@ -7,6 +7,12 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+type ProcessBlock struct {
+	Height         int
+	UtxoMap        map[string]CalcData
+	UtxoMissingMap map[string]bool
+}
+
 type CalcData struct {
 	Value       uint64
 	ScriptType  string
@@ -17,8 +23,7 @@ var (
 	calcMap   map[string]CalcData
 	calcMutex sync.Mutex
 
-	utxoMap        map[string]CalcData
-	utxoMissingMap map[string]bool
+	utxoMap map[string]CalcData
 
 	logger    *zap.Logger
 	loggerErr *zap.Logger
@@ -27,7 +32,6 @@ var (
 func init() {
 	calcMap = make(map[string]CalcData, 0)
 	utxoMap = make(map[string]CalcData, 50000000)
-	utxoMissingMap = make(map[string]bool, 1000000)
 
 	// logger, _ = zap.NewProduction()
 	logger, _ = zap.Config{

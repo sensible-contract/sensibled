@@ -7,23 +7,22 @@ import (
 )
 
 type Block struct {
-	Raw         []byte  `json:"-"`
-	HashHex     string  `json:"hash"` // 32 bytes
-	FileIdx     int     `json:"file_idx"`
-	FileOffset  int     `json:"file_offset"`
-	Height      int     `json:"height"`
-	Txs         []*Tx   `json:"tx,omitempty"`
-	Version     uint32  `json:"ver"`
-	MerkleRoot  string  `json:"mrkl_root"`
-	BlockTime   uint32  `json:"time"`
-	Bits        uint32  `json:"bits"`
-	Nonce       uint32  `json:"nonce"`
-	Size        uint32  `json:"size"`
-	TxCnt       uint32  `json:"n_tx"`
-	TotalBTC    uint64  `json:"total_out"`
-	BlockReward float64 `json:"-"`
-	ParentHex   string  `json:"prev_block"` // 32 bytes
-	NextHex     string  `json:"next_block"` // 32 bytes
+	Raw        []byte        `json:"-"`
+	HashHex    string        `json:"hash"` // 32 bytes
+	FileIdx    int           `json:"file_idx"`
+	FileOffset int           `json:"file_offset"`
+	Height     int           `json:"height"`
+	Txs        []*Tx         `json:"tx,omitempty"`
+	Version    uint32        `json:"version"`
+	MerkleRoot string        `json:"merkle_root"`
+	BlockTime  uint32        `json:"time"`
+	Bits       uint32        `json:"bits"`
+	Nonce      uint32        `json:"nonce"`
+	Size       uint32        `json:"size"`
+	TxCnt      uint32        `json:"n_tx"`
+	ParentHex  string        `json:"prev_block"` // 32 bytes
+	NextHex    string        `json:"next_block"` // 32 bytes
+	ParseData  *ProcessBlock `json:"-"`
 }
 
 func NewBlock(rawblock []byte) (block *Block) {
@@ -43,7 +42,7 @@ func NewBlock(rawblock []byte) (block *Block) {
 	return block
 }
 
-func ParseTxsParallel(txsraw []byte, blockHeight int) (txs []*Tx) {
+func ParseTxsParallel(txsraw []byte, block *ProcessBlock) (txs []*Tx) {
 	offset := uint(0)
 	txcnt, txcnt_size := DecodeVarInt(txsraw[offset:])
 	offset += txcnt_size
@@ -65,7 +64,7 @@ func ParseTxsParallel(txsraw []byte, blockHeight int) (txs []*Tx) {
 		offset += txoffset
 
 		isCoinbase := (i == 0)
-		parseTxParallel(txs[i], isCoinbase, blockHeight)
+		parseTxParallel(txs[i], isCoinbase, block)
 	}
 	return txs
 }

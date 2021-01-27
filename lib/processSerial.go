@@ -19,9 +19,12 @@ func ParseBlockSerial(block *Block, maxBlockHeight int) {
 	ParseBlockSpeed(len(block.Txs), block.Height, maxBlockHeight)
 	// ParseBlockCount(block)
 
+	parseUtxoSerial(block.ParseData)
+
 	// dumpBlock(block)
 	// dumpBlockTx(block)
 
+	block.ParseData = nil
 	block.Txs = nil
 }
 
@@ -36,19 +39,12 @@ func ParseEnd() {
 	}.Build()
 	defer loggerMap.Sync()
 
-	logger.Info("end",
-		zap.Int("dataMap", len(calcMap)),
-	)
-
 	ParseEndDumpUtxo(loggerMap)
 	// ParseEndDumpScriptType(loggerMap)
 }
 
 func ParseEndDumpUtxo(log *zap.Logger) {
 	for keyStr, data := range utxoMap {
-		if _, ok := utxoMissingMap[keyStr]; ok {
-			continue
-		}
 		key := []byte(keyStr)
 
 		log.Info("utxo",
@@ -77,32 +73,33 @@ func ParseEndDumpScriptType(log *zap.Logger) {
 func ParseBlockSpeed(nTx int, nextBlockHeight, maxBlockHeight int) {
 	lastBlockTxCount += nTx
 
-	if time.Since(lastLogTime) > time.Second {
-		if nextBlockHeight < lastBlockHeight {
-			lastBlockHeight = 0
-		}
-
-		lastLogTime = time.Now()
-
-		timeLeft := 0
-		if maxBlockHeight > 0 && (nextBlockHeight-lastBlockHeight) != 0 {
-			timeLeft = (maxBlockHeight - nextBlockHeight) / (nextBlockHeight - lastBlockHeight)
-		}
-
-		loggerErr.Info("parsing",
-			zap.String("log", "speed"),
-			zap.Int("height", nextBlockHeight),
-			zap.Int("bps", nextBlockHeight-lastBlockHeight),
-			zap.Int("tps", lastBlockTxCount),
-			zap.Int("time", timeLeft),
-			zap.Int("calc", len(calcMap)),
-			zap.Int("utxo", len(utxoMap)),
-			zap.Int("utxoMissing", len(utxoMissingMap)),
-		)
-
-		lastBlockHeight = nextBlockHeight
-		lastBlockTxCount = 0
+	if nextBlockHeight != maxBlockHeight && time.Since(lastLogTime) < time.Second {
+		return
 	}
+
+	if nextBlockHeight < lastBlockHeight {
+		lastBlockHeight = 0
+	}
+
+	lastLogTime = time.Now()
+
+	timeLeft := 0
+	if maxBlockHeight > 0 && (nextBlockHeight-lastBlockHeight) != 0 {
+		timeLeft = (maxBlockHeight - nextBlockHeight) / (nextBlockHeight - lastBlockHeight)
+	}
+
+	loggerErr.Info("parsing",
+		zap.String("log", "speed"),
+		zap.Int("height", nextBlockHeight),
+		zap.Int("bps", nextBlockHeight-lastBlockHeight),
+		zap.Int("tps", lastBlockTxCount),
+		zap.Int("time", timeLeft),
+		zap.Int("calc", len(calcMap)),
+		zap.Int("utxo", len(utxoMap)),
+	)
+
+	lastBlockHeight = nextBlockHeight
+	lastBlockTxCount = 0
 }
 
 func ParseBlockCount(block *Block) {
@@ -143,5 +140,15 @@ func dumpBlockTx(block *Block) {
 			zap.String("tx", tx.HashHex),
 			zap.Int("height", block.Height),
 		)
+	}
+}
+
+// parseUtxoSerial utxo 信息
+func parseUtxoSerial(block *ProcessBlock) {
+	for key, data := range block.UtxoMap {
+		utxoMap[key] = data
+	}
+	for key := range block.UtxoMissingMap {
+		delete(utxoMap, key)
 	}
 }

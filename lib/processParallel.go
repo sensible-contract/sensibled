@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func parseTxParallel(tx *Tx, isCoinbase bool, blockHeight int) {
+func parseTxParallel(tx *Tx, isCoinbase bool, block *ProcessBlock) {
 	key := make([]byte, 36)
 	copy(key, tx.Hash)
 	for idx, output := range tx.TxOuts {
@@ -30,8 +30,8 @@ func parseTxParallel(tx *Tx, isCoinbase bool, blockHeight int) {
 	}
 
 	// dumpLockingScriptType(tx)
-	dumpTxoSpendBy(tx, isCoinbase)
-	dumpUtxo(tx, blockHeight)
+	parseTxoSpendByTxParallel(tx, isCoinbase, block)
+	parseUtxoParallel(tx, block)
 }
 
 func isLockingScriptOnlyEqual(pkscript []byte) bool {
@@ -104,24 +104,22 @@ func dumpLockingScriptType(tx *Tx) {
 	}
 }
 
-// dumpUtxo utxo 信息
-func dumpUtxo(tx *Tx, blockHeight int) {
+// parseUtxoParallel utxo 信息
+func parseUtxoParallel(tx *Tx, block *ProcessBlock) {
 	for idx, output := range tx.TxOuts {
 		if output.Value == 0 || !output.LockingScriptMatch {
 			continue
 		}
 
-		calcMutex.Lock()
-		if _, ok := utxoMissingMap[output.OutpointKey]; ok {
-			delete(utxoMissingMap, output.OutpointKey)
+		if _, ok := block.UtxoMissingMap[output.OutpointKey]; ok {
+			delete(block.UtxoMissingMap, output.OutpointKey)
 		} else {
-			utxoMap[output.OutpointKey] = CalcData{
+			block.UtxoMap[output.OutpointKey] = CalcData{
 				Value:       output.Value,
 				ScriptType:  output.LockingScriptTypeHex,
-				BlockHeight: blockHeight,
+				BlockHeight: block.Height,
 			}
 		}
-		calcMutex.Unlock()
 
 		logger.Debug("utxo",
 			zap.String("tx", tx.HashHex),
@@ -132,20 +130,17 @@ func dumpUtxo(tx *Tx, blockHeight int) {
 	}
 }
 
-// dumpTxoSpendBy utxo被使用
-func dumpTxoSpendBy(tx *Tx, isCoinbase bool) {
+// parseTxoSpendByTxParallel utxo被使用
+func parseTxoSpendByTxParallel(tx *Tx, isCoinbase bool, block *ProcessBlock) {
 	if isCoinbase {
 		return
 	}
 	for idx, input := range tx.TxIns {
-
-		calcMutex.Lock()
-		if _, ok := utxoMap[input.InputOutpointKey]; !ok {
-			utxoMissingMap[input.InputOutpointKey] = true
+		if _, ok := block.UtxoMap[input.InputOutpointKey]; !ok {
+			block.UtxoMissingMap[input.InputOutpointKey] = true
 		} else {
-			delete(utxoMap, input.InputOutpointKey)
+			delete(block.UtxoMap, input.InputOutpointKey)
 		}
-		calcMutex.Unlock()
 
 		logger.Debug("spend",
 			zap.String("tx", input.InputHashHex),
