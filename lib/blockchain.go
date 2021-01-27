@@ -26,21 +26,25 @@ func NewBlockchain(path string, magic [4]byte) (bc *Blockchain, err error) {
 	return
 }
 
-func (bc *Blockchain) ParseLongestChain() {
+func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight int) {
 	bc.InitLongestChainHeader()
-	bc.BF.SkipTo(0, 0)
+
+	if ok := bc.SkipToBlockFileIdByBlockHeight(startBlockHeight); !ok {
+		log.Printf("skip to block height failed: %d", startBlockHeight)
+		return
+	}
 
 	blocksReady := make(chan *Block, 256)
 
-	go bc.InitLongestChainBlock(blocksReady)
+	go bc.InitLongestChainBlock(blocksReady, startBlockHeight, endBlockHeight)
 
-	bc.ParseLongestChainBlock(blocksReady)
+	bc.ParseLongestChainBlock(blocksReady, startBlockHeight, endBlockHeight)
 
 	ParseEnd()
 }
 
 // InitLongestChainBlock 解码区块，生产者
-func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block) {
+func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block, startBlockHeight, endBlockHeight int) {
 	var wg sync.WaitGroup
 	parsers := make(chan struct{}, 32)
 	for {
@@ -58,6 +62,9 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block) {
 		block, ok := bc.BlocksOfChain[blockHash]
 		if !ok {
 			// 若不是主链区块则跳过
+			continue
+		}
+		if block.Height < startBlockHeight {
 			continue
 		}
 
@@ -91,13 +98,17 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block) {
 }
 
 // ParseLongestChainBlock 按顺序消费解码后的区块
-func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *Block) {
-	nextBlockHeight := 0
-	maxBlockHeight := len(bc.BlocksOfChain)
+func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *Block, nextBlockHeight, maxBlockHeight int) {
+	blocksTotal := len(bc.BlocksOfChain)
+	if maxBlockHeight < 0 || maxBlockHeight > blocksTotal {
+		maxBlockHeight = blocksTotal
+	}
 	blockParseBufferBlock := make([]*Block, maxBlockHeight)
 	for block := range blocksReady {
 		// 暂存block
-		blockParseBufferBlock[block.Height] = block
+		if block.Height < maxBlockHeight {
+			blockParseBufferBlock[block.Height] = block
+		}
 		// 按序
 		if block.Height != nextBlockHeight {
 			continue
@@ -114,7 +125,45 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *Block) {
 			block.Txs = nil
 			nextBlockHeight++
 		}
+		if nextBlockHeight >= maxBlockHeight {
+			break
+		}
 	}
+}
+
+func (bc *Blockchain) SkipToBlockFileIdByBlockHeight(height int) bool {
+	for idx := 0; ; idx++ {
+		if err := bc.BF.SkipTo(idx, 0); err != nil {
+			skipTo := 0
+			if idx > 5 {
+				skipTo = idx - 5
+			}
+			bc.BF.SkipTo(skipTo, 0)
+			return true
+		}
+
+		for {
+			rawblock, err := bc.BF.GetRawBlockHeader()
+			if err != nil {
+				break
+			}
+			block := NewBlock(rawblock)
+			blockInfo, ok := bc.BlocksOfChain[block.HashHex]
+			if !ok {
+				continue
+			}
+			if blockInfo.Height < height {
+				break
+			}
+			skipTo := 0
+			if idx > 5 {
+				skipTo = idx - 5
+			}
+			bc.BF.SkipTo(skipTo, 0)
+			return true
+		}
+	}
+	return false
 }
 
 func (bc *Blockchain) InitLongestChainHeader() {

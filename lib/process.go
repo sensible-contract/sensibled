@@ -1,6 +1,8 @@
 package blkparser
 
 import (
+	"encoding/gob"
+	"os"
 	"sync"
 
 	"go.uber.org/zap"
@@ -29,10 +31,26 @@ var (
 	loggerErr *zap.Logger
 )
 
-func init() {
-	calcMap = make(map[string]CalcData, 0)
-	utxoMap = make(map[string]CalcData, 50000000)
+func loadUtxoFromGobFile() {
+	utxoFile, err := os.Open("/data/utxo.gob")
+	if err != nil {
+		loggerErr.Info("dump utxo",
+			zap.String("log", "open utxo gob failed"),
+		)
+		return
+	}
+	utxoDec := gob.NewDecoder(utxoFile)
+	loggerErr.Info("load utxo",
+		zap.String("log", "loading utxo"),
+	)
+	if err := utxoDec.Decode(&utxoMap); err != nil {
+		loggerErr.Info("load utxo",
+			zap.String("log", "load utxo failed"),
+		)
+	}
+}
 
+func init() {
 	// logger, _ = zap.NewProduction()
 	logger, _ = zap.Config{
 		Encoding:    "console",                               // 配置编码方式（json 或 console）
@@ -45,4 +63,9 @@ func init() {
 		Level:       zap.NewAtomicLevelAt(zapcore.DebugLevel), // 输出级别
 		OutputPaths: []string{"stderr"},                       // 输出目的地
 	}.Build()
+
+	calcMap = make(map[string]CalcData, 0)
+	utxoMap = make(map[string]CalcData, 0)
+
+	// loadUtxoFromGobFile()
 }

@@ -3,11 +3,20 @@ package main
 import (
 	blkparser "blkparser/lib"
 	"context"
+	"flag"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"time"
 )
+
+var startBlockHeight, endBlockHeight int
+
+func init() {
+	flag.IntVar(&startBlockHeight, "start", 0, "start block height")
+	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
+	flag.Parse()
+}
 
 func main() {
 	blockchain, err := blkparser.NewBlockchain(
@@ -23,7 +32,8 @@ func main() {
 
 	server := &http.Server{Addr: "0.0.0.0:8080", Handler: nil}
 	go func() {
-		blockchain.ParseLongestChain()
+
+		blockchain.ParseLongestChain(startBlockHeight, endBlockHeight)
 		log.Printf("finished")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)

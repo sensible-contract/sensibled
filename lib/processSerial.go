@@ -2,7 +2,9 @@ package blkparser
 
 import (
 	"encoding/binary"
+	"encoding/gob"
 	"encoding/hex"
+	"os"
 	"time"
 
 	"go.uber.org/zap"
@@ -10,9 +12,11 @@ import (
 )
 
 var (
-	lastLogTime      time.Time
-	lastBlockHeight  int
-	lastBlockTxCount int
+	lastLogTime            time.Time
+	lastBlockHeight        int
+	lastBlockTxCount       int
+	lastUtxoMapAddCount    int
+	lastUtxoMapRemoveCount int
 )
 
 func ParseBlockSerial(block *Block, maxBlockHeight int) {
@@ -22,15 +26,17 @@ func ParseBlockSerial(block *Block, maxBlockHeight int) {
 	parseUtxoSerial(block.ParseData)
 
 	// dumpBlock(block)
-	// dumpBlockTx(block)
+	dumpBlockTx(block)
 
 	block.ParseData = nil
 	block.Txs = nil
 }
 
 func ParseEnd() {
-	logger.Sync()
-	loggerErr.Sync()
+	defer logger.Sync()
+	defer loggerErr.Sync()
+
+	// dumpUtxoToGobFile()
 
 	loggerMap, _ := zap.Config{
 		Encoding:    "console",                                // 配置编码方式（json 或 console）
@@ -39,8 +45,29 @@ func ParseEnd() {
 	}.Build()
 	defer loggerMap.Sync()
 
-	ParseEndDumpUtxo(loggerMap)
+	// ParseEndDumpUtxo(loggerMap)
 	// ParseEndDumpScriptType(loggerMap)
+}
+
+func dumpUtxoToGobFile() {
+	utxoFile, err := os.OpenFile("/data/utxo.gob", os.O_RDWR|os.O_CREATE, 0777)
+	if err != nil {
+		loggerErr.Info("dump utxo",
+			zap.String("log", "dump utxo file failed"),
+		)
+		return
+	}
+	defer utxoFile.Close()
+
+	enc := gob.NewEncoder(utxoFile)
+	if err := enc.Encode(utxoMap); err != nil {
+		loggerErr.Info("dump utxo",
+			zap.String("log", "dump utxo failed"),
+		)
+	}
+	loggerErr.Info("dump utxo",
+		zap.String("log", "dump utxo ok"),
+	)
 }
 
 func ParseEndDumpUtxo(log *zap.Logger) {
@@ -73,7 +100,7 @@ func ParseEndDumpScriptType(log *zap.Logger) {
 func ParseBlockSpeed(nTx int, nextBlockHeight, maxBlockHeight int) {
 	lastBlockTxCount += nTx
 
-	if nextBlockHeight != maxBlockHeight && time.Since(lastLogTime) < time.Second {
+	if nextBlockHeight != maxBlockHeight-1 && time.Since(lastLogTime) < time.Second {
 		return
 	}
 
@@ -89,17 +116,21 @@ func ParseBlockSpeed(nTx int, nextBlockHeight, maxBlockHeight int) {
 	}
 
 	loggerErr.Info("parsing",
-		zap.String("log", "speed"),
 		zap.Int("height", nextBlockHeight),
-		zap.Int("bps", nextBlockHeight-lastBlockHeight),
-		zap.Int("tps", lastBlockTxCount),
-		zap.Int("time", timeLeft),
-		zap.Int("calc", len(calcMap)),
+		zap.Int("blk", nextBlockHeight-lastBlockHeight),
+		zap.Int("tx", lastBlockTxCount),
+		zap.Int("+u", lastUtxoMapAddCount),
+		zap.Int("-u", lastUtxoMapRemoveCount),
+		zap.Int("=u", lastUtxoMapAddCount-lastUtxoMapRemoveCount),
 		zap.Int("utxo", len(utxoMap)),
+		zap.Int("calc", len(calcMap)),
+		zap.Int("time", timeLeft),
 	)
 
 	lastBlockHeight = nextBlockHeight
 	lastBlockTxCount = 0
+	lastUtxoMapAddCount = 0
+	lastUtxoMapRemoveCount = 0
 }
 
 func ParseBlockCount(block *Block) {
@@ -145,6 +176,9 @@ func dumpBlockTx(block *Block) {
 
 // parseUtxoSerial utxo 信息
 func parseUtxoSerial(block *ProcessBlock) {
+	lastUtxoMapAddCount += len(block.UtxoMap)
+	lastUtxoMapRemoveCount += len(block.UtxoMissingMap)
+
 	for key, data := range block.UtxoMap {
 		utxoMap[key] = data
 	}

@@ -30,8 +30,8 @@ func parseTxParallel(tx *Tx, isCoinbase bool, block *ProcessBlock) {
 	}
 
 	// dumpLockingScriptType(tx)
-	parseTxoSpendByTxParallel(tx, isCoinbase, block)
-	parseUtxoParallel(tx, block)
+	// parseTxoSpendByTxParallel(tx, isCoinbase, block)
+	// parseUtxoParallel(tx, block)
 }
 
 func isLockingScriptOnlyEqual(pkscript []byte) bool {
