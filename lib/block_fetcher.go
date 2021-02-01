@@ -121,7 +121,6 @@ func (bf *BlockFetcher) FetchNextBlock(skipTxs bool) (rawblock []byte, err error
 
 	blocksize := binary.LittleEndian.Uint32(buf[:])
 
-	// log.Printf("blocksize: %d", blocksize)
 	if skipTxs {
 		rawblock = make([]byte, 80)
 	} else {

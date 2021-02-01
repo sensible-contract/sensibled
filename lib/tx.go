@@ -4,49 +4,6 @@ import (
 	"encoding/binary"
 )
 
-type Tx struct {
-	HashHex   string // 32
-	Hash      []byte // 32
-	Size      uint32
-	WitOffset uint
-	LockTime  uint32
-	Version   uint32
-	TxInCnt   uint32
-	TxOutCnt  uint32
-	TxIns     []*TxIn
-	TxOuts    []*TxOut
-	TxWits    []*TxWit
-}
-
-type TxIn struct {
-	InputHashHex string // 32
-	InputHash    []byte // 32
-	InputVout    uint32
-	// ScriptSig []byte
-	Sequence uint32
-
-	// other:
-	InputOutpointKey string // 32 + 4
-}
-
-type TxOut struct {
-	// Addr     string
-	Value    uint64
-	Pkscript []byte
-
-	// other:
-	OutpointKey          string // 32 + 4
-	LockingScriptType    []byte
-	LockingScriptTypeHex string
-	LockingScriptMatch   bool
-}
-
-type TxWit struct {
-	// Addr     string
-	Value uint64
-	// Pkscript []byte
-}
-
 func NewTx(rawtx []byte) (tx *Tx, offset uint) {
 	tx = new(Tx)
 	tx.Version = binary.LittleEndian.Uint32(rawtx[0:4])

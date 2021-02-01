@@ -135,8 +135,8 @@ func (bc *Blockchain) SkipToBlockFileIdByBlockHeight(height int) bool {
 	for idx := 0; ; idx++ {
 		if err := bc.BF.SkipTo(idx, 0); err != nil {
 			skipTo := 0
-			if idx > 5 {
-				skipTo = idx - 5
+			if idx > 2 {
+				skipTo = idx - 2
 			}
 			bc.BF.SkipTo(skipTo, 0)
 			return true
@@ -156,8 +156,8 @@ func (bc *Blockchain) SkipToBlockFileIdByBlockHeight(height int) bool {
 				break
 			}
 			skipTo := 0
-			if idx > 5 {
-				skipTo = idx - 5
+			if idx > 2 {
+				skipTo = idx - 2
 			}
 			bc.BF.SkipTo(skipTo, 0)
 			return true
@@ -214,7 +214,7 @@ func (bc *Blockchain) LoadAllBlockHeaders(loadCacheHeader bool) {
 			rawblock, err = bc.BF.GetRawBlockHeader()
 		}
 		if err != nil {
-			log.Printf("no more block header: %v", err)
+			// log.Printf("no more block header: %v", err)
 			break
 		}
 		if len(rawblock) < 80 {

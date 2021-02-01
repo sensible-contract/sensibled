@@ -23,10 +23,11 @@ func ParseBlockSerial(block *Block, maxBlockHeight int) {
 	ParseBlockSpeed(len(block.Txs), block.Height, maxBlockHeight)
 	// ParseBlockCount(block)
 
-	parseUtxoSerial(block.ParseData)
+	// parseUtxoSerial(block.ParseData)
 
-	// dumpBlock(block)
+	dumpBlock(block)
 	dumpBlockTx(block)
+	dumpBlockTxInfo(block)
 
 	block.ParseData = nil
 	block.Txs = nil
@@ -158,18 +159,33 @@ func ParseBlockCount(block *Block) {
 
 // dumpBlock block id
 func dumpBlock(block *Block) {
-	logger.Info("blkid",
-		zap.String("id", block.HashHex),
-		zap.Int("height", block.Height),
+	logger.Info("blk-list",
+		zap.String("b", block.HashHex),
+		zap.Int("h", block.Height),
 	)
 }
 
 // dumpBlockTx all tx in block height
 func dumpBlockTx(block *Block) {
 	for _, tx := range block.Txs {
-		logger.Info("tx-of-block",
-			zap.String("tx", tx.HashHex),
-			zap.Int("height", block.Height),
+		logger.Info("tx-list",
+			zap.String("t", tx.HashHex),
+			zap.String("b", block.HashHex),
+			// zap.Int("h", block.Height),
+		)
+	}
+}
+
+// dumpBlockTxInfo all tx info
+func dumpBlockTxInfo(block *Block) {
+	for _, tx := range block.Txs {
+		logger.Info("tx-info",
+			zap.String("t", tx.HashHex),
+			zap.Uint32("i", tx.TxInCnt),
+			zap.Uint32("o", tx.TxOutCnt),
+			zap.Array("in", tx.TxIns),
+			zap.Array("out", tx.TxOuts),
+			// zap.Int("h", block.Height),
 		)
 	}
 }
