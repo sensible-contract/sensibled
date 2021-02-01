@@ -3,6 +3,8 @@ package serial
 import (
 	"blkparser/model"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -19,12 +21,21 @@ func init() {
 	// loadUtxoFromGobFile()
 }
 
-func Parse(block *model.Block) {
+// ParseBlock 再串行分析区块
+func ParseBlock(block *model.Block) {
 	dumpBlock(block)
 	dumpBlockTx(block)
 	dumpBlockTxInfo(block)
 
+	dumpLockingScriptType(block)
 	// parseBlockCount(block)
 	// parseUtxoSerial(block.ParseData)
+}
 
+// End 最后分析执行
+func End(log *zap.Logger) {
+	// dumpUtxoToGobFile()
+
+	// parseEndDumpUtxo(loggerMap)
+	// parseEndDumpScriptType(loggerMap)
 }

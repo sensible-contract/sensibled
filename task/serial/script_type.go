@@ -24,7 +24,7 @@ func dumpLockingScriptType(block *model.Block) {
 				calcMap[key] = model.CalcData{Value: 1}
 			}
 
-			utils.Log.Debug("pkscript",
+			utils.Log.Info("pkscript",
 				zap.String("tx", tx.HashHex),
 				zap.Int("vout", idx),
 				zap.Uint64("v", output.Value),

@@ -35,14 +35,14 @@ func ParseTxParallel(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		// }
 	}
 
-	parallel.Parse(tx, isCoinbase, block)
+	parallel.ParseTx(tx, isCoinbase, block)
 }
 
 // ParseBlockSerial 再串行分析区块
 func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 	serial.ParseBlockSpeed(len(block.Txs), block.Height, maxBlockHeight)
 
-	serial.Parse(block)
+	serial.ParseBlock(block)
 
 	block.ParseData = nil
 	block.Txs = nil
@@ -53,8 +53,6 @@ func ParseEnd() {
 	defer utils.Log.Sync()
 	defer utils.LogErr.Sync()
 
-	// dumpUtxoToGobFile()
-
 	loggerMap, _ := zap.Config{
 		Encoding:    "console",                                // 配置编码方式（json 或 console）
 		Level:       zap.NewAtomicLevelAt(zapcore.DebugLevel), // 输出级别
@@ -62,6 +60,5 @@ func ParseEnd() {
 	}.Build()
 	defer loggerMap.Sync()
 
-	// parseEndDumpUtxo(loggerMap)
-	// parseEndDumpScriptType(loggerMap)
+	serial.End(loggerMap)
 }
