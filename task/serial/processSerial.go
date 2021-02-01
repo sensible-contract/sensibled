@@ -14,12 +14,6 @@ var (
 	lastUtxoMapRemoveCount int
 )
 
-func Parse(block *model.Block) {
-	dumpBlock(block)
-	dumpBlockTx(block)
-	dumpBlockTxInfo(block)
-}
-
 func parseEndDumpUtxo(log *zap.Logger) {
 	for keyStr, data := range utxoMap {
 		key := []byte(keyStr)

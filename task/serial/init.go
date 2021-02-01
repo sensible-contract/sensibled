@@ -18,3 +18,13 @@ func init() {
 
 	// loadUtxoFromGobFile()
 }
+
+func Parse(block *model.Block) {
+	dumpBlock(block)
+	dumpBlockTx(block)
+	dumpBlockTxInfo(block)
+
+	// parseBlockCount(block)
+	// parseUtxoSerial(block.ParseData)
+
+}

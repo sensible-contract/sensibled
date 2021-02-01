@@ -35,17 +35,12 @@ func ParseTxParallel(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		// }
 	}
 
-	// dumpLockingScriptType(tx)
-	// parseTxoSpendByTxParallel(tx, isCoinbase, block)
-	// parseUtxoParallel(tx, block)
+	parallel.Parse(tx, isCoinbase, block)
 }
 
 // ParseBlockSerial 再串行分析区块
 func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 	serial.ParseBlockSpeed(len(block.Txs), block.Height, maxBlockHeight)
-	// parseBlockCount(block)
-
-	// parseUtxoSerial(block.ParseData)
 
 	serial.Parse(block)
 
