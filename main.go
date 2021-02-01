@@ -1,7 +1,7 @@
 package main
 
 import (
-	blkparser "blkparser/lib"
+	"blkparser/parser"
 	"context"
 	"flag"
 	"log"
@@ -19,7 +19,7 @@ func init() {
 }
 
 func main() {
-	blockchain, err := blkparser.NewBlockchain(
+	blockchain, err := parser.NewBlockchain(
 		"./blocks-bsv", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin-sv
 	// "./blocks", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin
 	// "/data/bitcoin-sv-blocks/blocks", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin-sv

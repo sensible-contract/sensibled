@@ -1,4 +1,4 @@
-package blkparser
+package model
 
 import (
 	"go.uber.org/multierr"
@@ -79,4 +79,37 @@ type TxWit struct {
 
 	// other:
 	Addr string
+}
+
+////////////////
+type Block struct {
+	Raw        []byte        `json:"-"`
+	HashHex    string        `json:"hash"` // 32 bytes
+	FileIdx    int           `json:"file_idx"`
+	FileOffset int           `json:"file_offset"`
+	Height     int           `json:"height"`
+	Txs        []*Tx         `json:"tx,omitempty"`
+	Version    uint32        `json:"version"`
+	MerkleRoot string        `json:"merkle_root"`
+	BlockTime  uint32        `json:"time"`
+	Bits       uint32        `json:"bits"`
+	Nonce      uint32        `json:"nonce"`
+	Size       uint32        `json:"size"`
+	TxCnt      uint32        `json:"n_tx"`
+	ParentHex  string        `json:"prev_block"` // 32 bytes
+	NextHex    string        `json:"next_block"` // 32 bytes
+	ParseData  *ProcessBlock `json:"-"`
+}
+
+////////////////
+type ProcessBlock struct {
+	Height         int
+	UtxoMap        map[string]CalcData
+	UtxoMissingMap map[string]bool
+}
+
+type CalcData struct {
+	Value       uint64
+	ScriptType  string
+	BlockHeight int
 }

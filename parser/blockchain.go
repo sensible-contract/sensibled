@@ -1,25 +1,30 @@
-package blkparser
+package parser
 
 import (
+	"blkparser/loader"
+	"blkparser/model"
+	"blkparser/task"
+	serialTask "blkparser/task/serial"
+	"blkparser/utils"
 	"log"
 	"sync"
 )
 
 type Blockchain struct {
-	Blocks        map[string]*Block // 所有区块
-	BlocksOfChain map[string]*Block // 主链区块
-	MaxBlock      *Block
-	GenesisBlock  *Block
-	BF            *BlockFetcher
+	Blocks        map[string]*model.Block // 所有区块
+	BlocksOfChain map[string]*model.Block // 主链区块
+	MaxBlock      *model.Block
+	GenesisBlock  *model.Block
+	BlockData     *loader.BlockData
 	m             sync.Mutex
 }
 
 func NewBlockchain(path string, magic [4]byte) (bc *Blockchain, err error) {
 	bc = new(Blockchain)
-	bc.Blocks = make(map[string]*Block, 0)
-	bc.BlocksOfChain = make(map[string]*Block, 0)
+	bc.Blocks = make(map[string]*model.Block, 0)
+	bc.BlocksOfChain = make(map[string]*model.Block, 0)
 
-	bc.BF, err = NewBlockFetcher(path, magic)
+	bc.BlockData, err = loader.NewBlockData(path, magic)
 	if err != nil {
 		return nil, err
 	}
@@ -34,23 +39,24 @@ func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight int) {
 		return
 	}
 
-	blocksReady := make(chan *Block, 256)
+	blocksReady := make(chan *model.Block, 256)
 
 	go bc.InitLongestChainBlock(blocksReady, startBlockHeight, endBlockHeight)
 
 	bc.ParseLongestChainBlock(blocksReady, startBlockHeight, endBlockHeight)
 
-	ParseEnd()
+	// 最后分析执行
+	task.ParseEnd()
 }
 
 // InitLongestChainBlock 解码区块，生产者
-func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block, startBlockHeight, endBlockHeight int) {
+func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *model.Block, startBlockHeight, endBlockHeight int) {
 	var wg sync.WaitGroup
 	parsers := make(chan struct{}, 32)
 	for {
 		// 获取所有Block字节，不要求有序返回或属于主链
 		// 但由于未分析的区块需要暂存，无序遍历会增加内存消耗
-		rawblock, err := bc.BF.GetRawBlock()
+		rawblock, err := bc.BlockData.GetRawBlock()
 		if err != nil {
 			log.Printf("get block error: %v", err)
 			break
@@ -58,7 +64,7 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block, startBlockH
 		if len(rawblock) < 80 {
 			continue
 		}
-		blockHash := HashString(GetShaString(rawblock[:80]))
+		blockHash := utils.HashString(utils.GetShaString(rawblock[:80]))
 		block, ok := bc.BlocksOfChain[blockHash]
 		if !ok {
 			// 若不是主链区块则跳过
@@ -73,16 +79,21 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block, startBlockH
 
 		parsers <- struct{}{}
 		wg.Add(1)
-		go func(block *Block) {
+		go func(block *model.Block) {
 			defer wg.Done()
 
 			// 先并行分析交易
-			processBlock := &ProcessBlock{
+			processBlock := &model.ProcessBlock{
 				Height:         block.Height,
-				UtxoMap:        make(map[string]CalcData, 1),
+				UtxoMap:        make(map[string]model.CalcData, 1),
 				UtxoMissingMap: make(map[string]bool, 1),
 			}
-			txs := ParseTxsParallel(block.Raw[80:], processBlock)
+			txs := NewTxs(block.Raw[80:])
+			for idx, tx := range txs {
+				isCoinbase := (idx == 0)
+				task.ParseTxParallel(tx, isCoinbase, processBlock)
+			}
+
 			block.ParseData = processBlock
 			block.Txs = txs
 			block.Raw = nil
@@ -98,12 +109,12 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *Block, startBlockH
 }
 
 // ParseLongestChainBlock 按顺序消费解码后的区块
-func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *Block, nextBlockHeight, maxBlockHeight int) {
+func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *model.Block, nextBlockHeight, maxBlockHeight int) {
 	blocksTotal := len(bc.BlocksOfChain)
 	if maxBlockHeight < 0 || maxBlockHeight > blocksTotal {
 		maxBlockHeight = blocksTotal
 	}
-	blockParseBufferBlock := make([]*Block, maxBlockHeight)
+	blockParseBufferBlock := make([]*model.Block, maxBlockHeight)
 	for block := range blocksReady {
 		// 暂存block
 		if block.Height < maxBlockHeight {
@@ -120,7 +131,7 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *Block, nextBlockH
 			}
 
 			// 再串行分析区块
-			ParseBlockSerial(block, maxBlockHeight)
+			task.ParseBlockSerial(block, maxBlockHeight)
 
 			block.Txs = nil
 			nextBlockHeight++
@@ -133,17 +144,17 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *Block, nextBlockH
 
 func (bc *Blockchain) SkipToBlockFileIdByBlockHeight(height int) bool {
 	for idx := 0; ; idx++ {
-		if err := bc.BF.SkipTo(idx, 0); err != nil {
+		if err := bc.BlockData.SkipTo(idx, 0); err != nil {
 			skipTo := 0
 			if idx > 2 {
 				skipTo = idx - 2
 			}
-			bc.BF.SkipTo(skipTo, 0)
+			bc.BlockData.SkipTo(skipTo, 0)
 			return true
 		}
 
 		for {
-			rawblock, err := bc.BF.GetRawBlockHeader()
+			rawblock, err := bc.BlockData.GetRawBlockHeader()
 			if err != nil {
 				break
 			}
@@ -159,7 +170,7 @@ func (bc *Blockchain) SkipToBlockFileIdByBlockHeight(height int) bool {
 			if idx > 2 {
 				skipTo = idx - 2
 			}
-			bc.BF.SkipTo(skipTo, 0)
+			bc.BlockData.SkipTo(skipTo, 0)
 			return true
 		}
 	}
@@ -168,15 +179,15 @@ func (bc *Blockchain) SkipToBlockFileIdByBlockHeight(height int) bool {
 
 func (bc *Blockchain) InitLongestChainHeader() {
 	bc.LoadAllBlockHeaders(true)
-	bc.BF.HeaderFile.Close()
+	bc.BlockData.HeaderFile.Close()
 
 	idx := 0
 	for ; ; idx++ {
-		err := bc.BF.SkipTo(idx, 0)
+		err := bc.BlockData.SkipTo(idx, 0)
 		if err != nil {
 			break
 		}
-		rawblock, err := bc.BF.GetRawBlockHeader()
+		rawblock, err := bc.BlockData.GetRawBlockHeader()
 		if err != nil {
 			break
 		}
@@ -190,11 +201,11 @@ func (bc *Blockchain) InitLongestChainHeader() {
 	if idx > 0 {
 		skipTo = idx - 1
 	}
-	if err := bc.BF.SkipTo(skipTo, 0); err == nil {
+	if err := bc.BlockData.SkipTo(skipTo, 0); err == nil {
 		bc.LoadAllBlockHeaders(false)
-		bc.BF.HeaderFileWriter.Flush()
+		bc.BlockData.HeaderFileWriter.Flush()
 	}
-	bc.BF.HeaderFileA.Close()
+	bc.BlockData.HeaderFileA.Close()
 
 	bc.SetBlockHeight()
 	bc.SelectLongestChain()
@@ -209,9 +220,9 @@ func (bc *Blockchain) LoadAllBlockHeaders(loadCacheHeader bool) {
 		var rawblock []byte
 		var err error
 		if loadCacheHeader {
-			rawblock, err = bc.BF.GetCacheRawBlockHeader()
+			rawblock, err = bc.BlockData.GetCacheRawBlockHeader()
 		} else {
-			rawblock, err = bc.BF.GetRawBlockHeader()
+			rawblock, err = bc.BlockData.GetRawBlockHeader()
 		}
 		if err != nil {
 			// log.Printf("no more block header: %v", err)
@@ -231,7 +242,7 @@ func (bc *Blockchain) LoadAllBlockHeaders(loadCacheHeader bool) {
 			if _, ok := bc.Blocks[block.HashHex]; !ok {
 				bc.Blocks[block.HashHex] = block
 				if !loadCacheHeader {
-					bc.BF.SetCacheRawBlockHeader(rawblock)
+					bc.BlockData.SetCacheRawBlockHeader(rawblock)
 				}
 			}
 			bc.m.Unlock()
@@ -239,7 +250,8 @@ func (bc *Blockchain) LoadAllBlockHeaders(loadCacheHeader bool) {
 			<-parsers
 		}(rawblock)
 
-		ParseBlockSpeed(0, idx, 0)
+		// header speed
+		serialTask.ParseBlockSpeed(0, idx, 0)
 	}
 	wg.Wait()
 }

@@ -1,4 +1,4 @@
-package blkparser
+package utils
 
 import (
 	"crypto/sha256"

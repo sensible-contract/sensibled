@@ -1,10 +1,11 @@
-package blkparser
+package serial
 
 import (
+	"blkparser/model"
 	"log"
 )
 
-func CountWitTxsInBlock(txs []*Tx) int {
+func CountWitTxsInBlock(txs []*model.Tx) int {
 	count := 0
 	for _, tx := range txs {
 		if tx.WitOffset > 0 {
@@ -15,7 +16,7 @@ func CountWitTxsInBlock(txs []*Tx) int {
 }
 
 // CountValueOfTxsInBlock 统计tx中所有
-func CountValueOfTxsInBlock(txs []*Tx) uint64 {
+func CountValueOfTxsInBlock(txs []*model.Tx) uint64 {
 	allValue := uint64(0)
 	for _, tx := range txs {
 		for _, output := range tx.TxOuts {
@@ -26,7 +27,7 @@ func CountValueOfTxsInBlock(txs []*Tx) uint64 {
 }
 
 // CountZeroValueOfTxsInBlock 统计存在0输出的tx数量
-func CountZeroValueOfTxsInBlock(txs []*Tx) uint64 {
+func CountZeroValueOfTxsInBlock(txs []*model.Tx) uint64 {
 	zeroCount := uint64(0)
 	for _, tx := range txs {
 		hasZero := false
@@ -43,7 +44,7 @@ func CountZeroValueOfTxsInBlock(txs []*Tx) uint64 {
 	return zeroCount
 }
 
-func CheckTxsOrder(txs []*Tx) int {
+func CheckTxsOrder(txs []*model.Tx) int {
 	allTx := make(map[string]bool)
 	parsedTx := make(map[string]bool)
 	for _, tx := range txs {

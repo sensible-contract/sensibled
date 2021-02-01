@@ -1,4 +1,4 @@
-package blkparser
+package loader
 
 import (
 	"bufio"
@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-type BlockFetcher struct {
+type BlockData struct {
 	Path             string
 	Magic            [4]byte
 	CurrentFile      *os.File
@@ -22,8 +22,8 @@ type BlockFetcher struct {
 	m                sync.Mutex
 }
 
-func NewBlockFetcher(path string, magic [4]byte) (bf *BlockFetcher, err error) {
-	bf = new(BlockFetcher)
+func NewBlockData(path string, magic [4]byte) (bf *BlockData, err error) {
+	bf = new(BlockData)
 	bf.Path = path
 	bf.Magic = magic
 	bf.CurrentId = 0
@@ -52,7 +52,7 @@ func NewBlockFetcher(path string, magic [4]byte) (bf *BlockFetcher, err error) {
 	return
 }
 
-func (bf *BlockFetcher) GetCacheRawBlockHeader() (rawblockheader []byte, err error) {
+func (bf *BlockData) GetCacheRawBlockHeader() (rawblockheader []byte, err error) {
 	rawblockheader = make([]byte, 80)
 	_, err = bf.HeaderFile.Read(rawblockheader[:])
 	if err != nil {
@@ -61,7 +61,7 @@ func (bf *BlockFetcher) GetCacheRawBlockHeader() (rawblockheader []byte, err err
 	return
 }
 
-func (bf *BlockFetcher) SetCacheRawBlockHeader(rawblockheader []byte) (err error) {
+func (bf *BlockData) SetCacheRawBlockHeader(rawblockheader []byte) (err error) {
 	_, err = bf.HeaderFileWriter.Write(rawblockheader[:])
 	if err != nil {
 		return
@@ -70,15 +70,15 @@ func (bf *BlockFetcher) SetCacheRawBlockHeader(rawblockheader []byte) (err error
 }
 
 // GetRawBlockHeader
-func (bf *BlockFetcher) GetRawBlockHeader() (rawblockheader []byte, err error) {
+func (bf *BlockData) GetRawBlockHeader() (rawblockheader []byte, err error) {
 	return bf.NextRawBlockData(true)
 }
 
-func (bf *BlockFetcher) GetRawBlock() (rawblock []byte, err error) {
+func (bf *BlockData) GetRawBlock() (rawblock []byte, err error) {
 	return bf.NextRawBlockData(false)
 }
 
-func (bf *BlockFetcher) NextRawBlockData(skipTxs bool) (rawblock []byte, err error) {
+func (bf *BlockData) NextRawBlockData(skipTxs bool) (rawblock []byte, err error) {
 	bf.m.Lock()
 	defer bf.m.Unlock()
 
@@ -98,7 +98,7 @@ func (bf *BlockFetcher) NextRawBlockData(skipTxs bool) (rawblock []byte, err err
 	return rawblock, nil
 }
 
-func (bf *BlockFetcher) FetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
+func (bf *BlockData) FetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
 	buf := [4]byte{}
 	_, err = bf.CurrentFile.Read(buf[:])
 	if err != nil {
@@ -143,7 +143,7 @@ func (bf *BlockFetcher) FetchNextBlock(skipTxs bool) (rawblock []byte, err error
 
 // Convenience method to skip directly to the given blkfile / offset,
 // you must take care of the height
-func (bf *BlockFetcher) SkipTo(blkId int, offset int64) (err error) {
+func (bf *BlockData) SkipTo(blkId int, offset int64) (err error) {
 	bf.m.Lock()
 	defer bf.m.Unlock()
 
