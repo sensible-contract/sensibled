@@ -72,6 +72,7 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *model.Block, start
 			// 若不是主链区块则跳过
 			continue
 		}
+		// 不到高度的区块跳过
 		if block.Height < startBlockHeight {
 			continue
 		}
@@ -103,12 +104,13 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *model.Block, start
 			}
 			block.ParseData = processBlock
 
-			task.ParseBlockParallel(block)
+			// 超过高度的不分析
+			if block.Height < endBlockHeight {
+				task.ParseBlockParallel(block)
+			}
 
 			block.Raw = nil
-
 			blocksReady <- block
-
 			<-parsers
 		}(block)
 	}
