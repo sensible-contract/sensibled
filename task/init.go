@@ -5,44 +5,29 @@ import (
 	"blkparser/task/parallel"
 	"blkparser/task/serial"
 	"blkparser/utils"
-	"encoding/binary"
-	"encoding/hex"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 // 先并行分析交易tx，不同区块并行，同区块内串行
-func ParseTxParallel(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
-	key := make([]byte, 36)
-	copy(key, tx.Hash)
-	for idx, output := range tx.TxOuts {
-		if output.Value == 0 {
-			continue
-		}
+func ParseBlockParallel(block *model.Block) {
+	for idx, tx := range block.Txs {
+		isCoinbase := idx == 0
+		parallel.ParseTxFirst(tx, isCoinbase, block.ParseData)
 
-		binary.LittleEndian.PutUint32(key[32:], uint32(idx))
-		output.OutpointKey = string(key)
-
-		output.LockingScriptType = parallel.GetLockingScriptType(output.Pkscript)
-		output.LockingScriptTypeHex = hex.EncodeToString(output.LockingScriptType)
-
-		// test locking script
-		output.LockingScriptMatch = true
-
-		// if isLockingScriptOnlyEqual(output.Pkscript) {
-		// 	output.LockingScriptMatch = true
-		// }
+		// parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
+		// parallel.ParseUtxoParallel(tx, block.ParseData)
 	}
 
-	parallel.ParseTx(tx, isCoinbase, block)
+	serial.DumpBlockData(block)
 }
 
 // ParseBlockSerial 再串行分析区块
 func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 	serial.ParseBlockSpeed(len(block.Txs), block.Height, maxBlockHeight)
 
-	serial.ParseBlock(block)
+	// serial.ParseBlock(block)
 
 	block.ParseData = nil
 	block.Txs = nil
@@ -50,8 +35,7 @@ func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 
 // ParseEnd 最后分析执行
 func ParseEnd() {
-	defer utils.Log.Sync()
-	defer utils.LogErr.Sync()
+	defer utils.SyncLog()
 
 	loggerMap, _ := zap.Config{
 		Encoding:    "console",                                // 配置编码方式（json 或 console）

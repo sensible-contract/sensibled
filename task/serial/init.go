@@ -21,13 +21,17 @@ func init() {
 	// loadUtxoFromGobFile()
 }
 
-// ParseBlock 再串行分析区块
-func ParseBlock(block *model.Block) {
+func DumpBlockData(block *model.Block) {
 	dumpBlock(block)
 	dumpBlockTx(block)
-	dumpBlockTxInfo(block)
+	dumpBlockTxOutputInfo(block)
+	dumpBlockTxInputInfo(block)
+	// dumpBlockTxInfo(block)
+	// dumpLockingScriptType(block)
+}
 
-	dumpLockingScriptType(block)
+// ParseBlock 再串行分析区块
+func ParseBlock(block *model.Block) {
 	// parseBlockCount(block)
 	// parseUtxoSerial(block.ParseData)
 }

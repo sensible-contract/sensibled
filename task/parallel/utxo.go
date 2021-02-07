@@ -7,9 +7,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// parseUtxoParallel utxo 信息
-func parseUtxoParallel(tx *model.Tx, block *model.ProcessBlock) {
-	for idx, output := range tx.TxOuts {
+// ParseUtxoParallel utxo 信息
+func ParseUtxoParallel(tx *model.Tx, block *model.ProcessBlock) {
+	for _, output := range tx.TxOuts {
 		if output.Value == 0 || !output.LockingScriptMatch {
 			continue
 		}
@@ -24,34 +24,40 @@ func parseUtxoParallel(tx *model.Tx, block *model.ProcessBlock) {
 			}
 		}
 
-		utils.Log.Debug("utxo",
-			zap.String("tx", tx.HashHex),
-			zap.Int("vout", idx),
-			zap.Uint64("v", output.Value),
-			zap.String("type", output.LockingScriptTypeHex),
+		utils.Log.Info("tx-output-info",
+			zap.Object("utxoPoint", output.Outpoint),
+			zap.Object("address", output.AddressPkh), // 20 byte
+			zap.Object("genesis", output.GenesisId),  // 20 byte
+			zap.Uint64("value", output.Value),
+			zap.Object("scriptType", output.LockingScriptType),
+			zap.Object("script", output.Pkscript),
 		)
 	}
 }
 
-// parseTxoSpendByTxParallel utxo被使用
-func parseTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
+// ParseTxoSpendByTxParallel utxo被使用
+func ParseTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
+	for _, input := range tx.TxIns {
+		utils.Log.Info("tx-input-info",
+			zap.Object("txidIdx", input.InputPoint),
+			zap.Object("utxoPoint", input.InputOutpoint),
+			zap.Object("script", input.ScriptSig),
+		)
+	}
 	if isCoinbase {
 		return
 	}
-	for idx, input := range tx.TxIns {
+	for _, input := range tx.TxIns {
 		if _, ok := block.UtxoMap[input.InputOutpointKey]; !ok {
 			block.UtxoMissingMap[input.InputOutpointKey] = true
 		} else {
 			delete(block.UtxoMap, input.InputOutpointKey)
 		}
 
-		utils.Log.Debug("spend",
-			zap.String("tx", input.InputHashHex),
-			zap.Uint32("vout", input.InputVout),
-			zap.Int("idx", idx),
+		utils.Log.Info("tx-output-info",
+			zap.Object("utxoPoint", input.InputOutpoint),
+			zap.Object("spendByTxidIdx", input.InputPoint),
+			zap.Bool("utxo", false), // spent
 		)
 	}
-	utils.Log.Debug("by",
-		zap.String("tx", tx.HashHex),
-	)
 }

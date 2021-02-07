@@ -13,6 +13,7 @@ import (
 type Blockchain struct {
 	Blocks        map[string]*model.Block // 所有区块
 	BlocksOfChain map[string]*model.Block // 主链区块
+	ParsedBlocks  map[string]bool         // 主链已分析区块
 	MaxBlock      *model.Block
 	GenesisBlock  *model.Block
 	BlockData     *loader.BlockData
@@ -23,6 +24,7 @@ func NewBlockchain(path string, magic [4]byte) (bc *Blockchain, err error) {
 	bc = new(Blockchain)
 	bc.Blocks = make(map[string]*model.Block, 0)
 	bc.BlocksOfChain = make(map[string]*model.Block, 0)
+	bc.ParsedBlocks = make(map[string]bool, 0)
 
 	bc.BlockData, err = loader.NewBlockData(path, magic)
 	if err != nil {
@@ -74,6 +76,12 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *model.Block, start
 			continue
 		}
 
+		// 若已分析过则跳过
+		if ok := bc.ParsedBlocks[blockHash]; ok {
+			continue
+		}
+		bc.ParsedBlocks[blockHash] = true
+
 		block.Raw = rawblock
 		block.Size = uint32(len(rawblock))
 
@@ -83,19 +91,20 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *model.Block, start
 			defer wg.Done()
 
 			// 先并行分析交易
+			txs := NewTxs(block.Raw[80:])
+
+			block.TxCnt = len(txs)
+			block.Txs = txs
+
 			processBlock := &model.ProcessBlock{
 				Height:         block.Height,
 				UtxoMap:        make(map[string]model.CalcData, 1),
 				UtxoMissingMap: make(map[string]bool, 1),
 			}
-			txs := NewTxs(block.Raw[80:])
-			for idx, tx := range txs {
-				isCoinbase := (idx == 0)
-				task.ParseTxParallel(tx, isCoinbase, processBlock)
-			}
-
 			block.ParseData = processBlock
-			block.Txs = txs
+
+			task.ParseBlockParallel(block)
+
 			block.Raw = nil
 
 			blocksReady <- block

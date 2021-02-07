@@ -7,7 +7,7 @@ import (
 
 type Tx struct {
 	HashHex   string // 32
-	Hash      []byte // 32
+	Hash      Bytes  // 32
 	Size      uint32
 	WitOffset uint
 	LockTime  uint32
@@ -21,35 +21,49 @@ type Tx struct {
 
 type TxIn struct {
 	InputHashHex string // 32
-	InputHash    []byte // 32
+	InputHash    Bytes  // 32
 	InputVout    uint32
-	ScriptSig    []byte
+	ScriptSig    Bytes
 	Sequence     uint32
 
 	// other:
 	InputOutpointKey string // 32 + 4
+	InputOutpoint    Bytes  // 32 + 4
+	InputPoint       Bytes  // 32 + 4
 }
 
 func (t *TxIn) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("t", t.InputHashHex)
 	enc.AddUint32("i", t.InputVout)
+	enc.AddObject("s", t.ScriptSig)
+	return nil
+}
+
+type Bytes []byte
+
+func (b Bytes) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddBinary("$binary", b)
+	enc.AddString("$type", "05")
 	return nil
 }
 
 type TxOut struct {
 	Value    uint64
-	Pkscript []byte
+	Pkscript Bytes
 
 	// other:
-	// Addr     string
+	AddressPkh           Bytes
+	GenesisId            Bytes
+	Outpoint             Bytes  // 32 + 4
 	OutpointKey          string // 32 + 4
-	LockingScriptType    []byte
+	LockingScriptType    Bytes
 	LockingScriptTypeHex string
 	LockingScriptMatch   bool
 }
 
 func (t *TxOut) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddUint64("v", t.Value)
+	enc.AddObject("s", t.Pkscript)
 	return nil
 }
 
@@ -84,6 +98,7 @@ type TxWit struct {
 ////////////////
 type Block struct {
 	Raw        []byte        `json:"-"`
+	Hash       Bytes         `json:"-"`    // 32 bytes
 	HashHex    string        `json:"hash"` // 32 bytes
 	FileIdx    int           `json:"file_idx"`
 	FileOffset int           `json:"file_offset"`
@@ -95,7 +110,8 @@ type Block struct {
 	Bits       uint32        `json:"bits"`
 	Nonce      uint32        `json:"nonce"`
 	Size       uint32        `json:"size"`
-	TxCnt      uint32        `json:"n_tx"`
+	TxCnt      int           `json:"n_tx"`
+	Parent     Bytes         `json:"-"`          // 32 bytes
 	ParentHex  string        `json:"prev_block"` // 32 bytes
 	NextHex    string        `json:"next_block"` // 32 bytes
 	ParseData  *ProcessBlock `json:"-"`

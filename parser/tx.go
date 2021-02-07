@@ -52,7 +52,6 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 	for i := range tx.TxIns {
 		tx.TxIns[i], txoffset = NewTxIn(rawtx[offset:])
 		offset += txoffset
-
 	}
 
 	txoutcnt, txoutcntsize := utils.DecodeVarInt(rawtx[offset:])
@@ -104,7 +103,7 @@ func NewTxIn(txinraw []byte) (txin *model.TxIn, offset uint) {
 	scriptsig, scriptsigsize := utils.DecodeVarInt(txinraw[offset:])
 	offset += scriptsigsize
 
-	// txin.ScriptSig = txinraw[offset : offset+scriptsig]
+	txin.ScriptSig = txinraw[offset : offset+scriptsig]
 	offset += scriptsig
 
 	txin.Sequence = binary.LittleEndian.Uint32(txinraw[offset : offset+4])
@@ -112,6 +111,7 @@ func NewTxIn(txinraw []byte) (txin *model.TxIn, offset uint) {
 
 	// process Parallel
 	txin.InputOutpointKey = string(txinraw[0:36])
+	txin.InputOutpoint = txinraw[0:36]
 	return
 }
 
@@ -123,20 +123,10 @@ func NewTxOut(txoutraw []byte) (txout *model.TxOut, offset uint) {
 	pkscript, pkscriptsize := utils.DecodeVarInt(txoutraw[offset:])
 	offset += pkscriptsize
 
+	// txout.Pkscript = make([]byte, pkscript)
+	// copy(txout.Pkscript, txoutraw[offset:offset+pkscript])
 	txout.Pkscript = txoutraw[offset : offset+pkscript]
 	offset += pkscript
 
 	return
-
-	// address
-	// _, addrhash, _, err := txscript.ExtractPkScriptAddrs(txout.Pkscript, &chaincfg.MainNetParams)
-	// if err != nil {
-	// 	return
-	// }
-	// if len(addrhash) != 0 {
-	// 	txout.Addr = addrhash[0].EncodeAddress()
-	// } else {
-	// 	txout.Addr = ""
-	// }
-	// return
 }
