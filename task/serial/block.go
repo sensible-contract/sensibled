@@ -41,6 +41,7 @@ func dumpBlockTxInputInfo(block *model.Block) {
 				zap.Binary("txidIdx", input.InputPoint),
 				zap.Binary("utxoPoint", input.InputOutpoint),
 				zap.ByteString("script", input.ScriptSig),
+				zap.Uint32("height", uint32(block.Height)),
 			)
 		}
 
@@ -53,7 +54,8 @@ func dumpBlockTxInputInfo(block *model.Block) {
 			utils.LogTxOutSpent.Info("tx-utxo-spent",
 				zap.Binary("utxoPoint", input.InputOutpoint),
 				zap.Binary("spendByTxidIdx", input.InputPoint),
-				zap.Bool("utxo", false), // spent
+				zap.Uint32("height", uint32(block.Height)),
+				// zap.Bool("utxo", false), // spent
 			)
 		}
 	}
@@ -63,6 +65,10 @@ func dumpBlockTxInputInfo(block *model.Block) {
 func dumpBlockTxOutputInfo(block *model.Block) {
 	for _, tx := range block.Txs {
 		for _, output := range tx.TxOuts {
+			// if output.Value == 0 || !output.LockingScriptMatch {
+			// 	continue
+			// }
+
 			utils.LogTxOut.Info("tx-utxo",
 				zap.Binary("utxoPoint", output.Outpoint), // 36 byte
 				zap.Binary("address", output.AddressPkh), // 20 byte
@@ -70,7 +76,7 @@ func dumpBlockTxOutputInfo(block *model.Block) {
 				zap.Uint64("value", output.Value),
 				zap.ByteString("scriptType", output.LockingScriptType),
 				zap.ByteString("script", output.Pkscript),
-				zap.Bool("utxo", true), // unspent
+				zap.Uint32("height", uint32(block.Height)),
 			)
 		}
 	}

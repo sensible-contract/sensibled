@@ -20,9 +20,9 @@ func init() {
 
 func main() {
 	blockchain, err := parser.NewBlockchain(
-		"./blocks-bsv", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin-sv
-	// "./blocks", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin
-	// "/data/bitcoin-sv-blocks/blocks", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin-sv
+		// "./blocks-bsv", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin-sv
+		// "./blocks", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin
+		"/data/bitcoin-sv-blocks/blocks", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin-sv
 	// "./blocks-bsv-test", [4]byte{0x0b, 0x11, 0x09, 0x07}) // bsv-test
 
 	if err != nil {

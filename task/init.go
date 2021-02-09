@@ -28,6 +28,7 @@ func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 	serial.ParseBlockSpeed(len(block.Txs), block.Height, maxBlockHeight)
 
 	// serial.ParseBlock(block)
+	// serial.DumpBlockData(block)
 
 	block.ParseData = nil
 	block.Txs = nil

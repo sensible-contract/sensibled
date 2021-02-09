@@ -54,7 +54,7 @@ func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight int) {
 // InitLongestChainBlock 解码区块，生产者
 func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *model.Block, startBlockHeight, endBlockHeight int) {
 	var wg sync.WaitGroup
-	parsers := make(chan struct{}, 32)
+	parsers := make(chan struct{}, 28)
 	for {
 		// 获取所有Block字节，不要求有序返回或属于主链
 		// 但由于未分析的区块需要暂存，无序遍历会增加内存消耗

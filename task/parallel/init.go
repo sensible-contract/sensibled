@@ -9,22 +9,25 @@ import (
 
 // ParseTx 先并行分析交易tx，不同区块并行，同区块内串行
 func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
-	key := make([]byte, 36)
-	copy(key, tx.Hash)
 
 	for idx, input := range tx.TxIns {
+		key := make([]byte, 36)
+		copy(key, tx.Hash)
 		binary.LittleEndian.PutUint32(key[32:], uint32(idx))
-		input.InputPoint = key[:]
+		input.InputPoint = key
 	}
 
 	for idx, output := range tx.TxOuts {
-		if output.Value == 0 {
-			continue
-		}
+		// if output.Value == 0 {
+		// 	continue
+		// }
+
+		key := make([]byte, 36)
+		copy(key, tx.Hash)
 
 		binary.LittleEndian.PutUint32(key[32:], uint32(idx))
 		output.OutpointKey = string(key)
-		output.Outpoint = key[:]
+		output.Outpoint = key
 
 		output.LockingScriptType = script.GetLockingScriptType(output.Pkscript)
 		output.LockingScriptTypeHex = hex.EncodeToString(output.LockingScriptType)
