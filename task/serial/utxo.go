@@ -9,6 +9,18 @@ var (
 
 // parseUtxoSerial utxo 信息
 func parseUtxoSerial(block *model.ProcessBlock) {
+	insideTxo := make([]string, len(block.UtxoMissingMap))
+	for key := range block.UtxoMissingMap {
+		if _, ok := block.UtxoMap[key]; !ok {
+			continue
+		}
+		insideTxo = append(insideTxo, key)
+	}
+	for _, key := range insideTxo {
+		delete(block.UtxoMap, key)
+		delete(block.UtxoMissingMap, key)
+	}
+
 	lastUtxoMapAddCount += len(block.UtxoMap)
 	lastUtxoMapRemoveCount += len(block.UtxoMissingMap)
 

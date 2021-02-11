@@ -10,25 +10,25 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// 先并行分析交易tx，不同区块并行，同区块内串行
+// ParseBlockParallel 先并行分析区块，不同区块并行，同区块内串行
 func ParseBlockParallel(block *model.Block) {
 	for idx, tx := range block.Txs {
 		isCoinbase := idx == 0
 		parallel.ParseTxFirst(tx, isCoinbase, block.ParseData)
 
-		// parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
-		// parallel.ParseUtxoParallel(tx, block.ParseData)
+		parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
+		parallel.ParseUtxoParallel(tx, block.ParseData)
 	}
 
-	serial.DumpBlockData(block)
+	// serial.DumpBlockData(block)
 }
 
 // ParseBlockSerial 再串行分析区块
 func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 	serial.ParseBlockSpeed(len(block.Txs), block.Height, maxBlockHeight)
 
-	// serial.ParseBlock(block)
-	// serial.DumpBlockData(block)
+	serial.DumpBlockData(block)
+	serial.ParseBlock(block)
 
 	block.ParseData = nil
 	block.Txs = nil

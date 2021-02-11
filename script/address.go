@@ -8,7 +8,9 @@ func ExtractPkScriptAddressPkh(Pkscript, scriptType []byte) (genesisId, addressP
 	// }
 
 	if isPubkeyHash(scriptType) {
-		return empty, Pkscript[3:23]
+		addressPkh = make([]byte, 20)
+		copy(addressPkh, Pkscript[3:23])
+		return empty, addressPkh
 	}
 
 	// if isMultiSig(scriptType) {

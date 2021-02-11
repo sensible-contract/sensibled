@@ -17,7 +17,7 @@ func parseEndDumpUtxo(log *zap.Logger) {
 			zap.String("tx", utils.HashString(key[:32])),
 			zap.Uint32("i", binary.LittleEndian.Uint32(key[32:])),
 			zap.Uint64("v", data.Value),
-			zap.String("type", data.ScriptType),
+			zap.Object("type", data.ScriptType),
 			zap.Int("n", len(data.ScriptType)),
 		)
 	}

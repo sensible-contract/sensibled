@@ -22,10 +22,11 @@ func init() {
 }
 
 func DumpBlockData(block *model.Block) {
-	dumpBlock(block)
-	dumpBlockTx(block)
-	dumpBlockTxOutputInfo(block)
+	// dumpBlock(block)
+	// dumpBlockTx(block)
+	// dumpBlockTxOutputInfo(block)
 	dumpBlockTxInputInfo(block)
+
 	// dumpBlockTxInfo(block)
 	// dumpLockingScriptType(block)
 }
@@ -33,7 +34,8 @@ func DumpBlockData(block *model.Block) {
 // ParseBlock 再串行分析区块
 func ParseBlock(block *model.Block) {
 	// parseBlockCount(block)
-	// parseUtxoSerial(block.ParseData)
+
+	parseUtxoSerial(block.ParseData)
 }
 
 // End 最后分析执行
