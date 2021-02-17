@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func parseBlockCount(block *model.Block) {
+func ParseBlockCount(block *model.Block) {
 	txs := block.Txs
 
 	// 检查一些统计项

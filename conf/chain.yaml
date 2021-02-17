@@ -1,0 +1,12 @@
+# # btc
+# blocks: "./blocks"
+# magic: "f9beb4d9"
+
+# # bsv-test
+# blocks: "./blocks-bsv-test"
+# magic: "0b110907"
+
+# bsv
+# "./blocks-bsv"
+blocks: "/data/bitcoin-sv-blocks/blocks"
+magic: "f9beb4d9"

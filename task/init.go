@@ -20,6 +20,7 @@ func ParseBlockParallel(block *model.Block) {
 		parallel.ParseUtxoParallel(tx, block.ParseData)
 	}
 
+	// DumpBlockData
 	// serial.DumpBlockData(block)
 }
 
@@ -27,11 +28,25 @@ func ParseBlockParallel(block *model.Block) {
 func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 	serial.ParseBlockSpeed(len(block.Txs), block.Height, maxBlockHeight)
 
-	serial.DumpBlockData(block)
-	serial.ParseBlock(block)
+	// DumpBlockData
+	// serial.DumpBlock(block)
+	// serial.DumpBlockTx(block)
+	// serial.DumpBlockTxOutputInfo(block)
+	serial.DumpBlockTxInputInfo(block)
+
+	// serial.DumpBlockTxInfo(block)
+	// serial.DumpLockingScriptType(block)
+
+	// ParseBlock
+	// serial.ParseBlockCount(block)
+	serial.ParseUtxoSerial(block.ParseData)
 
 	block.ParseData = nil
 	block.Txs = nil
+}
+
+func init() {
+	// serial.LoadUtxoFromGobFile()
 }
 
 // ParseEnd 最后分析执行
@@ -45,5 +60,7 @@ func ParseEnd() {
 	}.Build()
 	defer loggerMap.Sync()
 
-	serial.End(loggerMap)
+	// serial.DumpUtxoToGobFile()
+	// serial.ParseEndDumpUtxo(loggerMap)
+	// serial.ParseEndDumpScriptType(loggerMap)
 }

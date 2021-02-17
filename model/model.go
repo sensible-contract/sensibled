@@ -97,24 +97,24 @@ type TxWit struct {
 
 ////////////////
 type Block struct {
-	Raw        []byte        `json:"-"`
-	Hash       Bytes         `json:"-"`    // 32 bytes
-	HashHex    string        `json:"hash"` // 32 bytes
-	FileIdx    int           `json:"file_idx"`
-	FileOffset int           `json:"file_offset"`
-	Height     int           `json:"height"`
-	Txs        []*Tx         `json:"tx,omitempty"`
-	Version    uint32        `json:"version"`
-	MerkleRoot string        `json:"merkle_root"`
-	BlockTime  uint32        `json:"time"`
-	Bits       uint32        `json:"bits"`
-	Nonce      uint32        `json:"nonce"`
-	Size       uint32        `json:"size"`
-	TxCnt      int           `json:"n_tx"`
-	Parent     Bytes         `json:"-"`          // 32 bytes
-	ParentHex  string        `json:"prev_block"` // 32 bytes
-	NextHex    string        `json:"next_block"` // 32 bytes
-	ParseData  *ProcessBlock `json:"-"`
+	Raw        []byte
+	Hash       Bytes  // 32 bytes
+	HashHex    string // 32 bytes
+	FileIdx    int
+	FileOffset int
+	Height     int
+	Txs        []*Tx
+	Version    uint32
+	MerkleRoot string
+	BlockTime  uint32
+	Bits       uint32
+	Nonce      uint32
+	Size       uint32
+	TxCnt      int
+	Parent     Bytes  // 32 bytes
+	ParentHex  string // 32 bytes
+	NextHex    string // 32 bytes
+	ParseData  *ProcessBlock
 }
 
 ////////////////

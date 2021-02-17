@@ -12,7 +12,7 @@ import (
 
 type BlockData struct {
 	Path             string
-	Magic            [4]byte
+	Magic            []byte
 	CurrentFile      *os.File
 	HeaderFile       *os.File
 	HeaderFileA      *os.File
@@ -22,7 +22,7 @@ type BlockData struct {
 	m                sync.Mutex
 }
 
-func NewBlockData(path string, magic [4]byte) (bf *BlockData, err error) {
+func NewBlockData(path string, magic []byte) (bf *BlockData, err error) {
 	bf = new(BlockData)
 	bf.Path = path
 	bf.Magic = magic
@@ -107,7 +107,7 @@ func (bf *BlockData) FetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
 	}
 	bf.Offset += 4
 
-	if !bytes.Equal(buf[:], bf.Magic[:]) {
+	if !bytes.Equal(buf[:], bf.Magic) {
 		err = errors.New("Bad magic")
 		// log.Printf("read blk%d[%d] failed: %v, %v != %v", bf.CurrentId, bf.Offset, err, buf[:], bf.Magic[:])
 		return

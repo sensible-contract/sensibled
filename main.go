@@ -4,27 +4,42 @@ import (
 	"blkparser/parser"
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
-var startBlockHeight, endBlockHeight int
+var (
+	startBlockHeight int
+	endBlockHeight   int
+	blocksPath       string
+	blockMagic       string
+)
 
 func init() {
 	flag.IntVar(&startBlockHeight, "start", 0, "start block height")
 	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
 	flag.Parse()
+
+	viper.SetConfigFile("conf/chain.yaml")
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		} else {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		}
+	}
+
+	blocksPath = viper.GetString("blocks")
+	blockMagic = viper.GetString("magic")
 }
 
 func main() {
-	blockchain, err := parser.NewBlockchain(
-		// "./blocks-bsv", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin-sv
-		// "./blocks", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin
-		"/data/bitcoin-sv-blocks/blocks", [4]byte{0xf9, 0xbe, 0xb4, 0xd9}) // bitcoin-sv
-	// "./blocks-bsv-test", [4]byte{0x0b, 0x11, 0x09, 0x07}) // bsv-test
-
+	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic)
 	if err != nil {
 		log.Printf("init chain error: %v", err)
 		return
@@ -32,7 +47,6 @@ func main() {
 
 	server := &http.Server{Addr: "0.0.0.0:8080", Handler: nil}
 	go func() {
-
 		blockchain.ParseLongestChain(startBlockHeight, endBlockHeight)
 		log.Printf("finished")
 

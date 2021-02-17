@@ -7,8 +7,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// dumpBlock block id
-func dumpBlock(block *model.Block) {
+// DumpBlock block id
+func DumpBlock(block *model.Block) {
 	utils.LogBlk.Info("blk-list",
 		zap.Uint32("height", uint32(block.Height)),
 		zap.Binary("blkid", block.Hash),
@@ -18,8 +18,8 @@ func dumpBlock(block *model.Block) {
 	)
 }
 
-// dumpBlockTx all tx in block height
-func dumpBlockTx(block *model.Block) {
+// DumpBlockTx all tx in block height
+func DumpBlockTx(block *model.Block) {
 	for idx, tx := range block.Txs {
 		utils.LogTx.Info("tx-list",
 			zap.Binary("txid", tx.Hash),
@@ -33,8 +33,8 @@ func dumpBlockTx(block *model.Block) {
 	}
 }
 
-// dumpBlockTxInputInfo all tx input info
-func dumpBlockTxInputInfo(block *model.Block) {
+// DumpBlockTxInputInfo all tx input info
+func DumpBlockTxInputInfo(block *model.Block) {
 	var commonObjData *model.CalcData = &model.CalcData{
 		GenesisId:  make(model.Bytes, 20),
 		AddressPkh: make(model.Bytes, 20),
@@ -75,25 +75,11 @@ func dumpBlockTxInputInfo(block *model.Block) {
 				zap.ByteString("scriptType", objData.ScriptType),
 			)
 		}
-
-		continue
-		if isCoinbase {
-			continue
-		}
-
-		for _, input := range tx.TxIns {
-			utils.LogTxOutSpent.Info("tx-utxo-spent",
-				zap.Binary("utxoPoint", input.InputOutpoint),
-				zap.Binary("spendByTxidIdx", input.InputPoint),
-				zap.Uint32("height", uint32(block.Height)),
-				// zap.Bool("utxo", false), // spent
-			)
-		}
 	}
 }
 
-// dumpBlockTxOutputInfo all tx output info
-func dumpBlockTxOutputInfo(block *model.Block) {
+// DumpBlockTxOutputInfo all tx output info
+func DumpBlockTxOutputInfo(block *model.Block) {
 	for _, tx := range block.Txs {
 		for _, output := range tx.TxOuts {
 			// if output.Value == 0 || !output.LockingScriptMatch {
@@ -110,20 +96,5 @@ func dumpBlockTxOutputInfo(block *model.Block) {
 				zap.Uint32("height", uint32(block.Height)),
 			)
 		}
-	}
-}
-
-// dumpBlockTxInfo all tx info
-func dumpBlockTxInfo(block *model.Block) {
-	for _, tx := range block.Txs {
-		utils.Log.Info("tx-info",
-			zap.Binary("_id", tx.Hash),
-			// zap.String("t", tx.HashHex),
-			zap.Uint32("i", tx.TxInCnt),
-			zap.Uint32("o", tx.TxOutCnt),
-			zap.Array("in", tx.TxIns),
-			zap.Array("out", tx.TxOuts),
-			// zap.Int("h", block.Height),
-		)
 	}
 }

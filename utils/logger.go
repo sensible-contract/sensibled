@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"fmt"
+
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -18,22 +21,27 @@ var (
 )
 
 func init() {
+	viper.SetConfigFile("conf/dump.yaml")
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		} else {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		}
+	}
+
+	dumpEncoding := viper.GetString("encoding")
+	logFile := viper.GetString("logFile")
+	pathPrefix := viper.GetString("pathPrefix")
+	pathSurfix := viper.GetString("pathSurfix")
+
 	zap.RegisterEncoder("row-binary", constructRowBinaryEncoder)
 	zap.RegisterEncoder("row-binary-debug", constructRowBinaryEncoderDebug)
-	// dumpEncoding := "console"
-	// dumpEncoding := "row-binary"
-	dumpEncoding := "row-binary"
-
-	// pathPrefix := "/home/jie/astudy/clickhouse"
-	pathPrefix := "/data/"
-
-	// pathSurfix := ".mgo"
-	pathSurfix := ".ch"
 
 	Log, _ = zap.Config{
 		Encoding:    "console",
 		Level:       zap.NewAtomicLevelAt(zapcore.InfoLevel),
-		OutputPaths: []string{pathPrefix + "/output.log"},
+		OutputPaths: []string{logFile},
 	}.Build()
 
 	LogErr, _ = zap.Config{

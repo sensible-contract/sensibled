@@ -19,18 +19,6 @@ func ExtractPkScriptGenesisIdAndAddressPkh(pkscript []byte) (genesisId, addressP
 		return empty, empty
 	}
 
-	// switch pkscript[scriptLen-8-4] {
-	// case 0:
-	// 	genesisOffset = genesisOffset
-	// 	addressOffset = addressOffset - 40
-	// case 1:
-	// 	genesisOffset = genesisOffset - 20
-	// 	addressOffset = addressOffset - 30
-	// default:
-	// 	genesisOffset = genesisOffset - 20
-	// 	addressOffset = addressOffset - 20
-	// }
-
 	genesisId = make([]byte, 20)
 	addressPkh = make([]byte, 20)
 	copy(genesisId, pkscript[genesisOffset:genesisOffset+20])

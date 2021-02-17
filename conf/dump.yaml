@@ -1,0 +1,11 @@
+
+# console/row-binary/row-binary-debug
+encoding: "row-binary"
+
+# /home/jie/astudy/clickhouse
+pathPrefix: "/data/"
+
+# .mgo
+pathSurfix: ".ch"
+
+logFile: "/data/output.log"
