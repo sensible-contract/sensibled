@@ -38,39 +38,51 @@ func init() {
 	zap.RegisterEncoder("row-binary-debug", constructRowBinaryEncoderDebug)
 
 	Log, _ = zap.Config{
-		Encoding:    "console",
-		Level:       zap.NewAtomicLevelAt(zapcore.InfoLevel),
-		OutputPaths: []string{logFile},
+		Encoding:          "console",
+		Level:             zap.NewAtomicLevelAt(zapcore.InfoLevel),
+		DisableCaller:     true,
+		DisableStacktrace: true,
+		OutputPaths:       []string{logFile},
 	}.Build()
 
 	LogErr, _ = zap.Config{
-		Encoding:    "console",
-		Level:       zap.NewAtomicLevelAt(zapcore.DebugLevel),
-		OutputPaths: []string{"stderr"},
+		Encoding:          "console",
+		Level:             zap.NewAtomicLevelAt(zapcore.DebugLevel),
+		DisableCaller:     true,
+		DisableStacktrace: true,
+		OutputPaths:       []string{"stderr"},
 	}.Build()
 
 	LogBlk, _ = zap.Config{
-		Encoding:    dumpEncoding,
-		Level:       zap.NewAtomicLevelAt(zapcore.InfoLevel),
-		OutputPaths: []string{pathPrefix + "/blk" + pathSurfix},
+		Encoding:          dumpEncoding,
+		Level:             zap.NewAtomicLevelAt(zapcore.InfoLevel),
+		DisableCaller:     true,
+		DisableStacktrace: true,
+		OutputPaths:       []string{pathPrefix + "/blk" + pathSurfix},
 	}.Build()
 
 	LogTx, _ = zap.Config{
-		Encoding:    dumpEncoding,
-		Level:       zap.NewAtomicLevelAt(zapcore.InfoLevel),
-		OutputPaths: []string{pathPrefix + "/tx" + pathSurfix},
+		Encoding:          dumpEncoding,
+		Level:             zap.NewAtomicLevelAt(zapcore.InfoLevel),
+		DisableCaller:     true,
+		DisableStacktrace: true,
+		OutputPaths:       []string{pathPrefix + "/tx" + pathSurfix},
 	}.Build()
 
 	LogTxIn, _ = zap.Config{
-		Encoding:    dumpEncoding,
-		Level:       zap.NewAtomicLevelAt(zapcore.InfoLevel),
-		OutputPaths: []string{pathPrefix + "/tx-in" + pathSurfix},
+		Encoding:          dumpEncoding,
+		Level:             zap.NewAtomicLevelAt(zapcore.InfoLevel),
+		DisableCaller:     true,
+		DisableStacktrace: true,
+		OutputPaths:       []string{pathPrefix + "/tx-in" + pathSurfix},
 	}.Build()
 
 	LogTxOut, _ = zap.Config{
-		Encoding:    dumpEncoding,
-		Level:       zap.NewAtomicLevelAt(zapcore.InfoLevel),
-		OutputPaths: []string{pathPrefix + "/tx-out" + pathSurfix},
+		Encoding:          dumpEncoding,
+		Level:             zap.NewAtomicLevelAt(zapcore.InfoLevel),
+		DisableCaller:     true,
+		DisableStacktrace: true,
+		OutputPaths:       []string{pathPrefix + "/tx-out" + pathSurfix},
 	}.Build()
 
 }

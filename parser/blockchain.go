@@ -95,6 +95,8 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *model.Block, start
 		block.Raw = rawblock
 		block.Size = uint32(len(rawblock))
 
+		// 设置已经分析到的区块高度
+		task.MaxBlockHeightParallel = block.Height
 		parsers <- struct{}{}
 		wg.Add(1)
 		go func(block *model.Block) {
@@ -162,7 +164,9 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *model.Block, star
 
 			// 再串行分析区块。可执行一些严格要求按序处理的任务，区块会串行依次执行
 			// 当串行执行到某个区块时，这个区块一定运行完毕了相应的并行预处理任务
-			task.ParseBlockSerial(block, maxBlockHeight)
+			task.ParseBlockSerial(block,
+				startBlockHeight+buffCount-nextBlockHeight,
+				maxBlockHeight)
 
 			block.Txs = nil
 			nextBlockHeight++
@@ -294,7 +298,7 @@ func (bc *Blockchain) LoadAllBlockHeaders(loadCacheHeader bool) {
 		}(rawblock)
 
 		// header speed
-		serialTask.ParseBlockSpeed(0, idx, 0)
+		serialTask.ParseBlockSpeed(0, idx, 0, 0, 0)
 	}
 	wg.Wait()
 }

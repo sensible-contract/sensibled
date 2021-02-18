@@ -13,7 +13,7 @@ var (
 	lastBlockTxCount int
 )
 
-func ParseBlockSpeed(nTx int, nextBlockHeight, maxBlockHeight int) {
+func ParseBlockSpeed(nTx int, nextBlockHeight, blockCountInBuffer, maxBlockHeightParallel, maxBlockHeight int) {
 	lastBlockTxCount += nTx
 
 	if nextBlockHeight != maxBlockHeight-1 && time.Since(lastLogTime) < time.Second {
@@ -33,13 +33,15 @@ func ParseBlockSpeed(nTx int, nextBlockHeight, maxBlockHeight int) {
 
 	utils.LogErr.Info("parsing",
 		zap.Int("height", nextBlockHeight),
-		zap.Int("blk", nextBlockHeight-lastBlockHeight),
-		zap.Int("tx", lastBlockTxCount),
-		zap.Int("+u", lastUtxoMapAddCount),
-		zap.Int("-u", lastUtxoMapRemoveCount),
-		zap.Int("=u", lastUtxoMapAddCount-lastUtxoMapRemoveCount),
-		zap.Int("utxo", len(utxoMap)),
-		zap.Int("calc", len(calcMap)),
+		zap.Int("~height", maxBlockHeightParallel),
+		zap.Int("buff", blockCountInBuffer),
+		zap.Int("nblk", nextBlockHeight-lastBlockHeight),
+		zap.Int("ntx", lastBlockTxCount),
+		// zap.Int("+u", lastUtxoMapAddCount),
+		// zap.Int("-u", lastUtxoMapRemoveCount),
+		// zap.Int("=u", lastUtxoMapAddCount-lastUtxoMapRemoveCount),
+		// zap.Int("utxo", len(utxoMap)),
+		// zap.Int("calc", len(calcMap)),
 		zap.Int("time", timeLeft),
 	)
 

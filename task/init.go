@@ -10,6 +10,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+var (
+	MaxBlockHeightParallel int
+)
+
 // ParseBlockParallel 先并行分析区块，不同区块并行，同区块内串行
 func ParseBlockParallel(block *model.Block) {
 	for idx, tx := range block.Txs {
@@ -28,8 +32,8 @@ func ParseBlockParallel(block *model.Block) {
 }
 
 // ParseBlockSerial 再串行分析区块
-func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
-	serial.ParseBlockSpeed(len(block.Txs), block.Height, maxBlockHeight)
+func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int) {
+	serial.ParseBlockSpeed(len(block.Txs), block.Height, blockCountInBuffer, MaxBlockHeightParallel, maxBlockHeight)
 	// DumpBlockData
 
 	// serial.DumpBlockTxInfo(block)
