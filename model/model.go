@@ -105,7 +105,7 @@ type Block struct {
 	Height     int
 	Txs        []*Tx
 	Version    uint32
-	MerkleRoot string
+	MerkleRoot Bytes // 32 bytes
 	BlockTime  uint32
 	Bits       uint32
 	Nonce      uint32

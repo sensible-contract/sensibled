@@ -12,9 +12,12 @@ func DumpBlock(block *model.Block) {
 	utils.LogBlk.Info("blk-list",
 		zap.Uint32("height", uint32(block.Height)),
 		zap.Binary("blkid", block.Hash),
-
 		zap.Binary("previd", block.Parent),
+		zap.Binary("merkle", block.MerkleRoot),
 		zap.Uint64("ntx", uint64(block.TxCnt)),
+		zap.Uint32("time", uint32(block.BlockTime)),
+		zap.Uint32("bits", uint32(block.Bits)),
+		zap.Uint32("size", uint32(block.Size)),
 	)
 }
 
@@ -25,6 +28,8 @@ func DumpBlockTx(block *model.Block) {
 			zap.Binary("txid", tx.Hash),
 			zap.Uint32("nTxIn", tx.TxInCnt),
 			zap.Uint32("nTxOut", tx.TxOutCnt),
+			zap.Uint32("size", tx.Size),
+			zap.Uint32("locktime", tx.LockTime),
 
 			zap.Uint32("height", uint32(block.Height)),
 			zap.Binary("blkid", block.Hash),
@@ -33,8 +38,44 @@ func DumpBlockTx(block *model.Block) {
 	}
 }
 
+// DumpBlockTxOutputInfo all tx output info
+func DumpBlockTxOutputInfo(block *model.Block) {
+	for _, tx := range block.Txs {
+		for _, output := range tx.TxOuts {
+			// if output.Value == 0 || !output.LockingScriptMatch {
+			// 	continue
+			// }
+
+			utils.LogTxOut.Info("tx-txo",
+				zap.Binary("utxoPoint", output.Outpoint), // 36 byte
+				zap.Binary("address", output.AddressPkh), // 20 byte
+				zap.Binary("genesis", output.GenesisId),  // 20 byte
+				zap.Uint64("value", output.Value),
+				zap.ByteString("scriptType", output.LockingScriptType),
+				zap.ByteString("script", output.Pkscript),
+				zap.Uint32("height", uint32(block.Height)),
+			)
+		}
+	}
+}
+
 // DumpBlockTxInputInfo all tx input info
 func DumpBlockTxInputInfo(block *model.Block) {
+	for _, tx := range block.Txs {
+		for _, input := range tx.TxIns {
+			utils.LogTxIn.Info("tx-input",
+				zap.Binary("txidIdx", input.InputPoint),
+				zap.Binary("utxoPoint", input.InputOutpoint),
+				zap.ByteString("scriptSig", input.ScriptSig),
+				zap.Uint32("sequence", uint32(input.Sequence)),
+				zap.Uint32("height", uint32(block.Height)),
+			)
+		}
+	}
+}
+
+// DumpBlockTxInputDetail all tx input info
+func DumpBlockTxInputDetail(block *model.Block) {
 	var commonObjData *model.CalcData = &model.CalcData{
 		GenesisId:  make(model.Bytes, 20),
 		AddressPkh: make(model.Bytes, 20),
@@ -65,7 +106,7 @@ func DumpBlockTxInputInfo(block *model.Block) {
 			utils.LogTxIn.Info("tx-input",
 				zap.Uint32("height", uint32(block.Height)),
 				zap.Binary("txidIdx", input.InputPoint),
-				zap.ByteString("script", input.ScriptSig),
+				zap.ByteString("scriptSig", input.ScriptSig),
 
 				zap.Uint32("height_out", uint32(objData.BlockHeight)),
 				zap.Binary("utxoPoint", input.InputOutpoint),
@@ -73,27 +114,6 @@ func DumpBlockTxInputInfo(block *model.Block) {
 				zap.Binary("genesis", objData.GenesisId),  // 20 byte
 				zap.Uint64("value", objData.Value),
 				zap.ByteString("scriptType", objData.ScriptType),
-			)
-		}
-	}
-}
-
-// DumpBlockTxOutputInfo all tx output info
-func DumpBlockTxOutputInfo(block *model.Block) {
-	for _, tx := range block.Txs {
-		for _, output := range tx.TxOuts {
-			// if output.Value == 0 || !output.LockingScriptMatch {
-			// 	continue
-			// }
-
-			utils.LogTxOut.Info("tx-utxo",
-				zap.Binary("utxoPoint", output.Outpoint), // 36 byte
-				zap.Binary("address", output.AddressPkh), // 20 byte
-				zap.Binary("genesis", output.GenesisId),  // 20 byte
-				zap.Uint64("value", output.Value),
-				zap.ByteString("scriptType", output.LockingScriptType),
-				zap.ByteString("script", output.Pkscript),
-				zap.Uint32("height", uint32(block.Height)),
 			)
 		}
 	}

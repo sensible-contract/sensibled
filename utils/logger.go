@@ -12,12 +12,11 @@ var (
 	Log    *zap.Logger
 	LogErr *zap.Logger
 
-	LogBlk        *zap.Logger
-	LogTx         *zap.Logger
-	LogTxIn       *zap.Logger
-	LogTxOut      *zap.Logger
-	LogTxOutSpent *zap.Logger
-	DEBUG         = true
+	LogBlk   *zap.Logger
+	LogTx    *zap.Logger
+	LogTxIn  *zap.Logger
+	LogTxOut *zap.Logger
+	DEBUG    = true
 )
 
 func init() {
@@ -74,12 +73,6 @@ func init() {
 		OutputPaths: []string{pathPrefix + "/tx-out" + pathSurfix},
 	}.Build()
 
-	LogTxOutSpent, _ = zap.Config{
-		Encoding:    dumpEncoding,
-		Level:       zap.NewAtomicLevelAt(zapcore.InfoLevel),
-		OutputPaths: []string{pathPrefix + "/tx-out-spent" + pathSurfix},
-	}.Build()
-
 }
 
 func SyncLog() {
@@ -89,5 +82,4 @@ func SyncLog() {
 	LogTx.Sync()
 	LogTxIn.Sync()
 	LogTxOut.Sync()
-	LogTxOutSpent.Sync()
 }

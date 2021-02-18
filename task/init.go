@@ -16,30 +16,28 @@ func ParseBlockParallel(block *model.Block) {
 		isCoinbase := idx == 0
 		parallel.ParseTxFirst(tx, isCoinbase, block.ParseData)
 
-		parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
-		parallel.ParseUtxoParallel(tx, block.ParseData)
+		// parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
+		// parallel.ParseUtxoParallel(tx, block.ParseData)
 	}
 
 	// DumpBlockData
-	// serial.DumpBlockData(block)
+	serial.DumpBlock(block)
+	serial.DumpBlockTx(block)
+	serial.DumpBlockTxOutputInfo(block)
+	serial.DumpBlockTxInputInfo(block)
 }
 
 // ParseBlockSerial 再串行分析区块
 func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 	serial.ParseBlockSpeed(len(block.Txs), block.Height, maxBlockHeight)
-
 	// DumpBlockData
-	// serial.DumpBlock(block)
-	// serial.DumpBlockTx(block)
-	// serial.DumpBlockTxOutputInfo(block)
-	serial.DumpBlockTxInputInfo(block)
 
 	// serial.DumpBlockTxInfo(block)
 	// serial.DumpLockingScriptType(block)
 
 	// ParseBlock
 	// serial.ParseBlockCount(block)
-	serial.ParseUtxoSerial(block.ParseData)
+	// serial.ParseUtxoSerial(block.ParseData)
 
 	block.ParseData = nil
 	block.Txs = nil
