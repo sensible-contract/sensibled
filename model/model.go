@@ -126,8 +126,9 @@ type ProcessBlock struct {
 
 type CalcData struct {
 	BlockHeight int
-	Value       uint64
-	ScriptType  Bytes
 	AddressPkh  Bytes
 	GenesisId   Bytes
+	Value       uint64
+	ScriptType  Bytes
+	Script      Bytes
 }

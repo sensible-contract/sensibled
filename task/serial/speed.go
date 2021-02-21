@@ -33,7 +33,7 @@ func ParseBlockSpeed(nTx int, nextBlockHeight, blockCountInBuffer, maxBlockHeigh
 
 	utils.LogErr.Info("parsing",
 		zap.Int("height", nextBlockHeight),
-		zap.Int("~height", maxBlockHeightParallel),
+		zap.Int("~height", maxBlockHeightParallel-nextBlockHeight),
 		zap.Int("buff", blockCountInBuffer),
 		zap.Int("nblk", nextBlockHeight-lastBlockHeight),
 		zap.Int("ntx", lastBlockTxCount),

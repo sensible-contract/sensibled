@@ -5,9 +5,6 @@ import (
 	"blkparser/task/parallel"
 	"blkparser/task/serial"
 	"blkparser/utils"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -20,8 +17,9 @@ func ParseBlockParallel(block *model.Block) {
 		isCoinbase := idx == 0
 		parallel.ParseTxFirst(tx, isCoinbase, block.ParseData)
 
-		// parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
-		// parallel.ParseUtxoParallel(tx, block.ParseData)
+		// for txin full dump
+		parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
+		parallel.ParseUtxoParallel(tx, block.ParseData)
 	}
 
 	// DumpBlockData
@@ -35,13 +33,16 @@ func ParseBlockParallel(block *model.Block) {
 func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int) {
 	serial.ParseBlockSpeed(len(block.Txs), block.Height, blockCountInBuffer, MaxBlockHeightParallel, maxBlockHeight)
 	// DumpBlockData
+	serial.DumpBlockTxInputDetail(block)
 
 	// serial.DumpBlockTxInfo(block)
 	// serial.DumpLockingScriptType(block)
 
 	// ParseBlock
 	// serial.ParseBlockCount(block)
-	// serial.ParseUtxoSerial(block.ParseData)
+
+	// for txin full dump
+	serial.ParseUtxoSerial(block.ParseData)
 
 	block.ParseData = nil
 	block.Txs = nil
@@ -55,12 +56,12 @@ func init() {
 func ParseEnd() {
 	defer utils.SyncLog()
 
-	loggerMap, _ := zap.Config{
-		Encoding:    "console",                                // 配置编码方式（json 或 console）
-		Level:       zap.NewAtomicLevelAt(zapcore.DebugLevel), // 输出级别
-		OutputPaths: []string{"/data/calcMap.log"},            // 输出目的地
-	}.Build()
-	defer loggerMap.Sync()
+	// loggerMap, _ := zap.Config{
+	// 	Encoding:    "console",                                // 配置编码方式（json 或 console）
+	// 	Level:       zap.NewAtomicLevelAt(zapcore.DebugLevel), // 输出级别
+	// 	OutputPaths: []string{"/data/calcMap.log"},            // 输出目的地
+	// }.Build()
+	// defer loggerMap.Sync()
 
 	// serial.DumpUtxoToGobFile()
 	// serial.ParseEndDumpUtxo(loggerMap)

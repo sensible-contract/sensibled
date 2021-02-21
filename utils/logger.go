@@ -12,11 +12,12 @@ var (
 	Log    *zap.Logger
 	LogErr *zap.Logger
 
-	LogBlk   *zap.Logger
-	LogTx    *zap.Logger
-	LogTxIn  *zap.Logger
-	LogTxOut *zap.Logger
-	DEBUG    = true
+	LogBlk      *zap.Logger
+	LogTx       *zap.Logger
+	LogTxIn     *zap.Logger
+	LogTxInFull *zap.Logger
+	LogTxOut    *zap.Logger
+	DEBUG       = true
 )
 
 func init() {
@@ -74,7 +75,15 @@ func init() {
 		Level:             zap.NewAtomicLevelAt(zapcore.InfoLevel),
 		DisableCaller:     true,
 		DisableStacktrace: true,
-		OutputPaths:       []string{pathPrefix + "/tx-in" + pathSurfix},
+		OutputPaths:       []string{pathPrefix + "/txin" + pathSurfix},
+	}.Build()
+
+	LogTxInFull, _ = zap.Config{
+		Encoding:          dumpEncoding,
+		Level:             zap.NewAtomicLevelAt(zapcore.InfoLevel),
+		DisableCaller:     true,
+		DisableStacktrace: true,
+		OutputPaths:       []string{pathPrefix + "/txin_full" + pathSurfix},
 	}.Build()
 
 	LogTxOut, _ = zap.Config{
@@ -82,7 +91,7 @@ func init() {
 		Level:             zap.NewAtomicLevelAt(zapcore.InfoLevel),
 		DisableCaller:     true,
 		DisableStacktrace: true,
-		OutputPaths:       []string{pathPrefix + "/tx-out" + pathSurfix},
+		OutputPaths:       []string{pathPrefix + "/txout" + pathSurfix},
 	}.Build()
 
 }
@@ -93,5 +102,6 @@ func SyncLog() {
 	LogBlk.Sync()
 	LogTx.Sync()
 	LogTxIn.Sync()
+	LogTxInFull.Sync()
 	LogTxOut.Sync()
 }

@@ -103,10 +103,11 @@ func DumpBlockTxInputDetail(block *model.Block) {
 				}
 			}
 
-			utils.LogTxIn.Info("tx-input",
+			utils.LogTxInFull.Info("tx-input-detail",
 				zap.Uint32("height", uint32(block.Height)),
 				zap.Binary("txidIdx", input.InputPoint),
 				zap.ByteString("scriptSig", input.ScriptSig),
+				zap.Uint32("sequence", uint32(input.Sequence)),
 
 				zap.Uint32("height_out", uint32(objData.BlockHeight)),
 				zap.Binary("utxoPoint", input.InputOutpoint),
@@ -114,6 +115,7 @@ func DumpBlockTxInputDetail(block *model.Block) {
 				zap.Binary("genesis", objData.GenesisId),  // 20 byte
 				zap.Uint64("value", objData.Value),
 				zap.ByteString("scriptType", objData.ScriptType),
+				zap.ByteString("script", objData.Script),
 			)
 		}
 	}

@@ -49,13 +49,6 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 
 // ParseTxoSpendByTxParallel utxo被使用
 func ParseTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
-	// for _, input := range tx.TxIns {
-	// 	utils.Log.Info("tx-input-info",
-	// 		zap.Object("txidIdx", input.InputPoint),
-	// 		zap.Object("utxoPoint", input.InputOutpoint),
-	// 		zap.Object("script", input.ScriptSig),
-	// 	)
-	// }
 	if isCoinbase {
 		return
 	}
@@ -67,12 +60,6 @@ func ParseTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.Proce
 		// } else {
 		// 	delete(block.UtxoMap, input.InputOutpointKey)
 		// }
-
-		// utils.Log.Info("tx-output-info",
-		// 	zap.Object("utxoPoint", input.InputOutpoint),
-		// 	zap.Object("spendByTxidIdx", input.InputPoint),
-		// 	zap.Bool("utxo", false), // spent
-		// )
 	}
 }
 
@@ -85,10 +72,11 @@ func ParseUtxoParallel(tx *model.Tx, block *model.ProcessBlock) {
 
 		block.UtxoMap[output.OutpointKey] = model.CalcData{
 			BlockHeight: block.Height,
-			Value:       output.Value,
-			ScriptType:  output.LockingScriptType,
 			AddressPkh:  output.AddressPkh,
 			GenesisId:   output.GenesisId,
+			Value:       output.Value,
+			ScriptType:  output.LockingScriptType,
+			Script:      output.Pkscript,
 		}
 
 		// if _, ok := block.UtxoMissingMap[output.OutpointKey]; ok {
@@ -102,14 +90,5 @@ func ParseUtxoParallel(tx *model.Tx, block *model.ProcessBlock) {
 		// 		GenesisId:   output.GenesisId,
 		// 	}
 		// }
-
-		// utils.Log.Info("tx-output-info",
-		// 	zap.Object("utxoPoint", output.Outpoint),
-		// 	zap.Object("address", output.AddressPkh), // 20 byte
-		// 	zap.Object("genesis", output.GenesisId),  // 20 byte
-		// 	zap.Uint64("value", output.Value),
-		// 	zap.Object("scriptType", output.LockingScriptType),
-		// 	zap.Object("script", output.Pkscript),
-		// )
 	}
 }
