@@ -3,6 +3,7 @@ module blkparser
 go 1.15
 
 require (
+	github.com/ClickHouse/clickhouse-go v1.4.3
 	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/spf13/viper v1.7.1
 	go.uber.org/multierr v1.5.0

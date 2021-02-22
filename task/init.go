@@ -5,11 +5,36 @@ import (
 	"blkparser/task/parallel"
 	"blkparser/task/serial"
 	"blkparser/utils"
+	"fmt"
+
+	"github.com/spf13/viper"
 )
 
 var (
 	MaxBlockHeightParallel int
+	DumpBlock              bool = true
+	DumpTx                 bool
+	DumpTxin               bool
+	DumpTxout              bool
+	DumpTxinFull           bool
 )
+
+func init() {
+	viper.SetConfigFile("conf/task.yaml")
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		}
+	} else {
+		DumpBlock = viper.GetBool("block")
+		DumpTx = viper.GetBool("tx")
+		DumpTxin = viper.GetBool("txin")
+		DumpTxout = viper.GetBool("txout")
+		DumpTxinFull = viper.GetBool("txin_full")
+	}
+
+	// serial.LoadUtxoFromGobFile()
+}
 
 // ParseBlockParallel 先并行分析区块，不同区块并行，同区块内串行
 func ParseBlockParallel(block *model.Block) {
@@ -18,22 +43,37 @@ func ParseBlockParallel(block *model.Block) {
 		parallel.ParseTxFirst(tx, isCoinbase, block.ParseData)
 
 		// for txin full dump
-		parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
-		parallel.ParseUtxoParallel(tx, block.ParseData)
+		if DumpTxinFull {
+			parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
+			parallel.ParseUtxoParallel(tx, block.ParseData)
+		}
 	}
 
 	// DumpBlockData
-	serial.DumpBlock(block)
-	serial.DumpBlockTx(block)
-	serial.DumpBlockTxOutputInfo(block)
-	serial.DumpBlockTxInputInfo(block)
+	if DumpBlock {
+		serial.DumpBlock(block)
+	}
+	if DumpTx {
+		serial.DumpBlockTx(block)
+	}
+	if DumpTxout {
+		serial.DumpBlockTxOutputInfo(block)
+	}
+	if DumpTxin {
+		serial.DumpBlockTxInputInfo(block)
+	}
 }
 
 // ParseBlockSerial 再串行分析区块
 func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int) {
 	serial.ParseBlockSpeed(len(block.Txs), block.Height, blockCountInBuffer, MaxBlockHeightParallel, maxBlockHeight)
+
 	// DumpBlockData
-	serial.DumpBlockTxInputDetail(block)
+	if DumpTxinFull {
+		serial.DumpBlockTxInputDetail(block)
+		// for txin full dump
+		serial.ParseUtxoSerial(block.ParseData)
+	}
 
 	// serial.DumpBlockTxInfo(block)
 	// serial.DumpLockingScriptType(block)
@@ -41,15 +81,8 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 	// ParseBlock
 	// serial.ParseBlockCount(block)
 
-	// for txin full dump
-	serial.ParseUtxoSerial(block.ParseData)
-
 	block.ParseData = nil
 	block.Txs = nil
-}
-
-func init() {
-	// serial.LoadUtxoFromGobFile()
 }
 
 // ParseEnd 最后分析执行

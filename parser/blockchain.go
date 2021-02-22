@@ -41,9 +41,6 @@ func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
 
 // ParseLongestChain 两遍遍历区块。先获取header，再遍历区块
 func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight int) {
-	// 初始化载入block header
-	bc.InitLongestChainHeader()
-
 	// 跳到指定高度的区块文件"附近"开始读取区块
 	// 注意如果区块在文件中严重乱序(错位2个区块文件以上)则可能读取起始失败(分析进度不开始，内存占用持续增加)
 	bc.SkipToBlockFileIdByBlockHeight(startBlockHeight)
@@ -115,7 +112,7 @@ func (bc *Blockchain) InitLongestChainBlock(blocksReady chan *model.Block, start
 			block.ParseData = processBlock
 
 			// 超过高度的不分析。但不能在此退出，因为区块文件是乱序的
-			if block.Height < endBlockHeight {
+			if endBlockHeight < 0 || block.Height < endBlockHeight {
 				// 先并行分析区块。可执行一些区块内的独立预处理任务，不同区块会并行乱序执行
 				task.ParseBlockParallel(block)
 			}
@@ -135,6 +132,10 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *model.Block, star
 	blocksTotal := len(bc.BlocksOfChain)
 	if maxBlockHeight < 0 || maxBlockHeight > blocksTotal {
 		maxBlockHeight = blocksTotal
+	}
+
+	if startBlockHeight >= maxBlockHeight {
+		return
 	}
 
 	nextBlockHeight := startBlockHeight
@@ -244,8 +245,7 @@ func (bc *Blockchain) InitLongestChainHeader() {
 		skipTo = idx - 1
 	}
 	// 这里回退1个blockfile开始读取所有header
-	// 在区块文件严重乱序情况下可能会遗漏读取block
-	// 但若区块文件是追加写入，则不会出现遗漏
+	// 由于区块文件是追加写入，不会出现遗漏
 	if err := bc.BlockData.SkipTo(skipTo, 0); err == nil {
 		bc.LoadAllBlockHeaders(false)
 		bc.BlockData.HeaderFileWriter.Flush()
@@ -371,4 +371,22 @@ func (bc *Blockchain) SelectLongestChain() {
 	if len(bc.Blocks) > len(bc.BlocksOfChain)+1000 {
 		panic("too many orphan blocks. block header may missing")
 	}
+}
+
+// GetBlockSyncCommonBlockHeight 获取区块同步起始的共同区块高度
+func (bc *Blockchain) GetBlockSyncCommonBlockHeight() (heigth int) {
+	blocks, err := loader.GetLatestBlocks()
+	if err != nil {
+		panic("sync check, but failed.")
+	}
+	orphanCount := 0
+	for _, block := range blocks {
+		blockIdHex := utils.HashString(block.BlockId)
+		if _, ok := bc.BlocksOfChain[blockIdHex]; ok {
+			log.Printf("shoud sync block after height: %d, orphan: %d", block.Height, orphanCount)
+			return int(block.Height)
+		}
+		orphanCount++
+	}
+	panic("sync check, but found more then 1000 orphan blocks.")
 }
