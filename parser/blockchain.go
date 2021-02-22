@@ -383,7 +383,8 @@ func (bc *Blockchain) GetBlockSyncCommonBlockHeight() (heigth int) {
 	for _, block := range blocks {
 		blockIdHex := utils.HashString(block.BlockId)
 		if _, ok := bc.BlocksOfChain[blockIdHex]; ok {
-			log.Printf("shoud sync block after height: %d, orphan: %d", block.Height, orphanCount)
+			log.Printf("shoud sync block after height: %d, new: %d, orphan: %d",
+				block.Height, len(bc.BlocksOfChain)-int(block.Height)-1, orphanCount)
 			return int(block.Height)
 		}
 		orphanCount++

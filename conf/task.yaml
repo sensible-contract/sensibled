@@ -3,4 +3,4 @@ block: true
 tx: true
 txin: true
 txout: true
-txin_full: true
+txin_full: false

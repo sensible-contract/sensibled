@@ -3,9 +3,9 @@
 encoding: "row-binary"
 
 # /home/jie/astudy/clickhouse
-pathPrefix: "/data/"
+pathPrefix: "out/"
 
 # .mgo
 pathSurfix: ".ch"
 
-logFile: "/data/output.log"
+logFile: "out/output.log"

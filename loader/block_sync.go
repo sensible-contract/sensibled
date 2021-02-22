@@ -23,7 +23,7 @@ func blockResultSRF(rows *sql.Rows) (interface{}, error) {
 }
 
 func GetLatestBlocks() (blksRsp []*model.BlockDO, err error) {
-	psql := fmt.Sprintf("SELECT %s FROM blk_height WHERE ORDER BY height DESC LIMIT 1000", SQL_FIELEDS_BLOCK)
+	psql := fmt.Sprintf("SELECT %s FROM blk_height ORDER BY height DESC LIMIT 1000", SQL_FIELEDS_BLOCK)
 
 	blksRet, err := clickhouse.ScanAll(psql, blockResultSRF)
 	if err != nil {
