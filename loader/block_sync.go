@@ -35,18 +35,4 @@ func GetLatestBlocks() (blksRsp []*model.BlockDO, err error) {
 	}
 	blksRsp = blksRet.([]*model.BlockDO)
 	return blksRsp, nil
-
-	// for _, block := range blocks {
-	// 	blksRsp = append(blksRsp, &model.BlockInfoResp{
-	// 		Height:         int(block.Height),
-	// 		BlockIdHex:     utils.HashString(block.BlockId),
-	// 		PrevBlockIdHex: utils.HashString(block.PrevBlockId),
-	// 		MerkleRootHex:  utils.HashString(block.MerkleRoot),
-	// 		TxCount:        int(block.TxCount),
-	// 		BlockTime:      int(block.BlockTime),
-	// 		Bits:           int(block.Bits),
-	// 		BlockSize:      int(block.BlockSize),
-	// 	})
-	// }
-	// return
 }

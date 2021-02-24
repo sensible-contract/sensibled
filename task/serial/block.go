@@ -7,6 +7,10 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	DumpTxFullCount int
+)
+
 // DumpBlock block id
 func DumpBlock(block *model.Block) {
 	utils.LogBlk.Info("blk-list",
@@ -117,6 +121,7 @@ func DumpBlockTxInputDetail(block *model.Block) {
 				zap.ByteString("scriptType", objData.ScriptType),
 				zap.ByteString("script", objData.Script),
 			)
+			DumpTxFullCount++
 		}
 	}
 }

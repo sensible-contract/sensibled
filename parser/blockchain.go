@@ -374,17 +374,22 @@ func (bc *Blockchain) SelectLongestChain() {
 }
 
 // GetBlockSyncCommonBlockHeight 获取区块同步起始的共同区块高度
-func (bc *Blockchain) GetBlockSyncCommonBlockHeight() (heigth int) {
+func (bc *Blockchain) GetBlockSyncCommonBlockHeight(endBlockHeight int) (heigth int) {
 	blocks, err := loader.GetLatestBlocks()
 	if err != nil {
 		panic("sync check, but failed.")
 	}
+
+	if endBlockHeight < 0 || endBlockHeight > len(bc.BlocksOfChain) {
+		endBlockHeight = len(bc.BlocksOfChain)
+	}
+
 	orphanCount := 0
 	for _, block := range blocks {
 		blockIdHex := utils.HashString(block.BlockId)
 		if _, ok := bc.BlocksOfChain[blockIdHex]; ok {
 			log.Printf("shoud sync block after height: %d, new: %d, orphan: %d",
-				block.Height, len(bc.BlocksOfChain)-int(block.Height)-1, orphanCount)
+				block.Height, endBlockHeight-int(block.Height)-1, orphanCount)
 			return int(block.Height)
 		}
 		orphanCount++

@@ -5,34 +5,16 @@ import (
 	"blkparser/task/parallel"
 	"blkparser/task/serial"
 	"blkparser/utils"
-	"fmt"
-
-	"github.com/spf13/viper"
 )
 
 var (
 	MaxBlockHeightParallel int
-	DumpBlock              bool = true
-	DumpTx                 bool
-	DumpTxin               bool
-	DumpTxout              bool
-	DumpTxinFull           bool
+
+	IsSync bool
+	IsFull bool
 )
 
 func init() {
-	viper.SetConfigFile("conf/task.yaml")
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			panic(fmt.Errorf("Fatal error config file: %s \n", err))
-		}
-	} else {
-		DumpBlock = viper.GetBool("block")
-		DumpTx = viper.GetBool("tx")
-		DumpTxin = viper.GetBool("txin")
-		DumpTxout = viper.GetBool("txout")
-		DumpTxinFull = viper.GetBool("txin_full")
-	}
-
 	// serial.LoadUtxoFromGobFile()
 }
 
@@ -43,23 +25,22 @@ func ParseBlockParallel(block *model.Block) {
 		parallel.ParseTxFirst(tx, isCoinbase, block.ParseData)
 
 		// for txin full dump
-		if DumpTxinFull {
+		if IsFull {
 			parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
 			parallel.ParseUtxoParallel(tx, block.ParseData)
 		}
 	}
 
 	// DumpBlockData
-	if DumpBlock {
+	if IsSync {
+		serial.SyncBlock(block)
+		serial.SyncBlockTx(block)
+		serial.SyncBlockTxOutputInfo(block)
+		serial.SyncBlockTxInputInfo(block)
+	} else {
 		serial.DumpBlock(block)
-	}
-	if DumpTx {
 		serial.DumpBlockTx(block)
-	}
-	if DumpTxout {
 		serial.DumpBlockTxOutputInfo(block)
-	}
-	if DumpTxin {
 		serial.DumpBlockTxInputInfo(block)
 	}
 }
@@ -69,8 +50,13 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 	serial.ParseBlockSpeed(len(block.Txs), block.Height, blockCountInBuffer, MaxBlockHeightParallel, maxBlockHeight)
 
 	// DumpBlockData
-	if DumpTxinFull {
-		serial.DumpBlockTxInputDetail(block)
+	if IsFull {
+		if IsSync {
+			serial.SyncBlockTxInputDetail(block)
+		} else {
+			serial.DumpBlockTxInputDetail(block)
+		}
+
 		// for txin full dump
 		serial.ParseUtxoSerial(block.ParseData)
 	}
@@ -88,6 +74,16 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 // ParseEnd 最后分析执行
 func ParseEnd() {
 	defer utils.SyncLog()
+
+	if IsSync {
+		utils.CommitSyncCk()
+		if IsFull {
+			utils.CommitFullSyncCk(serial.DumpTxFullCount > 0)
+			utils.ProcessAllSyncCk()
+		} else {
+			utils.ProcessPartSyncCk()
+		}
+	}
 
 	// loggerMap, _ := zap.Config{
 	// 	Encoding:    "console",                                // 配置编码方式（json 或 console）

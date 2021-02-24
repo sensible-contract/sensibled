@@ -3,6 +3,7 @@ package main
 import (
 	"blkparser/parser"
 	"blkparser/task"
+	"blkparser/utils"
 	"context"
 	"flag"
 	"fmt"
@@ -15,22 +16,15 @@ import (
 )
 
 var (
-	SyncBlockHeightCheck bool
-	startBlockHeight     int
-	endBlockHeight       int
-	blocksPath           string
-	blockMagic           string
+	startBlockHeight int
+	endBlockHeight   int
+	blocksPath       string
+	blockMagic       string
 )
 
 func init() {
-	var dumpTxinFull bool
-	flag.BoolVar(&dumpTxinFull, "full", false, "dump txin detail data")
-
-	if dumpTxinFull {
-		task.DumpTxinFull = true
-	}
-
-	flag.BoolVar(&SyncBlockHeightCheck, "sync", false, "check sync block height")
+	flag.BoolVar(&task.IsSync, "sync", false, "sync into db")
+	flag.BoolVar(&task.IsFull, "full", false, "full dump")
 
 	flag.IntVar(&startBlockHeight, "start", 0, "start block height")
 	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
@@ -62,11 +56,27 @@ func main() {
 		// 初始化载入block header
 		blockchain.InitLongestChainHeader()
 
-		if SyncBlockHeightCheck {
-			// 从clickhouse读取现有同步区块，判断同步位置
-			commonHeigth := blockchain.GetBlockSyncCommonBlockHeight()
-			startBlockHeight = commonHeigth + 1
+		if task.IsFull {
+			log.Printf("full")
+			startBlockHeight = 0
+			if task.IsSync {
+				log.Printf("sync")
+				utils.CreateAllSyncCk()
+				utils.PrepareFullSyncCk()
+			}
+		} else {
+			log.Printf("part")
+			if task.IsSync {
+				log.Printf("sync")
+				// 从clickhouse读取现有同步区块，判断同步位置
+				commonHeigth := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
+				startBlockHeight = commonHeigth + 1
+
+				utils.CreatePartSyncCk()
+				utils.PreparePartSyncCk()
+			}
 		}
+
 		blockchain.ParseLongestChain(startBlockHeight, endBlockHeight)
 		log.Printf("finished")
 
