@@ -1,6 +1,7 @@
 package main
 
 import (
+	"blkparser/loader"
 	"blkparser/parser"
 	"blkparser/task"
 	"blkparser/utils"
@@ -51,38 +52,56 @@ func main() {
 	}
 
 	server := &http.Server{Addr: "0.0.0.0:8080", Handler: nil}
+
+	newBlockNotify := make(chan string)
 	go func() {
+		for {
+			// 初始化载入block header
+			blockchain.InitLongestChainHeader()
 
-		// 初始化载入block header
-		blockchain.InitLongestChainHeader()
+			if task.IsFull {
+				log.Printf("full")
+				startBlockHeight = 0
+				if task.IsSync {
+					log.Printf("sync")
+					utils.CreateAllSyncCk()
+					utils.PrepareFullSyncCk()
+				}
+			} else {
+				log.Printf("part")
+				if task.IsSync {
+					log.Printf("sync")
+					// 从clickhouse读取现有同步区块，判断同步位置
+					commonHeigth, orphanCount := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
+					startBlockHeight = commonHeigth + 1
 
-		if task.IsFull {
-			log.Printf("full")
-			startBlockHeight = 0
-			if task.IsSync {
-				log.Printf("sync")
-				utils.CreateAllSyncCk()
-				utils.PrepareFullSyncCk()
+					if orphanCount > 0 {
+						// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
+						// 直接从公有块高度（COMMON_HEIGHT）往上删除就可以了。
+						utils.RemoveOrphanPartSyncCk(commonHeigth)
+					}
+
+					utils.CreatePartSyncCk()
+					utils.PreparePartSyncCk()
+				}
 			}
-		} else {
-			log.Printf("part")
-			if task.IsSync {
-				log.Printf("sync")
-				// 从clickhouse读取现有同步区块，判断同步位置
-				commonHeigth := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
-				startBlockHeight = commonHeigth + 1
 
-				utils.CreatePartSyncCk()
-				utils.PreparePartSyncCk()
+			blockchain.ParseLongestChain(startBlockHeight, endBlockHeight)
+			log.Printf("finished")
+
+			if task.IsSync && endBlockHeight < 0 {
+				task.IsFull = false
+				<-newBlockNotify
+				log.Printf("new block")
+			} else {
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+				defer cancel()
+				server.Shutdown(ctx)
 			}
 		}
-
-		blockchain.ParseLongestChain(startBlockHeight, endBlockHeight)
-		log.Printf("finished")
-
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer cancel()
-		server.Shutdown(ctx)
+	}()
+	go func() {
+		loader.ZmqNotify(newBlockNotify)
 	}()
 
 	// go tool pprof http://localhost:8080/debug/pprof/profile

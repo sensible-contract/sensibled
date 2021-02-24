@@ -117,6 +117,13 @@ type Block struct {
 	ParseData  *ProcessBlock
 }
 
+type BlockCache struct {
+	Hash       Bytes // 32 bytes
+	FileIdx    int
+	FileOffset int
+	Parent     Bytes // 32 bytes
+}
+
 ////////////////
 type ProcessBlock struct {
 	Height         int

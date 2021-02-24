@@ -1,7 +1,6 @@
 package loader
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"errors"
@@ -11,15 +10,12 @@ import (
 )
 
 type BlockData struct {
-	Path             string
-	Magic            []byte
-	CurrentFile      *os.File
-	HeaderFile       *os.File
-	HeaderFileA      *os.File
-	HeaderFileWriter *bufio.Writer
-	CurrentId        int
-	Offset           int
-	m                sync.Mutex
+	Path        string
+	Magic       []byte
+	CurrentFile *os.File
+	CurrentId   int
+	Offset      int
+	m           sync.Mutex
 }
 
 func NewBlockData(path string, magic []byte) (bf *BlockData, err error) {
@@ -34,38 +30,6 @@ func NewBlockData(path string, magic []byte) (bf *BlockData, err error) {
 	}
 
 	bf.CurrentFile = f
-
-	filePathHeader := path + "/block_header_cache.dat"
-	headerFile, err := os.OpenFile(filePathHeader, os.O_RDONLY|os.O_CREATE, 0666)
-	if err != nil {
-		return
-	}
-	bf.HeaderFile = headerFile
-
-	fileWriteHeader, err := os.OpenFile(filePathHeader, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		return
-	}
-
-	bf.HeaderFileA = fileWriteHeader
-	bf.HeaderFileWriter = bufio.NewWriter(fileWriteHeader)
-	return
-}
-
-func (bf *BlockData) GetCacheRawBlockHeader() (rawblockheader []byte, err error) {
-	rawblockheader = make([]byte, 80)
-	_, err = bf.HeaderFile.Read(rawblockheader[:])
-	if err != nil {
-		return
-	}
-	return
-}
-
-func (bf *BlockData) SetCacheRawBlockHeader(rawblockheader []byte) (err error) {
-	_, err = bf.HeaderFileWriter.Write(rawblockheader[:])
-	if err != nil {
-		return
-	}
 	return
 }
 

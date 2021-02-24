@@ -8,6 +8,11 @@ import (
 
 func NewBlock(rawblock []byte) (block *model.Block) {
 	block = new(model.Block)
+	InitBlock(block, rawblock)
+	return block
+}
+
+func InitBlock(block *model.Block, rawblock []byte) {
 	block.Hash = utils.GetShaString(rawblock[:80])
 	block.HashHex = utils.HashString(block.Hash)
 	block.Version = binary.LittleEndian.Uint32(rawblock[0:4])
@@ -23,6 +28,4 @@ func NewBlock(rawblock []byte) (block *model.Block) {
 	block.Bits = binary.LittleEndian.Uint32(rawblock[72:76])
 	block.Nonce = binary.LittleEndian.Uint32(rawblock[76:80])
 	block.Size = uint32(len(rawblock))
-
-	return block
 }

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"blkparser/loader/clickhouse"
+	"strconv"
 
 	"go.uber.org/zap"
 )
@@ -58,8 +59,6 @@ CREATE TABLE IF NOT EXISTS blktx_height (
 ORDER BY height
 PARTITION BY intDiv(height, 2100)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
-		// load
-		// cat /data/674936/tx.ch | clickhouse-client -h 192.168.31.236 --database="bsv" --query="INSERT INTO blktx_height FORMAT RowBinary"
 
 		// 区块包含的交易列表，分区内按交易txid排序、索引。仅按txid查询时将遍历所有分区 (慢)
 		// 查询需附带height。可配合tx_height表查询
@@ -78,8 +77,6 @@ CREATE TABLE IF NOT EXISTS tx (
 ORDER BY txid
 PARTITION BY intDiv(height, 2100)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
-		// insert
-		// INSERT INTO tx SELECT * FROM blktx_height;
 
 		// txout
 		// ================================================================
@@ -101,7 +98,6 @@ ORDER BY (utxid, vout)
 PARTITION BY intDiv(height, 2100)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// load
-		// cat /data/674936/tx-out.ch | clickhouse-client -h 192.168.31.236 --database="bsv" --query="INSERT INTO txout FORMAT RowBinary"
 
 		// txin
 		// ================================================================
@@ -121,10 +117,6 @@ CREATE TABLE IF NOT EXISTS txin (
 ORDER BY (txid, idx)
 PARTITION BY intDiv(height, 2100)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
-		// load
-		// cat /data/674936/tx-in.ch | clickhouse-client -h 192.168.31.236 --database="bsv" --query="INSERT INTO txin FORMAT RowBinary"
-		// or insert
-		// INSERT INTO txin SELECT txid, idx, utxid, vout, script_sig, nsequence, height FROM txin_full
 
 		// 交易输入的outpoint列表，分区内按outpoint txid+idx排序、索引。用于查询某txo被哪个tx花费，需遍历所有分区（慢）
 		// 查询需附带height，需配合txout_spent_height表查询
@@ -140,8 +132,6 @@ CREATE TABLE IF NOT EXISTS txin_spent (
 ORDER BY (utxid, vout)
 PARTITION BY intDiv(height, 2100)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
-		// 创建数据
-		// INSERT INTO txin_spent SELECT height, txid, idx, utxid, vout FROM txin;
 
 		// 交易输入列表，分区内按交易txid+idx排序、索引，单条记录包括输入的各种细节。仅按txid查询时将遍历所有分区（慢）
 		// 查询需附带height。可配合tx_height表查询
@@ -166,9 +156,6 @@ CREATE TABLE IF NOT EXISTS txin_full (
 ORDER BY (txid, idx)
 PARTITION BY intDiv(height, 2100)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
-		// load
-		// cat /data256/674936/tx-in.ch | clickhouse-client -h 192.168.31.236 --database="bsv" --query="INSERT INTO txin_full FORMAT RowBinary"
-		// or insert
 
 		// tx在哪个高度被打包，按txid首字节分区，分区内按交易txid排序、索引。按txid查询时可确定分区（快）
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
@@ -197,11 +184,6 @@ ORDER BY (utxid, vout)
 PARTITION BY substring(utxid, 1, 1)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
-		// 从txin_spent表创建txout_spent_height
-		// INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_spent;
-		// 需验证排序是否可以加快导入速度
-		// INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_spent ORDER BY substring(utxid, 1, 1);
-
 		// address在哪些高度的tx中出现，按address首字节分区，分区内按address+genesis+height排序，按address索引。按address查询时可确定分区 (快)
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
 		// 主要用于从address确定所在区块height。配合txin_full源表查询
@@ -218,9 +200,6 @@ PRIMARY KEY address
 ORDER BY (address, genesis, height)
 PARTITION BY substring(address, 1, 1)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
-
-		// 添加
-		// INSERT INTO txin_address_height SELECT height, txid, idx, address, genesis FROM txin_full
 
 		// genesis在哪些高度的tx中出现，按genesis首字节分区，分区内按genesis+address+height排序，按genesis索引。按genesis查询时可确定分区 (快)
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
@@ -239,9 +218,6 @@ ORDER BY (genesis, address, height)
 PARTITION BY substring(genesis, 1, 1)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
-		// 添加
-		// INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin_full
-
 		// address在哪些高度的tx中出现，按address首字节分区，分区内按address+genesis+height排序，按address索引。按address查询时可确定分区 (快)
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
 		// 主要用于从address确定所在区块height。配合txout源表查询
@@ -258,9 +234,6 @@ PRIMARY KEY address
 ORDER BY (address, genesis, height)
 PARTITION BY substring(address, 1, 1)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
-
-		// 添加
-		// INSERT INTO txout_address_height SELECT height, utxid, vout, address, genesis FROM txout
 
 		// genesis在哪些高度的tx中出现，按genesis首字节分区，分区内按genesis+address+height排序，按genesis索引。按genesis查询时可确定分区 (快)
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
@@ -279,9 +252,6 @@ ORDER BY (genesis, address, height)
 PARTITION BY substring(genesis, 1, 1)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
-		// 添加
-		// INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, genesis FROM txout
-
 		// sign mergeTree
 		"DROP TABLE IF EXISTS utxo",
 		`
@@ -294,7 +264,7 @@ CREATE TABLE IF NOT EXISTS utxo (
 	script_type  String,
 	script_pk    String,
 	height       UInt32,
-   sign         Int8
+    sign         Int8
 ) engine=CollapsingMergeTree(sign)
 ORDER BY (utxid, vout)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
@@ -311,7 +281,7 @@ CREATE TABLE IF NOT EXISTS utxo_address (
 	script_type  String,
 	script_pk    String,
 	height       UInt32,
-   sign         Int8
+    sign         Int8
 ) engine=CollapsingMergeTree(sign)
 PRIMARY KEY address
 ORDER BY (address, genesis, height)
@@ -329,7 +299,7 @@ CREATE TABLE IF NOT EXISTS utxo_genesis (
 	script_type  String,
 	script_pk    String,
 	height       UInt32,
-   sign         Int8
+    sign         Int8
 ) engine=CollapsingMergeTree(sign)
 PRIMARY KEY genesis
 ORDER BY (genesis, address, height)
@@ -360,18 +330,6 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 生成溯源ID参与输入的相关tx区块高度索引
 		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin_full",
 
-		// 不执行
-		// 生成txin_full的JOIN语句在大数据量时无法执行，需要直接导入txin_full表的数据
-		// INSERT INTO txin_full
-		//   SELECT height, txid, idx, script_sig, nsequence,
-		//          txo.height, txo.utxid, txo.vout, txo.address, txo.genesis, txo.satoshi, txo.script_type, txo.script_pk FROM txin
-		//   LEFT JOIN txout AS txo
-		//   USING (utxid, vout);
-
-		// 不执行
-		// 如果txin_full表通过直接导入，则txin表可使用txin_full来生成；或者直接导入txin表的数据
-		// INSERT INTO txin SELECT txid, idx, utxid, vout, script_sig, nsequence, height FROM txin_full;
-
 		// 全量生成utxo
 		`INSERT INTO utxo
   SELECT utxid, vout, address, genesis, satoshi, script_type, script_pk, height, 1 FROM txout
@@ -385,6 +343,47 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"INSERT INTO utxo_address SELECT utxid, vout, address, genesis, satoshi, script_type, script_pk, height, 1 FROM utxo",
 		// 生成溯源ID相关的utxo索引
 		"INSERT INTO utxo_genesis SELECT utxid, vout, address, genesis, satoshi, script_type, script_pk, height, 1 FROM utxo",
+	}
+
+	removeOrphanPartSQLs = []string{
+		// ================ 如果没有孤块，则无需处理
+		"ALTER TABLE blk_height DELETE WHERE height > ",
+		"ALTER TABLE blk DELETE WHERE height > ",
+
+		"ALTER TABLE blktx_height DELETE WHERE height > ",
+		"ALTER TABLE tx DELETE WHERE height > ",
+
+		"ALTER TABLE txin DELETE WHERE height > ",
+		"ALTER TABLE txin_spent DELETE WHERE height > ",
+
+		// 回滚已被花费的utxo_address
+		`INSERT INTO utxo
+  SELECT utxid, vout, address, genesis, satoshi, script_type, script_pk, height_txo, 1 FROM txin_full
+  WHERE satoshi > 0 AND
+      height > `,
+		// 删除新添加的utxo_address˜
+		`INSERT INTO utxo_address
+  SELECT utxid, vout,'', '', 0, '', '', 0, -1 FROM txout
+  WHERE satoshi > 0 AND
+      NOT startsWith(script_type, char(0x6a)) AND
+      NOT startsWith(script_type, char(0x00, 0x6a)) AND
+      height > `,
+
+		// 回滚已被花费的utxo_genesis
+		`INSERT INTO utxo_genesis
+  SELECT utxid, vout, address, genesis, satoshi, script_type, script_pk, height_txo, 1 FROM txin_full
+  WHERE satoshi > 0 AND
+      height > `,
+		// 删除新添加的utxo_genesis
+		`INSERT INTO utxo_genesis
+  SELECT utxid, vout,'', '', 0, '', '', 0, -1 FROM txout
+  WHERE satoshi > 0 AND
+      NOT startsWith(script_type, char(0x6a)) AND
+      NOT startsWith(script_type, char(0x00, 0x6a)) AND
+      height > `,
+
+		"ALTER TABLE txin_full DELETE WHERE height > ",
+		"ALTER TABLE txout DELETE WHERE height > ",
 	}
 
 	createPartSQLs = []string{
@@ -493,6 +492,16 @@ func CreateAllSyncCk() bool {
 
 func ProcessAllSyncCk() bool {
 	return ProcessSyncCk(processAllSQLs)
+}
+
+func RemoveOrphanPartSyncCk(startBlockHeight int) bool {
+	removeOrphanPartSQLsWithHeight := []string{}
+	for _, psql := range removeOrphanPartSQLs {
+		removeOrphanPartSQLsWithHeight = append(removeOrphanPartSQLsWithHeight,
+			psql+strconv.Itoa(startBlockHeight),
+		)
+	}
+	return ProcessSyncCk(removeOrphanPartSQLsWithHeight)
 }
 
 func CreatePartSyncCk() bool {
