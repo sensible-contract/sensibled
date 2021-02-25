@@ -46,7 +46,7 @@ func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight int) {
 	// 注意如果区块在文件中严重乱序(错位2个区块文件以上)则可能读取起始失败(分析进度不开始，内存占用持续增加)
 	bc.SkipToBlockFileIdByBlockHeight(startBlockHeight)
 
-	blocksReady := make(chan *model.Block, 256)
+	blocksReady := make(chan *model.Block, 64)
 	done := make(chan struct{}, 1)
 
 	//  解码区块，生产者

@@ -15,9 +15,9 @@ func SyncBlock(block *model.Block) {
 		string(block.Parent),
 		string(block.MerkleRoot),
 		uint64(block.TxCnt),
-		uint32(block.BlockTime),
-		uint32(block.Bits),
-		uint32(block.Size),
+		block.BlockTime,
+		block.Bits,
+		block.Size,
 	); err != nil {
 		utils.Log.Info("sync-block-err",
 			zap.String("sync", "block err"),
@@ -105,8 +105,8 @@ func SyncBlockTxInputInfo(block *model.Block) {
 // SyncBlockTxInputDetail all tx input info
 func SyncBlockTxInputDetail(block *model.Block) {
 	var commonObjData *model.CalcData = &model.CalcData{
-		GenesisId:  make(model.Bytes, 20),
-		AddressPkh: make(model.Bytes, 20),
+		GenesisId:  make(model.Bytes, 1),
+		AddressPkh: make(model.Bytes, 1),
 	}
 
 	for idx, tx := range block.Txs {
@@ -130,7 +130,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 					)
 				}
 			}
-
+			DumpTxFullCount++
 			if _, err := utils.SyncStmtTxInFull.Exec(
 				uint32(block.Height),
 				string(tx.Hash),

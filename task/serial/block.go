@@ -51,9 +51,9 @@ func DumpBlockTxOutputInfo(block *model.Block) {
 			// }
 
 			utils.LogTxOut.Info("tx-txo",
-				zap.Binary("utxoPoint", output.Outpoint), // 36 byte
-				zap.Binary("address", output.AddressPkh), // 20 byte
-				zap.Binary("genesis", output.GenesisId),  // 20 byte
+				zap.Binary("utxoPoint", output.Outpoint),     // 36 byte
+				zap.ByteString("address", output.AddressPkh), // 20 byte
+				zap.ByteString("genesis", output.GenesisId),  // 20 byte
 				zap.Uint64("value", output.Value),
 				zap.ByteString("scriptType", output.LockingScriptType),
 				zap.ByteString("script", output.Pkscript),
@@ -81,8 +81,8 @@ func DumpBlockTxInputInfo(block *model.Block) {
 // DumpBlockTxInputDetail all tx input info
 func DumpBlockTxInputDetail(block *model.Block) {
 	var commonObjData *model.CalcData = &model.CalcData{
-		GenesisId:  make(model.Bytes, 20),
-		AddressPkh: make(model.Bytes, 20),
+		GenesisId:  make(model.Bytes, 1),
+		AddressPkh: make(model.Bytes, 1),
 	}
 
 	for idx, tx := range block.Txs {
@@ -106,7 +106,7 @@ func DumpBlockTxInputDetail(block *model.Block) {
 					)
 				}
 			}
-
+			DumpTxFullCount++
 			utils.LogTxInFull.Info("tx-input-detail",
 				zap.Uint32("height", uint32(block.Height)),
 				zap.Binary("txidIdx", input.InputPoint),
@@ -115,13 +115,12 @@ func DumpBlockTxInputDetail(block *model.Block) {
 
 				zap.Uint32("height_out", uint32(objData.BlockHeight)),
 				zap.Binary("utxoPoint", input.InputOutpoint),
-				zap.Binary("address", objData.AddressPkh), // 20 byte
-				zap.Binary("genesis", objData.GenesisId),  // 20 byte
+				zap.ByteString("address", objData.AddressPkh), // 20 byte
+				zap.ByteString("genesis", objData.GenesisId),  // 20 byte
 				zap.Uint64("value", objData.Value),
 				zap.ByteString("scriptType", objData.ScriptType),
 				zap.ByteString("script", objData.Script),
 			)
-			DumpTxFullCount++
 		}
 	}
 }

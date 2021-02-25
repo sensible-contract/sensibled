@@ -40,7 +40,7 @@ func ParseBlockSpeed(nTx int, nextBlockHeight, blockCountInBuffer, maxBlockHeigh
 		// zap.Int("+u", lastUtxoMapAddCount),
 		// zap.Int("-u", lastUtxoMapRemoveCount),
 		// zap.Int("=u", lastUtxoMapAddCount-lastUtxoMapRemoveCount),
-		// zap.Int("utxo", len(utxoMap)),
+		zap.Int("utxo", len(utxoMap)),
 		// zap.Int("calc", len(calcMap)),
 		zap.Int("time", timeLeft),
 	)

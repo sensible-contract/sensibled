@@ -2,7 +2,7 @@ package script
 
 import "bytes"
 
-var empty = make([]byte, 20)
+var empty = make([]byte, 1)
 
 func ExtractPkScriptGenesisIdAndAddressPkh(pkscript []byte) (genesisId, addressPkh []byte) {
 	scriptLen := len(pkscript)

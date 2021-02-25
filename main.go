@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"runtime"
 	"time"
 
 	"github.com/spf13/viper"
@@ -102,6 +103,13 @@ func main() {
 	}()
 	go func() {
 		loader.ZmqNotify(newBlockNotify)
+	}()
+
+	go func() {
+		for {
+			runtime.GC()
+			time.Sleep(time.Second * 30)
+		}
 	}()
 
 	// go tool pprof http://localhost:8080/debug/pprof/profile

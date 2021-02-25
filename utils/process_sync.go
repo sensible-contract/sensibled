@@ -2,15 +2,14 @@ package utils
 
 import (
 	"blkparser/loader/clickhouse"
+	"log"
 	"strconv"
-
-	"go.uber.org/zap"
 )
 
 var (
 	createAllSQLs = []string{
 		"DROP TABLE IF EXISTS blk_height",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS blk_height (
 	height       UInt32,
 	blkid        FixedString(32),
@@ -26,7 +25,7 @@ PARTITION BY intDiv(height, 2100)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
 		"DROP TABLE IF EXISTS blk",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS blk (
 	height       UInt32,
 	blkid        FixedString(32),
@@ -45,7 +44,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// ================================================================
 		// 区块包含的交易列表，分区内按区块高度height排序、索引。按blk height查询时可确定分区 (快)
 		"DROP TABLE IF EXISTS blktx_height",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS blktx_height (
 	txid         FixedString(32),
 	nin          UInt32,
@@ -63,7 +62,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 区块包含的交易列表，分区内按交易txid排序、索引。仅按txid查询时将遍历所有分区 (慢)
 		// 查询需附带height。可配合tx_height表查询
 		"DROP TABLE IF EXISTS tx",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS tx (
 	txid         FixedString(32),
 	nin          UInt32,
@@ -83,12 +82,12 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 交易输出列表，分区内按交易txid+idx排序、索引，单条记录包括输出的各种细节。仅按txid查询时将遍历所有分区（慢）
 		// 查询需附带height，可配合tx_height表查询
 		"DROP TABLE IF EXISTS txout",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS txout (
 	utxid        FixedString(32),
 	vout         UInt32,
-	address      FixedString(20),
-	genesis      FixedString(20),
+	address      String,
+	genesis      String,
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String,
@@ -104,7 +103,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 交易输入列表，分区内按交易txid+idx排序、索引，单条记录包括输入的细节。仅按txid查询时将遍历所有分区（慢）
 		// 查询需附带height。可配合tx_height表查询
 		"DROP TABLE IF EXISTS txin",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS txin (
 	txid         FixedString(32),
 	idx          UInt32,
@@ -121,7 +120,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 交易输入的outpoint列表，分区内按outpoint txid+idx排序、索引。用于查询某txo被哪个tx花费，需遍历所有分区（慢）
 		// 查询需附带height，需配合txout_spent_height表查询
 		"DROP TABLE IF EXISTS txin_spent",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS txin_spent (
 	height       UInt32,
 	txid         FixedString(32),
@@ -136,7 +135,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 交易输入列表，分区内按交易txid+idx排序、索引，单条记录包括输入的各种细节。仅按txid查询时将遍历所有分区（慢）
 		// 查询需附带height。可配合tx_height表查询
 		"DROP TABLE IF EXISTS txin_full",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS txin_full (
 	height       UInt32,         
 	txid         FixedString(32),
@@ -147,8 +146,8 @@ CREATE TABLE IF NOT EXISTS txin_full (
 	height_txo   UInt32,         
 	utxid        FixedString(32),
 	vout         UInt32,
-	address      FixedString(20),
-	genesis      FixedString(20),
+	address      String,
+	genesis      String,
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String
@@ -161,7 +160,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
 		// 主要用于从txid确定所在区块height。配合其他表查询
 		"DROP TABLE IF EXISTS tx_height",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS tx_height (
 	txid         FixedString(32),
 	height       UInt32
@@ -174,7 +173,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
 		// 主要用于从txid+idx确定花费所在区块height。配合其他表查询
 		"DROP TABLE IF EXISTS txout_spent_height",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS txout_spent_height (
 	height       UInt32,
 	utxid        FixedString(32),
@@ -188,13 +187,13 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
 		// 主要用于从address确定所在区块height。配合txin_full源表查询
 		"DROP TABLE IF EXISTS txin_address_height",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS txin_address_height (
 	height       UInt32,
 	txid         FixedString(32),
 	idx          UInt32,
-	address      FixedString(20),
-	genesis      FixedString(20)
+	address      String,
+	genesis      String
 ) engine=MergeTree()
 PRIMARY KEY address
 ORDER BY (address, genesis, height)
@@ -205,13 +204,13 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
 		// 主要用于从genesis确定所在区块height。配合txin_full源表查询
 		"DROP TABLE IF EXISTS txin_genesis_height",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS txin_genesis_height (
 	height       UInt32,
 	txid         FixedString(32),
 	idx          UInt32,
-	address      FixedString(20),
-	genesis      FixedString(20)
+	address      String,
+	genesis      String
 ) engine=MergeTree()
 PRIMARY KEY genesis
 ORDER BY (genesis, address, height)
@@ -222,13 +221,13 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
 		// 主要用于从address确定所在区块height。配合txout源表查询
 		"DROP TABLE IF EXISTS txout_address_height",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS txout_address_height (
 	height       UInt32,
 	utxid        FixedString(32),
 	vout         UInt32,
-	address      FixedString(20),
-	genesis      FixedString(20)
+	address      String,
+	genesis      String
 ) engine=MergeTree()
 PRIMARY KEY address
 ORDER BY (address, genesis, height)
@@ -239,13 +238,13 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
 		// 主要用于从genesis确定所在区块height。配合txout源表查询
 		"DROP TABLE IF EXISTS txout_genesis_height",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS txout_genesis_height (
 	height       UInt32,
 	utxid        FixedString(32),
 	vout         UInt32,
-	address      FixedString(20),
-	genesis      FixedString(20)
+	address      String,
+	genesis      String
 ) engine=MergeTree()
 PRIMARY KEY genesis
 ORDER BY (genesis, address, height)
@@ -254,12 +253,12 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
 		// sign mergeTree
 		"DROP TABLE IF EXISTS utxo",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS utxo (
 	utxid        FixedString(32),
 	vout         UInt32,
-	address      FixedString(20),
-	genesis      FixedString(20),
+	address      String,
+	genesis      String,
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String,
@@ -271,12 +270,12 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
 		// utxo address
 		"DROP TABLE IF EXISTS utxo_address",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS utxo_address (
 	utxid        FixedString(32),
 	vout         UInt32,
-	address      FixedString(20),
-	genesis      FixedString(20),
+	address      String,
+	genesis      String,
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String,
@@ -289,12 +288,12 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
 		// utxo genesis
 		"DROP TABLE IF EXISTS utxo_genesis",
-		`
+		`\
 CREATE TABLE IF NOT EXISTS utxo_genesis (
 	utxid        FixedString(32),
 	vout         UInt32,
-	address      FixedString(20),
-	genesis      FixedString(20),
+	address      String,
+	genesis      String,
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String,
@@ -483,6 +482,12 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"ALTER TABLE utxo_genesis DELETE WHERE sign=-1",
 
 		"OPTIMIZE TABLE utxo_genesis FINAL",
+
+		"DROP TABLE IF EXISTS blk_height_new",
+		"DROP TABLE IF EXISTS blktx_height_new",
+		"DROP TABLE IF EXISTS txin_new",
+		"DROP TABLE IF EXISTS txout_new",
+		"DROP TABLE IF EXISTS txin_full_new",
 	}
 )
 
@@ -514,11 +519,13 @@ func ProcessPartSyncCk() bool {
 
 func ProcessSyncCk(processSQLs []string) bool {
 	for _, psql := range processSQLs {
+		partLen := len(psql)
+		if partLen > 64 {
+			partLen = 64
+		}
+		log.Println("sync exec:", psql[:partLen])
 		if _, err := clickhouse.CK.Exec(psql); err != nil {
-			LogErr.Info("sync-exec-err",
-				zap.String("sync-exec-err", psql),
-				zap.String("err", err.Error()),
-			)
+			log.Println("sync exec err", psql, err.Error())
 			return false
 		}
 	}

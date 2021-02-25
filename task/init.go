@@ -75,6 +75,8 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 func ParseEnd() {
 	defer utils.SyncLog()
 
+	serial.CleanUtxoMap()
+
 	if IsSync {
 		utils.CommitSyncCk()
 		if IsFull {

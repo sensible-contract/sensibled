@@ -9,7 +9,6 @@ import (
 
 // ParseTx 先并行分析交易tx，不同区块并行，同区块内串行
 func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
-
 	for idx, input := range tx.TxIns {
 		key := make([]byte, 36)
 		copy(key, tx.Hash)
