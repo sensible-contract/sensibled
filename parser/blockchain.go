@@ -118,9 +118,10 @@ OUT:
 			block.Txs = txs
 
 			processBlock := &model.ProcessBlock{
-				Height:         block.Height,
-				UtxoMap:        make(map[string]model.CalcData, 1),
-				UtxoMissingMap: make(map[string]bool, 1),
+				Height:           uint32(block.Height),
+				NewUtxoDataMap:   make(map[string]model.CalcData, 1),
+				SpentUtxoDataMap: make(map[string]model.CalcData, 1),
+				SpentUtxoKeysMap: make(map[string]bool, 1),
 			}
 			block.ParseData = processBlock
 
@@ -355,7 +356,7 @@ func (bc *Blockchain) SelectLongestChain() {
 }
 
 // GetBlockSyncCommonBlockHeight 获取区块同步起始的共同区块高度
-func (bc *Blockchain) GetBlockSyncCommonBlockHeight(endBlockHeight int) (heigth, orphanCount int) {
+func (bc *Blockchain) GetBlockSyncCommonBlockHeight(endBlockHeight int) (heigth, orphanCount, newblock int) {
 	blocks, err := loader.GetLatestBlocks()
 	if err != nil {
 		panic("sync check, but failed.")
@@ -369,9 +370,10 @@ func (bc *Blockchain) GetBlockSyncCommonBlockHeight(endBlockHeight int) (heigth,
 	for _, block := range blocks {
 		blockIdHex := utils.HashString(block.BlockId)
 		if _, ok := bc.BlocksOfChain[blockIdHex]; ok {
-			log.Printf("shoud sync block after height: %d, new: %d, orphan: %d",
-				block.Height, endBlockHeight-int(block.Height)-1, orphanCount)
-			return int(block.Height), orphanCount
+			newblock = endBlockHeight - int(block.Height) - 1
+			log.Printf("shoud sync block after height: %d, orphan: %d, new: %d",
+				block.Height, orphanCount, newblock)
+			return int(block.Height), orphanCount, newblock
 		}
 		orphanCount++
 	}

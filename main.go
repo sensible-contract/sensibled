@@ -4,6 +4,7 @@ import (
 	"blkparser/loader"
 	"blkparser/parser"
 	"blkparser/task"
+	"blkparser/task/serial"
 	"blkparser/utils"
 	"context"
 	"flag"
@@ -11,7 +12,6 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
-	"runtime"
 	"time"
 
 	"github.com/spf13/viper"
@@ -60,36 +60,58 @@ func main() {
 			// 初始化载入block header
 			blockchain.InitLongestChainHeader()
 
-			if task.IsFull {
-				log.Printf("full")
-				startBlockHeight = 0
-				if task.IsSync {
-					log.Printf("sync")
-					utils.CreateAllSyncCk()
-					utils.PrepareFullSyncCk()
-				}
-			} else {
-				log.Printf("part")
-				if task.IsSync {
-					log.Printf("sync")
-					// 从clickhouse读取现有同步区块，判断同步位置
-					commonHeigth, orphanCount := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
-					startBlockHeight = commonHeigth + 1
-
-					if orphanCount > 0 {
-						// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
-						// 直接从公有块高度（COMMON_HEIGHT）往上删除就可以了。
-						utils.RemoveOrphanPartSyncCk(commonHeigth)
+			for {
+				if task.IsFull {
+					log.Printf("full")
+					startBlockHeight = 0
+					if task.IsSync {
+						log.Printf("sync")
+						utils.CreateAllSyncCk()
+						utils.PrepareFullSyncCk()
 					}
+				} else {
+					log.Printf("part")
+					if task.IsSync {
+						log.Printf("sync")
+						// 从clickhouse读取现有同步区块，判断同步位置
+						commonHeigth, orphanCount, newblock := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
+						startBlockHeight = commonHeigth + 1
+						if newblock == 0 {
+							break
+						}
+						if orphanCount > 0 {
+							log.Printf("orphan")
+							// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
+							// 获取需要补回的utxo
+							utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(commonHeigth)
+							if err != nil {
+								log.Printf("get utxo to restore failed: %v", err)
+								break
+							}
+							utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(commonHeigth)
+							if err != nil {
+								log.Printf("get utxo to remove failed: %v", err)
+								break
+							}
 
-					utils.CreatePartSyncCk()
-					utils.PreparePartSyncCk()
+							if err := serial.RestoreUtxoFromRedis(utxoToRestore, utxoToRemove); err != nil {
+								log.Printf("restore/remove utxo from redis failed: %v", err)
+								break
+							}
+
+							// 直接从公有块高度（COMMON_HEIGHT）往上删除就可以了。
+							utils.RemoveOrphanPartSyncCk(commonHeigth)
+						}
+
+						utils.CreatePartSyncCk()
+						utils.PreparePartSyncCk()
+					}
 				}
+
+				blockchain.ParseLongestChain(startBlockHeight, endBlockHeight)
+				log.Printf("finished")
+				break
 			}
-
-			blockchain.ParseLongestChain(startBlockHeight, endBlockHeight)
-			log.Printf("finished")
-
 			if task.IsSync && endBlockHeight < 0 {
 				task.IsFull = false
 				<-newBlockNotify
@@ -103,13 +125,6 @@ func main() {
 	}()
 	go func() {
 		loader.ZmqNotify(newBlockNotify)
-	}()
-
-	go func() {
-		for {
-			runtime.GC()
-			time.Sleep(time.Second * 30)
-		}
 	}()
 
 	// go tool pprof http://localhost:8080/debug/pprof/profile

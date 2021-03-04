@@ -1,6 +1,6 @@
 
 # console/row-binary/row-binary-debug
-encoding: "row-binary"
+encoding: "row-binary-debug"
 
 # /home/jie/astudy/clickhouse
 pathPrefix: "out/"

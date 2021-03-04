@@ -33,6 +33,8 @@ func init() {
 		"database":                 viper.GetString("database"),
 		"read_timeout":             strconv.Itoa(viper.GetInt("read_timeout")),
 		"write_timeout":            strconv.Itoa(viper.GetInt("write_timeout")),
+		"send_timeout":             strconv.Itoa(viper.GetInt("send_timeout")),
+		"receive_timeout":          strconv.Itoa(viper.GetInt("receive_timeout")),
 		"no_delay":                 fmt.Sprintf("%t", viper.GetBool("no_delay")),
 		"connection_open_strategy": viper.GetString("connection_open_strategy"),
 		"block_size":               strconv.Itoa(viper.GetInt("block_size")),

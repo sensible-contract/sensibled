@@ -20,14 +20,14 @@ func init() {
 
 // ParseBlockParallel 先并行分析区块，不同区块并行，同区块内串行
 func ParseBlockParallel(block *model.Block) {
-	for idx, tx := range block.Txs {
-		isCoinbase := idx == 0
+	for txIdx, tx := range block.Txs {
+		isCoinbase := txIdx == 0
 		parallel.ParseTxFirst(tx, isCoinbase, block.ParseData)
 
 		// for txin full dump
 		if IsFull {
 			parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
-			parallel.ParseUtxoParallel(tx, block.ParseData)
+			parallel.ParseUtxoParallel(txIdx, tx, block.ParseData)
 		}
 	}
 
@@ -36,7 +36,6 @@ func ParseBlockParallel(block *model.Block) {
 		serial.SyncBlock(block)
 		serial.SyncBlockTx(block)
 		serial.SyncBlockTxOutputInfo(block)
-		serial.SyncBlockTxInputInfo(block)
 	} else {
 		serial.DumpBlock(block)
 		serial.DumpBlockTx(block)
@@ -52,6 +51,8 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 	// DumpBlockData
 	if IsFull {
 		if IsSync {
+			// serial.ParseGetSpentUtxoDataFromMapSerial(block.ParseData)
+			serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
 			serial.SyncBlockTxInputDetail(block)
 		} else {
 			serial.DumpBlockTxInputDetail(block)
@@ -75,7 +76,9 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 func ParseEnd() {
 	defer utils.SyncLog()
 
-	serial.CleanUtxoMap()
+	if IsFull {
+		serial.CleanUtxoMap()
+	}
 
 	if IsSync {
 		utils.CommitSyncCk()

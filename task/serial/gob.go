@@ -35,7 +35,7 @@ func ParseEndDumpUtxo(log *zap.Logger) {
 		key := []byte(keyStr)
 
 		log.Info("utxo",
-			zap.Int("h", data.BlockHeight),
+			zap.Uint32("h", data.BlockHeight),
 			zap.String("tx", utils.HashString(key[:32])),
 			zap.Uint32("i", binary.LittleEndian.Uint32(key[32:])),
 			zap.Uint64("v", data.Value),

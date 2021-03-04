@@ -11,11 +11,15 @@ maxIdleConns: 32
 # 最大打开数量(可选0)
 maxOpenConns: 32
 # 最大lifetime(分钟，可选0)
-connMaxLifetime: "10h"
+connMaxLifetime: "10m"
 # 读超时(秒)
 read_timeout: 3600
 # 写超时(秒)
 write_timeout: 3600
+# 服务端发送超时(秒)
+send_timeout: 7200
+# 服务端接收超时(秒)
+receive_timeout: 7200
 # 无延迟
 no_delay: true
 # connection_open_strategy 连接打开策略
