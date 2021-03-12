@@ -73,3 +73,13 @@ func isMultiSig(scriptType []byte) bool {
 	}
 	return true
 }
+
+func IsOpreturn(scriptType []byte) bool {
+	if len(scriptType) > 0 && scriptType[0] == OP_RETURN {
+		return true
+	}
+	if len(scriptType) > 1 && scriptType[1] == OP_RETURN {
+		return true
+	}
+	return false
+}

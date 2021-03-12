@@ -163,5 +163,7 @@ func (d *CalcData) Unmarshal(buf []byte) {
 	// copy(d.AddressPkh, buf[12:32])                      // 20
 	// copy(d.GenesisId, buf[32:52])                       // 20
 	// copy(d.ScriptType, buf[60:92])                      // 32
-	copy(d.Script, buf[20:]) // n
+	d.Script = buf[20:]
+	// d.Script = make([]byte, len(buf)-20)
+	// copy(d.Script, buf[20:]) // n
 }

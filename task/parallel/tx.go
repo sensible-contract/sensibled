@@ -37,12 +37,13 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		if output.AddressPkh == nil {
 			output.GenesisId, output.AddressPkh = script.ExtractPkScriptGenesisIdAndAddressPkh(output.Pkscript)
 		}
-		// test locking script
-		output.LockingScriptMatch = true
 
-		// if utils.IsLockingScriptOnlyEqual(output.Pkscript) {
-		// 	output.LockingScriptMatch = true
-		// }
+		// test locking script
+		// output.LockingScriptMatch = true
+
+		if !script.IsOpreturn(output.LockingScriptType) {
+			output.LockingScriptMatch = true
+		}
 	}
 }
 

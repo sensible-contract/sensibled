@@ -26,8 +26,8 @@ func init() {
 	})
 }
 
-// ParseGetSpentUtxoDataFromMapSerial utxo 信息
-func ParseGetSpentUtxoDataFromMapSerial(block *model.ProcessBlock) {
+// ParseGetSpentUtxoDataFromRedisSerial utxo 信息
+func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 	pipe := rdb.Pipeline()
 
 	m := map[string]*redis.StringCmd{}
@@ -38,7 +38,7 @@ func ParseGetSpentUtxoDataFromMapSerial(block *model.ProcessBlock) {
 		m[key] = pipe.Get(ctx, key)
 	}
 	_, err := pipe.Exec(ctx)
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		panic(err)
 	}
 
@@ -48,7 +48,6 @@ func ParseGetSpentUtxoDataFromMapSerial(block *model.ProcessBlock) {
 			continue
 		} else if err != nil {
 			panic(err)
-			continue
 		}
 		d := model.CalcData{}
 		d.Unmarshal([]byte(res))
@@ -64,8 +63,8 @@ func ParseGetSpentUtxoDataFromMapSerial(block *model.ProcessBlock) {
 	}
 }
 
-// ParseGetSpentUtxoDataFromRedisSerial utxo 信息
-func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
+// ParseGetSpentUtxoDataFromMapSerial utxo 信息
+func ParseGetSpentUtxoDataFromMapSerial(block *model.ProcessBlock) {
 	for key := range block.SpentUtxoKeysMap {
 		if _, ok := block.NewUtxoDataMap[key]; ok {
 			continue
@@ -103,12 +102,16 @@ func ParseUtxoSerial(block *model.ProcessBlock) {
 			panic(err)
 		}
 		// redis有序address utxo数据添加
-		if err := pipe.ZAdd(ctx, "a"+string(data.AddressPkh), &redis.Z{Score: score, Member: key}).Err(); err != nil {
-			panic(err)
+		if len(data.AddressPkh) == 20 {
+			if err := pipe.ZAdd(ctx, "a"+string(data.AddressPkh), &redis.Z{Score: score, Member: key}).Err(); err != nil {
+				panic(err)
+			}
 		}
 		// redis有序genesis utxo数据添加
-		if err := pipe.ZAdd(ctx, "g"+string(data.GenesisId), &redis.Z{Score: score, Member: key}).Err(); err != nil {
-			panic(err)
+		if len(data.GenesisId) > 32 {
+			if err := pipe.ZAdd(ctx, "g"+string(data.GenesisId), &redis.Z{Score: score, Member: key}).Err(); err != nil {
+				panic(err)
+			}
 		}
 	}
 	for key, data := range block.SpentUtxoDataMap {
@@ -122,6 +125,7 @@ func ParseUtxoSerial(block *model.ProcessBlock) {
 		if err := pipe.ZRem(ctx, "a"+string(data.AddressPkh), key).Err(); err != nil {
 			panic(err)
 		}
+
 		// redis有序genesis utxo数据清除
 		if err := pipe.ZRem(ctx, "g"+string(data.GenesisId), key).Err(); err != nil {
 			panic(err)
@@ -151,12 +155,16 @@ func RestoreUtxoFromRedis(utxoToRestore, utxoToRemove []*model.CalcData) (err er
 			panic(err)
 		}
 		// redis有序address utxo数据添加
-		if err := pipe.ZAdd(ctx, "a"+string(data.AddressPkh), &redis.Z{Score: score, Member: key}).Err(); err != nil {
-			panic(err)
+		if len(data.AddressPkh) == 20 {
+			if err := pipe.ZAdd(ctx, "a"+string(data.AddressPkh), &redis.Z{Score: score, Member: key}).Err(); err != nil {
+				panic(err)
+			}
 		}
 		// redis有序genesis utxo数据添加
-		if err := pipe.ZAdd(ctx, "g"+string(data.GenesisId), &redis.Z{Score: score, Member: key}).Err(); err != nil {
-			panic(err)
+		if len(data.GenesisId) > 32 {
+			if err := pipe.ZAdd(ctx, "g"+string(data.GenesisId), &redis.Z{Score: score, Member: key}).Err(); err != nil {
+				panic(err)
+			}
 		}
 	}
 	for _, data := range utxoToRemove {

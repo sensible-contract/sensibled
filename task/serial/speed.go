@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	start            time.Time = time.Now()
 	lastLogTime      time.Time
 	lastBlockHeight  int
 	lastBlockTxCount int
@@ -43,6 +44,7 @@ func ParseBlockSpeed(nTx int, nextBlockHeight, blockCountInBuffer, maxBlockHeigh
 		zap.Int("utxo", len(utxoMap)),
 		// zap.Int("calc", len(calcMap)),
 		zap.Int("time", timeLeft),
+		zap.Duration("elapse", time.Since(start)/time.Second),
 	)
 
 	lastBlockHeight = nextBlockHeight
