@@ -6,6 +6,7 @@ import (
 	"blkparser/utils"
 	"context"
 	"encoding/binary"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
@@ -20,9 +21,11 @@ var (
 
 func init() {
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Addr:        "localhost:6379",
+		Password:    "", // no password set
+		DB:          0,  // use default DB
+		DialTimeout: time.Minute,
+		ReadTimeout: time.Minute * 5,
 	})
 }
 

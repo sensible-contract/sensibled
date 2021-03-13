@@ -81,8 +81,8 @@ func DumpBlockTxInputInfo(block *model.Block) {
 // DumpBlockTxInputDetail all tx input info
 func DumpBlockTxInputDetail(block *model.Block) {
 	var commonObjData *model.CalcData = &model.CalcData{
-		GenesisId:  make(model.Bytes, 1),
-		AddressPkh: make(model.Bytes, 1),
+		GenesisId:  make([]byte, 1),
+		AddressPkh: make([]byte, 1),
 	}
 
 	for idx, tx := range block.Txs {

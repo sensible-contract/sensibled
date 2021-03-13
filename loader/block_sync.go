@@ -50,7 +50,7 @@ func GetSpentUTXOAfterBlockHeight(height int) (utxosRsp []*model.CalcData, err e
 	psql := fmt.Sprintf(`
 SELECT utxid, vout, address, genesis, satoshi, script_type, script_pk, height_txo, utxidx FROM txin_full
    WHERE satoshi > 0 AND
-      height > %d`, height)
+      height >= %d`, height)
 
 	utxosRet, err := clickhouse.ScanAll(psql, utxoResultSRF)
 	if err != nil {
@@ -58,7 +58,7 @@ SELECT utxid, vout, address, genesis, satoshi, script_type, script_pk, height_tx
 		return nil, err
 	}
 	if utxosRet == nil {
-		return nil, errors.New("not exist")
+		return nil, nil
 	}
 	utxosRsp = utxosRet.([]*model.CalcData)
 	return utxosRsp, nil
@@ -70,7 +70,7 @@ SELECT utxid, vout, address, genesis, 0, '', '', 0, 0 FROM txout
    WHERE satoshi > 0 AND
       NOT startsWith(script_type, char(0x6a)) AND
       NOT startsWith(script_type, char(0x00, 0x6a)) AND
-      height > %d`, height)
+      height >= %d`, height)
 
 	utxosRet, err := clickhouse.ScanAll(psql, utxoResultSRF)
 	if err != nil {
@@ -78,7 +78,7 @@ SELECT utxid, vout, address, genesis, 0, '', '', 0, 0 FROM txout
 		return nil, err
 	}
 	if utxosRet == nil {
-		return nil, errors.New("not exist")
+		return nil, nil
 	}
 	utxosRsp = utxosRet.([]*model.CalcData)
 	return utxosRsp, nil

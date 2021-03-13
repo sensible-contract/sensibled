@@ -82,8 +82,8 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 // SyncBlockTxInputDetail all tx input info
 func SyncBlockTxInputDetail(block *model.Block) {
 	var commonObjData *model.CalcData = &model.CalcData{
-		GenesisId:  make(model.Bytes, 1),
-		AddressPkh: make(model.Bytes, 1),
+		GenesisId:  make([]byte, 1),
+		AddressPkh: make([]byte, 1),
 	}
 
 	for txIdx, tx := range block.Txs {

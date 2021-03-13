@@ -10,8 +10,9 @@ import (
 var (
 	MaxBlockHeightParallel int
 
-	IsSync bool
-	IsFull bool
+	IsSync   bool
+	WithUtxo bool
+	IsFull   bool
 )
 
 func init() {
@@ -24,14 +25,13 @@ func ParseBlockParallel(block *model.Block) {
 		isCoinbase := txIdx == 0
 		parallel.ParseTxFirst(tx, isCoinbase, block.ParseData)
 
-		// for txin full dump
-		if IsFull {
+		if WithUtxo {
+			// 准备utxo花费关系数据
 			parallel.ParseTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
-			parallel.ParseUtxoParallel(txIdx, tx, block.ParseData)
+			parallel.ParseNewUtxoInTxParallel(txIdx, tx, block.ParseData)
 		}
 	}
 
-	// DumpBlockData
 	if IsSync {
 		serial.SyncBlock(block)
 		serial.SyncBlockTx(block)
@@ -48,8 +48,7 @@ func ParseBlockParallel(block *model.Block) {
 func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int) {
 	serial.ParseBlockSpeed(len(block.Txs), block.Height, blockCountInBuffer, MaxBlockHeightParallel, maxBlockHeight)
 
-	// DumpBlockData
-	if IsFull {
+	if WithUtxo {
 		if IsSync {
 			// serial.ParseGetSpentUtxoDataFromMapSerial(block.ParseData)
 			serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
@@ -58,7 +57,7 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 			serial.DumpBlockTxInputDetail(block)
 		}
 
-		// for txin full dump
+		// for txin dump
 		serial.ParseUtxoSerial(block.ParseData)
 	}
 
@@ -76,7 +75,7 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 func ParseEnd() {
 	defer utils.SyncLog()
 
-	if IsFull {
+	if WithUtxo {
 		serial.CleanUtxoMap()
 	}
 

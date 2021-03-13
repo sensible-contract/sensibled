@@ -9,7 +9,7 @@ import (
 
 type Tx struct {
 	HashHex   string // 32
-	Hash      Bytes  // 32
+	Hash      []byte // 32
 	Size      uint32
 	WitOffset uint
 	LockTime  uint32
@@ -23,49 +23,39 @@ type Tx struct {
 
 type TxIn struct {
 	InputHashHex string // 32
-	InputHash    Bytes  // 32
+	InputHash    []byte // 32
 	InputVout    uint32
-	ScriptSig    Bytes
+	ScriptSig    []byte
 	Sequence     uint32
 
 	// other:
 	InputOutpointKey string // 32 + 4
-	InputOutpoint    Bytes  // 32 + 4
-	InputPoint       Bytes  // 32 + 4
+	InputOutpoint    []byte // 32 + 4
+	InputPoint       []byte // 32 + 4
 }
 
 func (t *TxIn) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("t", t.InputHashHex)
 	enc.AddUint32("i", t.InputVout)
-	enc.AddObject("s", t.ScriptSig)
-	return nil
-}
-
-type Bytes []byte
-
-func (b Bytes) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	enc.AddBinary("$binary", b)
-	enc.AddString("$type", "05")
 	return nil
 }
 
 type TxOut struct {
 	Value    uint64
-	Pkscript Bytes
+	Pkscript []byte
 
 	// other:
-	AddressPkh           Bytes
-	GenesisId            Bytes
-	Outpoint             Bytes  // 32 + 4
+	AddressPkh           []byte
+	GenesisId            []byte
+	Outpoint             []byte // 32 + 4
 	OutpointKey          string // 32 + 4
-	LockingScriptType    Bytes
+	LockingScriptType    []byte
 	LockingScriptTypeHex string
 	LockingScriptMatch   bool
 }
 
 func (t *TxOut) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddUint64("v", t.Value)
-	enc.AddObject("s", t.Pkscript)
 	return nil
 }
 
@@ -100,30 +90,30 @@ type TxWit struct {
 ////////////////
 type Block struct {
 	Raw        []byte
-	Hash       Bytes  // 32 bytes
+	Hash       []byte // 32 bytes
 	HashHex    string // 32 bytes
 	FileIdx    int
 	FileOffset int
 	Height     int
 	Txs        []*Tx
 	Version    uint32
-	MerkleRoot Bytes // 32 bytes
+	MerkleRoot []byte // 32 bytes
 	BlockTime  uint32
 	Bits       uint32
 	Nonce      uint32
 	Size       uint32
 	TxCnt      int
-	Parent     Bytes  // 32 bytes
+	Parent     []byte // 32 bytes
 	ParentHex  string // 32 bytes
 	NextHex    string // 32 bytes
 	ParseData  *ProcessBlock
 }
 
 type BlockCache struct {
-	Hash       Bytes // 32 bytes
+	Hash       []byte // 32 bytes
 	FileIdx    int
 	FileOffset int
-	Parent     Bytes // 32 bytes
+	Parent     []byte // 32 bytes
 }
 
 ////////////////
@@ -135,15 +125,15 @@ type ProcessBlock struct {
 }
 
 type CalcData struct {
-	UTxid       Bytes
+	UTxid       []byte
 	Vout        uint32
 	BlockHeight uint32
 	TxIdx       uint64
-	AddressPkh  Bytes
-	GenesisId   Bytes
+	AddressPkh  []byte
+	GenesisId   []byte
 	Value       uint64
-	ScriptType  Bytes
-	Script      Bytes
+	ScriptType  []byte
+	Script      []byte
 }
 
 func (d *CalcData) Marshal(buf []byte) {

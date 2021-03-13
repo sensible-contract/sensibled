@@ -63,8 +63,8 @@ func ParseTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.Proce
 	}
 }
 
-// ParseUtxoParallel utxo 信息
-func ParseUtxoParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock) {
+// ParseNewUtxoInTxParallel utxo 信息
+func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock) {
 	for _, output := range tx.TxOuts {
 		if output.Value == 0 || !output.LockingScriptMatch {
 			continue

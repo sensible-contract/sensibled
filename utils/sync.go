@@ -26,7 +26,7 @@ var (
 	// part sync
 	sqlBlkNew      string = "INSERT INTO blk_height_new (height, blkid, previd, merkle, ntx, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxNew       string = "INSERT INTO blktx_height_new (txid, nin, nout, txsize, locktime, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxOutNew    string = "INSERT INTO txout_new (utxid, vout, address, genesis, satoshi, script_type, script_pk, height, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTxOutNew    string = "INSERT INTO txout_new (utxid, vout, address, genesis, satoshi, script_type, script_pk, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxInFullNew string = "INSERT INTO txin_full_new (height, txidx, txid, idx, script_sig, nsequence, height_txo, utxidx, utxid, vout, address, genesis, satoshi, script_type, script_pk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 )
 
@@ -34,7 +34,6 @@ func PrepareFullSyncCk() bool {
 	var err error
 	syncTxBlk, err = clickhouse.CK.Begin()
 	if err != nil {
-		log.Println()
 		log.Println("sync-begin-blk", err.Error())
 		return false
 	}
@@ -84,45 +83,45 @@ func PreparePartSyncCk() bool {
 	var err error
 	syncTxBlk, err = clickhouse.CK.Begin()
 	if err != nil {
-		log.Println("sync-prepare", "blk err")
+		log.Println("sync-begin-blk", err.Error())
 		return false
 	}
 	SyncStmtBlk, err = syncTxBlk.Prepare(sqlBlkNew)
 	if err != nil {
-		log.Println("sync-prepare", "blk err")
+		log.Println("sync-prepare-blk", err.Error())
 		return false
 	}
 
 	syncTxTx, err = clickhouse.CK.Begin()
 	if err != nil {
-		log.Println("sync-prepare", "tx err")
+		log.Println("sync-begin-tx", err.Error())
 		return false
 	}
 	SyncStmtTx, err = syncTxTx.Prepare(sqlTxNew)
 	if err != nil {
-		log.Println("sync-prepare", "tx err")
+		log.Println("sync-prepare-tx", err.Error())
 		return false
 	}
 
 	syncTxTxOut, err = clickhouse.CK.Begin()
 	if err != nil {
-		log.Println("sync-prepare", "txout err")
+		log.Println("sync-begin-txout", err.Error())
 		return false
 	}
 	SyncStmtTxOut, err = syncTxTxOut.Prepare(sqlTxOutNew)
 	if err != nil {
-		log.Println("sync-prepare", "txout err")
+		log.Println("sync-prepare-txout", err.Error())
 		return false
 	}
 
 	syncTxTxInFull, err = clickhouse.CK.Begin()
 	if err != nil {
-		log.Println("sync-prepare", "txin err")
+		log.Println("sync-begin-txinfull", err.Error())
 		return false
 	}
 	SyncStmtTxInFull, err = syncTxTxInFull.Prepare(sqlTxInFullNew)
 	if err != nil {
-		log.Println("sync-prepare", "txin err")
+		log.Println("sync-prepare-txinfull", err.Error())
 		return false
 	}
 
