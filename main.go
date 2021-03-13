@@ -28,6 +28,7 @@ func init() {
 	flag.BoolVar(&task.IsSync, "sync", false, "sync into db")
 	flag.BoolVar(&task.IsFull, "full", false, "full dump")
 	flag.BoolVar(&task.WithUtxo, "utxo", true, "with utxo dump")
+	flag.BoolVar(&task.UseMap, "map", false, "use map, instead of redis")
 
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
 	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
@@ -107,7 +108,7 @@ func main() {
 									break
 								}
 
-								if err := serial.RestoreUtxoFromRedis(utxoToRestore, utxoToRemove); err != nil {
+								if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove); err != nil {
 									log.Printf("restore/remove utxo from redis failed: %v", err)
 									break
 								}

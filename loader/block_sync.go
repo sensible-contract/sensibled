@@ -4,6 +4,7 @@ import (
 	"blkparser/loader/clickhouse"
 	"blkparser/model"
 	"database/sql"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
@@ -46,32 +47,25 @@ func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 	return &ret, nil
 }
 
-func GetSpentUTXOAfterBlockHeight(height int) (utxosRsp []*model.CalcData, err error) {
+func GetSpentUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.CalcData, err error) {
 	psql := fmt.Sprintf(`
 SELECT utxid, vout, address, genesis, satoshi, script_type, script_pk, height_txo, utxidx FROM txin_full
    WHERE satoshi > 0 AND
       height >= %d`, height)
-
-	utxosRet, err := clickhouse.ScanAll(psql, utxoResultSRF)
-	if err != nil {
-		log.Printf("query blk failed: %v", err)
-		return nil, err
-	}
-	if utxosRet == nil {
-		return nil, nil
-	}
-	utxosRsp = utxosRet.([]*model.CalcData)
-	return utxosRsp, nil
+	return GetUtxoBySql(psql)
 }
 
-func GetNewUTXOAfterBlockHeight(height int) (utxosRsp []*model.CalcData, err error) {
+func GetNewUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.CalcData, err error) {
 	psql := fmt.Sprintf(`
 SELECT utxid, vout, address, genesis, 0, '', '', 0, 0 FROM txout
    WHERE satoshi > 0 AND
       NOT startsWith(script_type, char(0x6a)) AND
       NOT startsWith(script_type, char(0x00, 0x6a)) AND
       height >= %d`, height)
+	return GetUtxoBySql(psql)
+}
 
+func GetUtxoBySql(psql string) (utxosMapRsp map[string]*model.CalcData, err error) {
 	utxosRet, err := clickhouse.ScanAll(psql, utxoResultSRF)
 	if err != nil {
 		log.Printf("query blk failed: %v", err)
@@ -80,6 +74,15 @@ SELECT utxid, vout, address, genesis, 0, '', '', 0, 0 FROM txout
 	if utxosRet == nil {
 		return nil, nil
 	}
-	utxosRsp = utxosRet.([]*model.CalcData)
-	return utxosRsp, nil
+	utxosRsp := utxosRet.([]*model.CalcData)
+
+	utxosMapRsp = make(map[string]*model.CalcData, len(utxosRsp))
+	for _, data := range utxosRsp {
+		key := make([]byte, 36)
+		copy(key, data.UTxid)
+		binary.LittleEndian.PutUint32(key[32:], data.Vout) // 4
+		utxosMapRsp[string(key)] = data
+	}
+
+	return utxosMapRsp, nil
 }

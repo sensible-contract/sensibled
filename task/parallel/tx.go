@@ -70,15 +70,16 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock
 			continue
 		}
 
-		block.NewUtxoDataMap[output.OutpointKey] = model.CalcData{
-			BlockHeight: block.Height,
-			TxIdx:       uint64(txIdx),
-			AddressPkh:  output.AddressPkh,
-			GenesisId:   output.GenesisId,
-			Value:       output.Value,
-			ScriptType:  output.LockingScriptType,
-			Script:      output.Pkscript,
-		}
+		d := model.CalcDataPool.Get().(*model.CalcData)
+		d.BlockHeight = block.Height
+		d.TxIdx = uint64(txIdx)
+		d.AddressPkh = output.AddressPkh
+		d.GenesisId = output.GenesisId
+		d.Value = output.Value
+		d.ScriptType = output.LockingScriptType
+		d.Script = output.Pkscript
+
+		block.NewUtxoDataMap[output.OutpointKey] = d
 
 		// if _, ok := block.UtxoMissingMap[output.OutpointKey]; ok {
 		// 	delete(block.UtxoMissingMap, output.OutpointKey)

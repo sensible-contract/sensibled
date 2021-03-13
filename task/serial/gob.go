@@ -12,26 +12,27 @@ import (
 )
 
 var (
-	calcMap   map[string]model.CalcData
+	calcMap   map[string]*model.CalcData
 	calcMutex sync.Mutex
 
-	utxoMap map[string]model.CalcData
+	GlobalSpentUtxoDataMap map[string]*model.CalcData
+	GlobalNewUtxoDataMap   map[string]*model.CalcData
 )
 
 func init() {
-	calcMap = make(map[string]model.CalcData, 0)
-	utxoMap = make(map[string]model.CalcData, 0)
-
+	calcMap = make(map[string]*model.CalcData, 0)
+	GlobalNewUtxoDataMap = make(map[string]*model.CalcData, 0)
+	GlobalSpentUtxoDataMap = make(map[string]*model.CalcData, 0)
 	// loadUtxoFromGobFile()
 }
 
 func CleanUtxoMap() {
-	utxoMap = nil
+	GlobalNewUtxoDataMap = nil
 	runtime.GC()
 }
 
 func ParseEndDumpUtxo(log *zap.Logger) {
-	for keyStr, data := range utxoMap {
+	for keyStr, data := range GlobalNewUtxoDataMap {
 		key := []byte(keyStr)
 
 		log.Info("utxo",

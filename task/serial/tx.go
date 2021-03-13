@@ -5,7 +5,6 @@ import (
 	"blkparser/script"
 	"blkparser/utils"
 	"context"
-	"encoding/binary"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -52,7 +51,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 		} else if err != nil {
 			panic(err)
 		}
-		d := model.CalcData{}
+		d := model.CalcDataPool.Get().(*model.CalcData)
 		d.Unmarshal([]byte(res))
 
 		// 补充数据
@@ -68,16 +67,80 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 
 // ParseGetSpentUtxoDataFromMapSerial utxo 信息
 func ParseGetSpentUtxoDataFromMapSerial(block *model.ProcessBlock) {
+	pipe := rdb.Pipeline()
+	m := map[string]*redis.StringCmd{}
+	needExec := false
 	for key := range block.SpentUtxoKeysMap {
 		if _, ok := block.NewUtxoDataMap[key]; ok {
 			continue
 		}
-		block.SpentUtxoDataMap[key] = utxoMap[key]
+		if data, ok := GlobalNewUtxoDataMap[key]; ok {
+			block.SpentUtxoDataMap[key] = data
+			delete(GlobalNewUtxoDataMap, key)
+		} else {
+			needExec = true
+			m[key] = pipe.Get(ctx, key)
+		}
+	}
+	if !needExec {
+		return
+	}
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		panic(err)
+	}
+	for key, v := range m {
+		res, err := v.Result()
+		if err == redis.Nil {
+			continue
+		} else if err != nil {
+			panic(err)
+		}
+		d := model.CalcDataPool.Get().(*model.CalcData)
+		d.Unmarshal([]byte(res))
+
+		// 补充数据
+		d.ScriptType = script.GetLockingScriptType(d.Script)
+		d.GenesisId, d.AddressPkh = script.ExtractPkScriptAddressPkh(d.Script, d.ScriptType)
+		if d.AddressPkh == nil {
+			d.GenesisId, d.AddressPkh = script.ExtractPkScriptGenesisIdAndAddressPkh(d.Script)
+		}
+
+		block.SpentUtxoDataMap[key] = d
+		GlobalSpentUtxoDataMap[key] = d
 	}
 }
 
-// ParseUtxoSerial utxo 信息
-func ParseUtxoSerial(block *model.ProcessBlock) {
+// UpdateUtxoInMapSerial utxo 信息
+func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
+	insideTxo := make([]string, len(block.SpentUtxoKeysMap))
+	for key := range block.SpentUtxoKeysMap {
+		if data, ok := block.NewUtxoDataMap[key]; !ok {
+			continue
+		} else {
+			model.CalcDataPool.Put(data)
+		}
+		insideTxo = append(insideTxo, key)
+	}
+	for _, key := range insideTxo {
+		delete(block.NewUtxoDataMap, key)
+		delete(block.SpentUtxoKeysMap, key)
+	}
+
+	lastUtxoMapAddCount += len(block.NewUtxoDataMap)
+	lastUtxoMapRemoveCount += len(block.SpentUtxoKeysMap)
+
+	for key, data := range block.NewUtxoDataMap {
+		GlobalNewUtxoDataMap[key] = data
+	}
+
+	for _, data := range block.SpentUtxoDataMap {
+		model.CalcDataPool.Put(data)
+	}
+}
+
+// UpdateUtxoInRedisSerial utxo 信息
+func UpdateUtxoInRedisSerial(block *model.ProcessBlock) {
 	insideTxo := make([]string, len(block.SpentUtxoKeysMap))
 	for key := range block.SpentUtxoKeysMap {
 		if _, ok := block.NewUtxoDataMap[key]; !ok {
@@ -93,8 +156,12 @@ func ParseUtxoSerial(block *model.ProcessBlock) {
 	lastUtxoMapAddCount += len(block.NewUtxoDataMap)
 	lastUtxoMapRemoveCount += len(block.SpentUtxoKeysMap)
 
+	UpdateUtxoInRedis(block.NewUtxoDataMap, block.SpentUtxoDataMap)
+}
+
+func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.CalcData) (err error) {
 	pipe := rdb.Pipeline()
-	for key, data := range block.NewUtxoDataMap {
+	for key, data := range utxoToRestore {
 		buf := make([]byte, 20+len(data.Script))
 		data.Marshal(buf)
 		// redis全局utxo数据添加
@@ -117,7 +184,7 @@ func ParseUtxoSerial(block *model.ProcessBlock) {
 			}
 		}
 	}
-	for key, data := range block.SpentUtxoDataMap {
+	for key, data := range utxoToRemove {
 		// redis全局utxo数据清除
 		pipe.Del(ctx, key)
 		// redis有序utxo数据清除
@@ -128,71 +195,14 @@ func ParseUtxoSerial(block *model.ProcessBlock) {
 		if err := pipe.ZRem(ctx, "a"+string(data.AddressPkh), key).Err(); err != nil {
 			panic(err)
 		}
-
 		// redis有序genesis utxo数据清除
 		if err := pipe.ZRem(ctx, "g"+string(data.GenesisId), key).Err(); err != nil {
 			panic(err)
 		}
 	}
-	_, err := pipe.Exec(ctx)
+	_, err = pipe.Exec(ctx)
 	if err != nil {
 		panic(err)
-	}
-}
-
-// RestoreUtxoFromRedis utxo 信息
-func RestoreUtxoFromRedis(utxoToRestore, utxoToRemove []*model.CalcData) (err error) {
-	pipe := rdb.Pipeline()
-	for _, data := range utxoToRestore {
-		key := make([]byte, 36)
-		copy(key, data.UTxid)
-		binary.LittleEndian.PutUint32(key[32:], data.Vout) // 4
-
-		buf := make([]byte, 20+len(data.Script))
-		data.Marshal(buf)
-		// redis全局utxo数据添加
-		pipe.Set(ctx, string(key), buf, 0)
-		// redis有序utxo数据添加
-		score := float64(data.BlockHeight)*1000000000 + float64(data.TxIdx)
-		if err := pipe.ZAdd(ctx, "utxo", &redis.Z{Score: score, Member: key}).Err(); err != nil {
-			panic(err)
-		}
-		// redis有序address utxo数据添加
-		if len(data.AddressPkh) == 20 {
-			if err := pipe.ZAdd(ctx, "a"+string(data.AddressPkh), &redis.Z{Score: score, Member: key}).Err(); err != nil {
-				panic(err)
-			}
-		}
-		// redis有序genesis utxo数据添加
-		if len(data.GenesisId) > 32 {
-			if err := pipe.ZAdd(ctx, "g"+string(data.GenesisId), &redis.Z{Score: score, Member: key}).Err(); err != nil {
-				panic(err)
-			}
-		}
-	}
-	for _, data := range utxoToRemove {
-		key := make([]byte, 36)
-		copy(key, data.UTxid)
-		binary.LittleEndian.PutUint32(key[32:], data.Vout) // 4
-
-		// redis全局utxo数据清除
-		pipe.Del(ctx, string(key))
-		// redis有序utxo数据清除
-		if err := pipe.ZRem(ctx, "utxo", key).Err(); err != nil {
-			panic(err)
-		}
-		// redis有序address utxo数据清除
-		if err := pipe.ZRem(ctx, "a"+string(data.AddressPkh), key).Err(); err != nil {
-			panic(err)
-		}
-		// redis有序genesis utxo数据清除
-		if err := pipe.ZRem(ctx, "g"+string(data.GenesisId), key).Err(); err != nil {
-			panic(err)
-		}
-	}
-
-	if _, err := pipe.Exec(ctx); err != nil {
-		return err
 	}
 	return nil
 }
@@ -211,7 +221,7 @@ func DumpLockingScriptType(block *model.Block) {
 				data.Value += 1
 				calcMap[key] = data
 			} else {
-				calcMap[key] = model.CalcData{Value: 1}
+				calcMap[key] = &model.CalcData{Value: 1}
 			}
 
 			utils.Log.Info("pkscript",

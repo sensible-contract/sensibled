@@ -92,9 +92,9 @@ func DumpBlockTxInputDetail(block *model.Block) {
 			objData := commonObjData
 			if !isCoinbase {
 				if obj, ok := block.ParseData.NewUtxoDataMap[input.InputOutpointKey]; ok {
-					objData = &obj
+					objData = obj
 				} else if obj, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]; ok {
-					objData = &obj
+					objData = obj
 				} else {
 					utils.Log.Info("tx-input-err",
 						zap.String("txin", "input missing utxo"),

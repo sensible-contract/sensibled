@@ -119,8 +119,8 @@ OUT:
 
 			processBlock := &model.ProcessBlock{
 				Height:           uint32(block.Height),
-				NewUtxoDataMap:   make(map[string]model.CalcData, 1),
-				SpentUtxoDataMap: make(map[string]model.CalcData, 1),
+				NewUtxoDataMap:   make(map[string]*model.CalcData, 1),
+				SpentUtxoDataMap: make(map[string]*model.CalcData, 1),
 				SpentUtxoKeysMap: make(map[string]bool, 1),
 			}
 			block.ParseData = processBlock

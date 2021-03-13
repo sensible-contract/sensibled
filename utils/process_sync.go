@@ -357,8 +357,8 @@ func ProcessPartSyncCk() bool {
 func ProcessSyncCk(processSQLs []string) bool {
 	for _, psql := range processSQLs {
 		partLen := len(psql)
-		if partLen > 80 {
-			partLen = 80
+		if partLen > 128 {
+			partLen = 128
 		}
 		log.Println("sync exec:", psql[:partLen])
 		if _, err := clickhouse.CK.Exec(psql); err != nil {

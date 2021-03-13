@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/binary"
+	"sync"
 
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
@@ -119,9 +120,9 @@ type BlockCache struct {
 ////////////////
 type ProcessBlock struct {
 	Height           uint32
-	NewUtxoDataMap   map[string]CalcData
 	SpentUtxoKeysMap map[string]bool
-	SpentUtxoDataMap map[string]CalcData
+	SpentUtxoDataMap map[string]*CalcData
+	NewUtxoDataMap   map[string]*CalcData
 }
 
 type CalcData struct {
@@ -156,4 +157,10 @@ func (d *CalcData) Unmarshal(buf []byte) {
 	d.Script = buf[20:]
 	// d.Script = make([]byte, len(buf)-20)
 	// copy(d.Script, buf[20:]) // n
+}
+
+var CalcDataPool = sync.Pool{
+	New: func() interface{} {
+		return &CalcData{}
+	},
 }

@@ -13,6 +13,7 @@ var (
 	IsSync   bool
 	WithUtxo bool
 	IsFull   bool
+	UseMap   bool
 )
 
 func init() {
@@ -50,15 +51,22 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 
 	if WithUtxo {
 		if IsSync {
-			// serial.ParseGetSpentUtxoDataFromMapSerial(block.ParseData)
-			serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
+			if UseMap {
+				serial.ParseGetSpentUtxoDataFromMapSerial(block.ParseData)
+			} else {
+				serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
+			}
 			serial.SyncBlockTxInputDetail(block)
 		} else {
 			serial.DumpBlockTxInputDetail(block)
 		}
 
 		// for txin dump
-		serial.ParseUtxoSerial(block.ParseData)
+		if UseMap {
+			serial.UpdateUtxoInMapSerial(block.ParseData)
+		} else {
+			serial.UpdateUtxoInRedisSerial(block.ParseData)
+		}
 	}
 
 	// serial.DumpBlockTxInfo(block)
@@ -76,6 +84,9 @@ func ParseEnd() {
 	defer utils.SyncLog()
 
 	if WithUtxo {
+		if UseMap {
+			serial.UpdateUtxoInRedis(serial.GlobalNewUtxoDataMap, serial.GlobalSpentUtxoDataMap)
+		}
 		serial.CleanUtxoMap()
 	}
 
