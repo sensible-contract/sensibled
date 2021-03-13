@@ -83,7 +83,7 @@ OUT:
 		if len(rawblock) < 80 {
 			continue
 		}
-		blockHash := utils.HashString(utils.GetShaString(rawblock[:80]))
+		blockHash := utils.HashString(utils.GetHash256(rawblock[:80]))
 		block, ok := bc.BlocksOfChain[blockHash]
 		if !ok {
 			// 若不是主链区块则跳过

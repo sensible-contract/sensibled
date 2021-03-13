@@ -49,7 +49,7 @@ func SafeDecodeVarIntForScript(raw []byte) (cnt uint, cnt_size uint) {
 	return 0, 0
 }
 
-func GetShaString(data []byte) (hash []byte) {
+func GetHash256(data []byte) (hash []byte) {
 	sha := sha256.New()
 	sha.Write(data[:])
 	tmp := sha.Sum(nil)
@@ -59,7 +59,7 @@ func GetShaString(data []byte) (hash []byte) {
 	return
 }
 
-func GetWitnessShaString(data []byte, witOffset uint) (hash []byte) {
+func GetWitnessHash256(data []byte, witOffset uint) (hash []byte) {
 	sha := sha256.New()
 	sha.Write(data[:4]) // version
 	// skip 2 bytes

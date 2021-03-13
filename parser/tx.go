@@ -17,10 +17,10 @@ func NewTxs(txsraw []byte) (txs []*model.Tx) {
 	for i := range txs {
 		txs[i], txoffset = NewTx(txsraw[offset:])
 		if txs[i].WitOffset > 0 {
-			txs[i].Hash = utils.GetWitnessShaString(txsraw[offset:offset+txoffset], txs[i].WitOffset)
+			txs[i].Hash = utils.GetWitnessHash256(txsraw[offset:offset+txoffset], txs[i].WitOffset)
 			txs[i].HashHex = utils.HashString(txs[i].Hash)
 		} else {
-			txs[i].Hash = utils.GetShaString(txsraw[offset : offset+txoffset])
+			txs[i].Hash = utils.GetHash256(txsraw[offset : offset+txoffset])
 			txs[i].HashHex = utils.HashString(txs[i].Hash)
 		}
 

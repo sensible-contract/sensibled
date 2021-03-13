@@ -13,7 +13,7 @@ func NewBlock(rawblock []byte) (block *model.Block) {
 }
 
 func InitBlock(block *model.Block, rawblock []byte) {
-	block.Hash = utils.GetShaString(rawblock[:80])
+	block.Hash = utils.GetHash256(rawblock[:80])
 	block.HashHex = utils.HashString(block.Hash)
 	block.Version = binary.LittleEndian.Uint32(rawblock[0:4])
 
