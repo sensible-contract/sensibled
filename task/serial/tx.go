@@ -24,7 +24,7 @@ func init() {
 		Password:    "", // no password set
 		DB:          0,  // use default DB
 		DialTimeout: time.Minute,
-		ReadTimeout: time.Minute * 5,
+		ReadTimeout: time.Minute * 30,
 	})
 }
 

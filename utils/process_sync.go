@@ -252,14 +252,14 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_spent",
 
 		// 生成地址参与的输出索引
-		"INSERT INTO txout_address_height SELECT height, utxid, vout, address, genesis FROM txout",
+		"INSERT INTO txout_address_height SELECT height, utxid, vout, address, genesis FROM txout WHERE address != unhex('00')",
 		// 生成溯源ID参与的输出索引
-		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, genesis FROM txout",
+		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, genesis FROM txout WHERE genesis != unhex('00')",
 
 		// 生成地址参与输入的相关tx区块高度索引
-		"INSERT INTO txin_address_height SELECT height, txid, idx, address, genesis FROM txin_full",
+		"INSERT INTO txin_address_height SELECT height, txid, idx, address, genesis FROM txin_full WHERE address != unhex('00')",
 		// 生成溯源ID参与输入的相关tx区块高度索引
-		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin_full",
+		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin_full WHERE genesis != unhex('00')",
 	}
 
 	removeOrphanPartSQLs = []string{
@@ -312,14 +312,14 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_full_new ORDER BY utxid",
 
 		// 更新地址参与的输出索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txout_address_height SELECT height, utxid, vout, address, genesis FROM txout_new ORDER BY address",
+		"INSERT INTO txout_address_height SELECT height, utxid, vout, address, genesis FROM txout_new WHERE address != unhex('00') ORDER BY address",
 		// 更新溯源ID参与的输出索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, genesis FROM txout_new ORDER BY genesis",
+		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, genesis FROM txout_new WHERE genesis != unhex('00') ORDER BY genesis",
 
 		// 更新地址参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txin_address_height SELECT height, txid, idx, address, genesis FROM txin_full_new ORDER BY address",
+		"INSERT INTO txin_address_height SELECT height, txid, idx, address, genesis FROM txin_full_new WHERE address != unhex('00') ORDER BY address",
 		// 更新溯源ID参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin_full_new ORDER BY genesis",
+		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin_full_new WHERE genesis != unhex('00') ORDER BY genesis",
 
 		"DROP TABLE IF EXISTS blk_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",

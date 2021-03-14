@@ -92,8 +92,8 @@ func ParseEnd() {
 
 	if IsSync {
 		utils.CommitSyncCk()
+		utils.CommitFullSyncCk(serial.DumpTxFullCount > 0)
 		if IsFull {
-			utils.CommitFullSyncCk(serial.DumpTxFullCount > 0)
 			utils.ProcessAllSyncCk()
 		} else {
 			utils.ProcessPartSyncCk()
