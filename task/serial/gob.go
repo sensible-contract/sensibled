@@ -20,14 +20,15 @@ var (
 )
 
 func init() {
-	calcMap = make(map[string]*model.CalcData, 0)
-	GlobalNewUtxoDataMap = make(map[string]*model.CalcData, 0)
-	GlobalSpentUtxoDataMap = make(map[string]*model.CalcData, 0)
+	CleanUtxoMap()
 	// loadUtxoFromGobFile()
 }
 
 func CleanUtxoMap() {
-	GlobalNewUtxoDataMap = nil
+	calcMap = make(map[string]*model.CalcData, 0)
+	GlobalNewUtxoDataMap = make(map[string]*model.CalcData, 0)
+	GlobalSpentUtxoDataMap = make(map[string]*model.CalcData, 0)
+
 	runtime.GC()
 }
 
