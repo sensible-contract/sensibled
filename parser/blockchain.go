@@ -6,19 +6,21 @@ import (
 	"blkparser/task"
 	serialTask "blkparser/task/serial"
 	"blkparser/utils"
+	"bytes"
 	"encoding/hex"
 	"log"
 	"sync"
 )
 
 type Blockchain struct {
-	Blocks        map[string]*model.Block // 所有区块
-	BlocksOfChain map[string]*model.Block // 主链区块
-	ParsedBlocks  map[string]bool         // 主链已分析区块
-	MaxBlock      *model.Block
-	GenesisBlock  *model.Block
-	BlockData     *loader.BlockData
-	m             sync.Mutex
+	Blocks                map[string]*model.Block // 所有区块
+	BlocksOfChainById     map[string]*model.Block // 按blkid主链区块
+	BlocksOfChainByHeight map[int]*model.Block    // 按height主链区块
+	ParsedBlocks          map[string]bool         // 主链已分析区块
+	MaxBlock              *model.Block
+	GenesisBlock          *model.Block
+	BlockData             *loader.BlockData
+	m                     sync.Mutex
 }
 
 func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
@@ -42,72 +44,56 @@ func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
 
 // ParseLongestChain 两遍遍历区块。先获取header，再遍历区块
 func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight int) {
-	// 跳到指定高度的区块文件"附近"开始读取区块
-	// 注意如果区块在文件中严重乱序(错位2个区块文件以上)则可能读取起始失败(分析进度不开始，内存占用持续增加)
-	bc.SkipToBlockFileIdByBlockHeight(startBlockHeight)
-
 	blocksReady := make(chan *model.Block, 64)
-	done := make(chan struct{}, 1)
+	blocksDone := make(chan struct{}, 64)
 
 	//  解码区块，生产者
-	go bc.InitLongestChainBlock(done, blocksReady, startBlockHeight, endBlockHeight)
+	go bc.InitLongestChainBlockByHeader(blocksDone, blocksReady, startBlockHeight, endBlockHeight)
 
 	// 按顺序消费解码后的区块
-	bc.ParseLongestChainBlock(blocksReady, startBlockHeight, endBlockHeight)
+	bc.ParseLongestChainBlock(blocksDone, blocksReady, startBlockHeight, endBlockHeight)
 	log.Printf("consume ok")
-	done <- struct{}{}
-	for _ = range blocksReady {
-	}
+
 	// 最后分析执行
 	task.ParseEnd()
 }
 
 // InitLongestChainBlock 解码区块，生产者
-func (bc *Blockchain) InitLongestChainBlock(done chan struct{}, blocksReady chan *model.Block, startBlockHeight, endBlockHeight int) {
+func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, blocksReady chan *model.Block, startBlockHeight, endBlockHeight int) {
 	var wg sync.WaitGroup
-	parsers := make(chan struct{}, 28)
-OUT:
-	for {
-		select {
-		case <-done:
-			break OUT
-		default:
+
+	if endBlockHeight < 0 {
+		endBlockHeight = len(bc.BlocksOfChainByHeight)
+	}
+	for nextBlockHeight := startBlockHeight; nextBlockHeight < endBlockHeight; nextBlockHeight++ {
+		block, ok := bc.BlocksOfChainByHeight[nextBlockHeight]
+		if !ok {
+			// 若不是主链区块则退出
+			break
 		}
-		// 获取所有Block字节，不要求有序返回或属于主链
-		// 但由于未分析的区块需要暂存，无序遍历会增加内存消耗
+		bc.BlockData.SkipTo(block.FileIdx, block.FileOffset)
+		// 获取所有Block字节
 		rawblock, err := bc.BlockData.GetRawBlock()
 		if err != nil {
-			// log.Printf("get block error: %v", err)
+			log.Printf("get block error: %v", err)
 			break
 		}
 		if len(rawblock) < 80 {
 			continue
 		}
-		blockHash := utils.HashString(utils.GetHash256(rawblock[:80]))
-		block, ok := bc.BlocksOfChain[blockHash]
-		if !ok {
-			// 若不是主链区块则跳过
-			continue
-		}
-		// 不到高度的区块跳过
-		if block.Height < startBlockHeight {
-			continue
-		}
 
-		// 若已分析过则跳过
-		if ok := bc.ParsedBlocks[blockHash]; ok {
-			continue
+		blkId := block.Hash
+		InitBlock(block, rawblock)
+		if !bytes.Equal(blkId, block.Hash) {
+			log.Printf("block id not match")
+			break
 		}
-		bc.ParsedBlocks[blockHash] = true
-
-		InitBlock(block, rawblock[:80])
-
-		block.Raw = rawblock
-		block.Size = uint32(len(rawblock))
 
 		// 设置已经分析到的区块高度
 		task.MaxBlockHeightParallel = block.Height
-		parsers <- struct{}{}
+
+		blocksDone <- struct{}{}
+
 		wg.Add(1)
 		go func(block *model.Block) {
 			defer wg.Done()
@@ -125,15 +111,11 @@ OUT:
 			}
 			block.ParseData = processBlock
 
-			// 超过高度的不分析。但不能在此退出，因为区块文件是乱序的
-			if endBlockHeight < 0 || block.Height < endBlockHeight {
-				// 先并行分析区块。可执行一些区块内的独立预处理任务，不同区块会并行乱序执行
-				task.ParseBlockParallel(block)
-			}
+			// 先并行分析区块。可执行一些区块内的独立预处理任务，不同区块会并行乱序执行
+			task.ParseBlockParallel(block)
 
 			block.Raw = nil
 			blocksReady <- block
-			<-parsers
 		}(block)
 	}
 	wg.Wait()
@@ -143,8 +125,8 @@ OUT:
 }
 
 // ParseLongestChainBlock 按顺序消费解码后的区块
-func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *model.Block, startBlockHeight, maxBlockHeight int) {
-	blocksTotal := len(bc.BlocksOfChain)
+func (bc *Blockchain) ParseLongestChainBlock(blocksDone chan struct{}, blocksReady chan *model.Block, startBlockHeight, maxBlockHeight int) {
+	blocksTotal := len(bc.BlocksOfChainById)
 	if maxBlockHeight < 0 || maxBlockHeight > blocksTotal {
 		maxBlockHeight = blocksTotal
 	}
@@ -178,6 +160,8 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *model.Block, star
 				break
 			}
 
+			<-blocksDone
+
 			// 再串行分析区块。可执行一些严格要求按序处理的任务，区块会串行依次执行
 			// 当串行执行到某个区块时，这个区块一定运行完毕了相应的并行预处理任务
 			task.ParseBlockSerial(block,
@@ -191,23 +175,6 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksReady chan *model.Block, star
 			break
 		}
 	}
-}
-
-// SkipToBlockFileIdByBlockHeight 跳到height高度的区块文件附近开始读取区块
-func (bc *Blockchain) SkipToBlockFileIdByBlockHeight(height int) {
-	for _, blk := range bc.Blocks {
-		if blk.Height == height {
-			//回撤2个区块文件开始扫描
-			// 在区块文件严重乱序情况下，可能导致漏过开始区块，分析将失败
-			skipTo := 0
-			if blk.FileIdx > 2 {
-				skipTo = blk.FileIdx - 2
-			}
-			bc.BlockData.SkipTo(skipTo, 0)
-			return
-		}
-	}
-	bc.BlockData.SkipTo(0, 0)
 }
 
 // InitLongestChainHeader 初始化block header
@@ -234,7 +201,7 @@ func (bc *Blockchain) InitLongestChainHeader() {
 		utils.DumpToGobFile("./headers-list.gob", bc.Blocks)
 	}
 	// 如果遗漏中间block header，可能导致最长链无法延长
-	// 造成 bc.BlocksOfChain 中区块数量远小于 bc.Blocks
+	// 造成 bc.BlocksOfChainById 中区块数量远小于 bc.Blocks
 	bc.SetBlockHeight()
 	bc.SelectLongestChain()
 }
@@ -272,7 +239,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 			bc.m.Unlock()
 
 			<-parsers
-		}(rawblock, bc.BlockData.CurrentId, bc.BlockData.Offset)
+		}(rawblock, bc.BlockData.CurrentId, bc.BlockData.LastOffset)
 
 		// header speed
 		serialTask.ParseBlockSpeed(0, idx, idx, 0, 0)
@@ -331,12 +298,14 @@ func (bc *Blockchain) SetBlockHeight() {
 
 // SelectLongestChain 提取最长主链
 func (bc *Blockchain) SelectLongestChain() {
-	bc.BlocksOfChain = make(map[string]*model.Block, 0)
+	bc.BlocksOfChainById = make(map[string]*model.Block, 0)
+	bc.BlocksOfChainByHeight = make(map[int]*model.Block, 0)
 	block := bc.MaxBlock
 	for {
 		// 由于之前的高度是从1开始，现在统一减一
 		block.Height -= 1
-		bc.BlocksOfChain[block.HashHex] = block
+		bc.BlocksOfChainById[block.HashHex] = block
+		bc.BlocksOfChainByHeight[block.Height] = block
 		// 设置genesis
 		bc.GenesisBlock = block
 		var ok bool
@@ -346,11 +315,11 @@ func (bc *Blockchain) SelectLongestChain() {
 		}
 	}
 	log.Printf("genesis block: %s", bc.GenesisBlock.HashHex)
-	log.Printf("chain blocks count: %d", len(bc.BlocksOfChain))
+	log.Printf("chain blocks count: %d", len(bc.BlocksOfChainById))
 
 	// 孤块太多，可能出现区块头遗漏，需要更多的区块文件扫描回撤
 	// 见：InitLongestChainHeader
-	if len(bc.Blocks) > len(bc.BlocksOfChain)+1000 {
+	if len(bc.Blocks) > len(bc.BlocksOfChainById)+1000 {
 		panic("too many orphan blocks. block header may missing")
 	}
 }
@@ -362,14 +331,14 @@ func (bc *Blockchain) GetBlockSyncCommonBlockHeight(endBlockHeight int) (heigth,
 		panic("sync check, but failed.")
 	}
 
-	if endBlockHeight < 0 || endBlockHeight > len(bc.BlocksOfChain) {
-		endBlockHeight = len(bc.BlocksOfChain)
+	if endBlockHeight < 0 || endBlockHeight > len(bc.BlocksOfChainById) {
+		endBlockHeight = len(bc.BlocksOfChainById)
 	}
 
 	orphanCount = 0
 	for _, block := range blocks {
 		blockIdHex := utils.HashString(block.BlockId)
-		if _, ok := bc.BlocksOfChain[blockIdHex]; ok {
+		if _, ok := bc.BlocksOfChainById[blockIdHex]; ok {
 			newblock = endBlockHeight - int(block.Height) - 1
 			log.Printf("shoud sync block after height: %d, orphan: %d, new: %d",
 				block.Height, orphanCount, newblock)

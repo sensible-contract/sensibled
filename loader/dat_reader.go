@@ -14,6 +14,7 @@ type BlockData struct {
 	Magic       []byte
 	CurrentFile *os.File
 	CurrentId   int
+	LastOffset  int
 	Offset      int
 	m           sync.Mutex
 }
@@ -24,6 +25,7 @@ func NewBlockData(path string, magic []byte) (bf *BlockData, err error) {
 	bf.Magic = magic
 	bf.CurrentId = 0
 	bf.Offset = 0
+	bf.LastOffset = 0
 	f, err := os.Open(blkfilename(path, 0))
 	if err != nil {
 		return
@@ -63,6 +65,8 @@ func (bf *BlockData) NextRawBlockData(skipTxs bool) (rawblock []byte, err error)
 }
 
 func (bf *BlockData) FetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
+	bf.LastOffset = bf.Offset
+
 	buf := [4]byte{}
 	_, err = bf.CurrentFile.Read(buf[:])
 	if err != nil {
@@ -107,20 +111,28 @@ func (bf *BlockData) FetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
 
 // Convenience method to skip directly to the given blkfile / offset,
 // you must take care of the height
-func (bf *BlockData) SkipTo(blkId int, offset int64) (err error) {
+func (bf *BlockData) SkipTo(blkId int, offset int) (err error) {
 	bf.m.Lock()
 	defer bf.m.Unlock()
 
-	bf.CurrentId = blkId
-	bf.Offset = 0
-	f, err := os.Open(blkfilename(bf.Path, blkId))
-	if err != nil {
-		return
+	if bf.CurrentId != blkId {
+		f, err := os.Open(blkfilename(bf.Path, blkId))
+		if err != nil {
+			return err
+		}
+		bf.CurrentFile.Close()
+		bf.CurrentFile = f
+		bf.CurrentId = blkId
+		bf.Offset = 0
 	}
-	bf.CurrentFile.Close()
-	bf.CurrentFile = f
-	_, err = bf.CurrentFile.Seek(offset, 0)
-	bf.Offset = int(offset)
+
+	if bf.Offset != offset {
+		_, err = bf.CurrentFile.Seek(int64(offset), 0)
+		if err != nil {
+			return err
+		}
+		bf.Offset = offset
+	}
 	return
 }
 

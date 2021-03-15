@@ -5,9 +5,10 @@ import (
 	"blkparser/script"
 	"blkparser/utils"
 	"context"
-	"time"
+	"fmt"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -19,12 +20,30 @@ var (
 )
 
 func init() {
+	viper.SetConfigFile("conf/redis.yaml")
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		} else {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		}
+	}
+
+	address := viper.GetString("address")
+	password := viper.GetString("password")
+	database := viper.GetInt("database")
+	dialTimeout := viper.GetDuration("dialTimeout")
+	readTimeout := viper.GetDuration("readTimeout")
+	writeTimeout := viper.GetDuration("writeTimeout")
+	poolSize := viper.GetInt("poolSize")
 	rdb = redis.NewClient(&redis.Options{
-		Addr:        "localhost:6379",
-		Password:    "", // no password set
-		DB:          0,  // use default DB
-		DialTimeout: time.Minute,
-		ReadTimeout: time.Minute * 30,
+		Addr:         address,
+		Password:     password,
+		DB:           database,
+		DialTimeout:  dialTimeout,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		PoolSize:     poolSize,
 	})
 }
 
