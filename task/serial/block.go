@@ -107,7 +107,7 @@ func DumpBlockTxInputDetail(block *model.Block) {
 				}
 			}
 			DumpTxFullCount++
-			utils.LogTxInFull.Info("tx-input-detail",
+			utils.LogTxIn.Info("tx-input-detail",
 				zap.Uint32("height", uint32(block.Height)),
 				zap.Binary("txidIdx", input.InputPoint),
 				zap.ByteString("scriptSig", input.ScriptSig),

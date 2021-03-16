@@ -7,27 +7,27 @@ import (
 )
 
 var (
-	SyncStmtBlk      *sql.Stmt
-	SyncStmtTx       *sql.Stmt
-	SyncStmtTxOut    *sql.Stmt
-	SyncStmtTxInFull *sql.Stmt
+	SyncStmtBlk   *sql.Stmt
+	SyncStmtTx    *sql.Stmt
+	SyncStmtTxOut *sql.Stmt
+	SyncStmtTxIn  *sql.Stmt
 
-	syncTxBlk      *sql.Tx
-	syncTxTx       *sql.Tx
-	syncTxTxOut    *sql.Tx
-	syncTxTxInFull *sql.Tx
+	syncTxBlk   *sql.Tx
+	syncTxTx    *sql.Tx
+	syncTxTxOut *sql.Tx
+	syncTxTxIn  *sql.Tx
 
 	// full sync
-	sqlBlk      string = "INSERT INTO blk_height (height, blkid, previd, merkle, ntx, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTx       string = "INSERT INTO blktx_height (txid, nin, nout, txsize, locktime, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxOut    string = "INSERT INTO txout (utxid, vout, address, genesis, satoshi, script_type, script_pk, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxInFull string = "INSERT INTO txin_full (height, txidx, txid, idx, script_sig, nsequence, height_txo, utxidx, utxid, vout, address, genesis, satoshi, script_type, script_pk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlBlk   string = "INSERT INTO blk_height (height, blkid, previd, merkle, ntx, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTx    string = "INSERT INTO blktx_height (txid, nin, nout, txsize, locktime, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTxOut string = "INSERT INTO txout (utxid, vout, address, genesis, satoshi, script_type, script_pk, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTxIn  string = "INSERT INTO txin (height, txidx, txid, idx, script_sig, nsequence, height_txo, utxidx, utxid, vout, address, genesis, satoshi, script_type, script_pk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	// part sync
-	sqlBlkNew      string = "INSERT INTO blk_height_new (height, blkid, previd, merkle, ntx, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxNew       string = "INSERT INTO blktx_height_new (txid, nin, nout, txsize, locktime, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxOutNew    string = "INSERT INTO txout_new (utxid, vout, address, genesis, satoshi, script_type, script_pk, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxInFullNew string = "INSERT INTO txin_full_new (height, txidx, txid, idx, script_sig, nsequence, height_txo, utxidx, utxid, vout, address, genesis, satoshi, script_type, script_pk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlBlkNew   string = "INSERT INTO blk_height_new (height, blkid, previd, merkle, ntx, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTxNew    string = "INSERT INTO blktx_height_new (txid, nin, nout, txsize, locktime, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTxOutNew string = "INSERT INTO txout_new (utxid, vout, address, genesis, satoshi, script_type, script_pk, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTxInNew  string = "INSERT INTO txin_new (height, txidx, txid, idx, script_sig, nsequence, height_txo, utxidx, utxid, vout, address, genesis, satoshi, script_type, script_pk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 )
 
 func PrepareFullSyncCk() bool {
@@ -65,12 +65,12 @@ func PrepareFullSyncCk() bool {
 		return false
 	}
 
-	syncTxTxInFull, err = clickhouse.CK.Begin()
+	syncTxTxIn, err = clickhouse.CK.Begin()
 	if err != nil {
 		log.Println("sync-begin-txinfull", err.Error())
 		return false
 	}
-	SyncStmtTxInFull, err = syncTxTxInFull.Prepare(sqlTxInFull)
+	SyncStmtTxIn, err = syncTxTxIn.Prepare(sqlTxIn)
 	if err != nil {
 		log.Println("sync-prepare-txinfull", err.Error())
 		return false
@@ -114,12 +114,12 @@ func PreparePartSyncCk() bool {
 		return false
 	}
 
-	syncTxTxInFull, err = clickhouse.CK.Begin()
+	syncTxTxIn, err = clickhouse.CK.Begin()
 	if err != nil {
 		log.Println("sync-begin-txinfull", err.Error())
 		return false
 	}
-	SyncStmtTxInFull, err = syncTxTxInFull.Prepare(sqlTxInFullNew)
+	SyncStmtTxIn, err = syncTxTxIn.Prepare(sqlTxInNew)
 	if err != nil {
 		log.Println("sync-prepare-txinfull", err.Error())
 		return false
@@ -145,14 +145,14 @@ func CommitSyncCk() {
 }
 
 func CommitFullSyncCk(needCommit bool) {
-	defer SyncStmtTxInFull.Close()
+	defer SyncStmtTxIn.Close()
 
 	if !needCommit {
-		syncTxTxInFull.Rollback()
+		syncTxTxIn.Rollback()
 		return
 	}
 
-	if err := syncTxTxInFull.Commit(); err != nil {
+	if err := syncTxTxIn.Commit(); err != nil {
 		log.Println("sync-commit-txinfull", err.Error())
 	}
 }

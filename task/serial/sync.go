@@ -108,7 +108,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				}
 			}
 			DumpTxFullCount++
-			if _, err := utils.SyncStmtTxInFull.Exec(
+			if _, err := utils.SyncStmtTxIn.Exec(
 				uint32(block.Height),
 				uint64(txIdx),
 				string(tx.Hash),

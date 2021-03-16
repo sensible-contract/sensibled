@@ -78,14 +78,6 @@ func init() {
 		OutputPaths:       []string{pathPrefix + "/txin" + pathSurfix},
 	}.Build()
 
-	LogTxInFull, _ = zap.Config{
-		Encoding:          dumpEncoding,
-		Level:             zap.NewAtomicLevelAt(zapcore.InfoLevel),
-		DisableCaller:     true,
-		DisableStacktrace: true,
-		OutputPaths:       []string{pathPrefix + "/txin_full" + pathSurfix},
-	}.Build()
-
 	LogTxOut, _ = zap.Config{
 		Encoding:          dumpEncoding,
 		Level:             zap.NewAtomicLevelAt(zapcore.InfoLevel),
@@ -102,6 +94,5 @@ func SyncLog() {
 	LogBlk.Sync()
 	LogTx.Sync()
 	LogTxIn.Sync()
-	LogTxInFull.Sync()
 	LogTxOut.Sync()
 }

@@ -117,9 +117,9 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
 		// 交易输入列表，分区内按交易txid+idx排序、索引，单条记录包括输入的各种细节。仅按txid查询时将遍历所有分区（慢）
 		// 查询需附带height。可配合tx_height表查询
-		"DROP TABLE IF EXISTS txin_full",
+		"DROP TABLE IF EXISTS txin",
 		`
-CREATE TABLE IF NOT EXISTS txin_full (
+CREATE TABLE IF NOT EXISTS txin (
 	height       UInt32,         
 	txidx        UInt64,
 	txid         FixedString(32),
@@ -170,7 +170,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
 		// address在哪些高度的tx中出现，按address首字节分区，分区内按address+genesis+height排序，按address索引。按address查询时可确定分区 (快)
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
-		// 主要用于从address确定所在区块height。配合txin_full源表查询
+		// 主要用于从address确定所在区块height。配合txin源表查询
 		"DROP TABLE IF EXISTS txin_address_height",
 		`
 CREATE TABLE IF NOT EXISTS txin_address_height (
@@ -187,7 +187,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
 		// genesis在哪些高度的tx中出现，按genesis首字节分区，分区内按genesis+address+height排序，按genesis索引。按genesis查询时可确定分区 (快)
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
-		// 主要用于从genesis确定所在区块height。配合txin_full源表查询
+		// 主要用于从genesis确定所在区块height。配合txin源表查询
 		"DROP TABLE IF EXISTS txin_genesis_height",
 		`
 CREATE TABLE IF NOT EXISTS txin_genesis_height (
@@ -247,7 +247,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"INSERT INTO tx_height SELECT txid, height FROM tx",
 
 		// 生成txo被花费的tx索引
-		"INSERT INTO txin_spent SELECT height, txid, idx, utxid, vout FROM txin_full",
+		"INSERT INTO txin_spent SELECT height, txid, idx, utxid, vout FROM txin",
 		// 生成txo被花费的tx区块高度索引
 		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_spent",
 
@@ -257,9 +257,9 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, genesis FROM txout WHERE genesis != unhex('00')",
 
 		// 生成地址参与输入的相关tx区块高度索引
-		"INSERT INTO txin_address_height SELECT height, txid, idx, address, genesis FROM txin_full WHERE address != unhex('00')",
+		"INSERT INTO txin_address_height SELECT height, txid, idx, address, genesis FROM txin WHERE address != unhex('00')",
 		// 生成溯源ID参与输入的相关tx区块高度索引
-		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin_full WHERE genesis != unhex('00')",
+		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin WHERE genesis != unhex('00')",
 	}
 
 	removeOrphanPartSQLs = []string{
@@ -272,7 +272,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
 		"ALTER TABLE txin_spent DELETE WHERE height >= ",
 
-		"ALTER TABLE txin_full DELETE WHERE height >= ",
+		"ALTER TABLE txin DELETE WHERE height >= ",
 		"ALTER TABLE txout DELETE WHERE height >= ",
 	}
 
@@ -280,12 +280,12 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"DROP TABLE IF EXISTS blk_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",
 		"DROP TABLE IF EXISTS txout_new",
-		"DROP TABLE IF EXISTS txin_full_new",
+		"DROP TABLE IF EXISTS txin_new",
 
 		"CREATE TABLE IF NOT EXISTS blk_height_new AS blk_height",
 		"CREATE TABLE IF NOT EXISTS blktx_height_new AS blktx_height",
 		"CREATE TABLE IF NOT EXISTS txout_new AS txout",
-		"CREATE TABLE IF NOT EXISTS txin_full_new AS txin_full",
+		"CREATE TABLE IF NOT EXISTS txin_new AS txin",
 	}
 
 	// 更新现有基础数据表blk_height、blktx_height、txin、txout
@@ -293,7 +293,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"INSERT INTO blk_height SELECT * FROM blk_height_new;",
 		"INSERT INTO blktx_height SELECT * FROM blktx_height_new;",
 		"INSERT INTO txout SELECT * FROM txout_new;",
-		"INSERT INTO txin_full SELECT * FROM txin_full_new",
+		"INSERT INTO txin SELECT * FROM txin_new",
 
 		// 优化blk表，以便统一按height排序查询
 		"OPTIMIZE TABLE blk_height FINAL",
@@ -307,9 +307,9 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"INSERT INTO tx_height SELECT txid, height FROM blktx_height_new ORDER BY txid",
 
 		// 更新txo被花费的tx索引
-		"INSERT INTO txin_spent SELECT height, txid, idx, utxid, vout FROM txin_full_new",
+		"INSERT INTO txin_spent SELECT height, txid, idx, utxid, vout FROM txin_new",
 		// 更新txo被花费的tx区块高度索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_full_new ORDER BY utxid",
+		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_new ORDER BY utxid",
 
 		// 更新地址参与的输出索引，注意这里并未清除孤立区块的数据
 		"INSERT INTO txout_address_height SELECT height, utxid, vout, address, genesis FROM txout_new WHERE address != unhex('00') ORDER BY address",
@@ -317,14 +317,14 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, genesis FROM txout_new WHERE genesis != unhex('00') ORDER BY genesis",
 
 		// 更新地址参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txin_address_height SELECT height, txid, idx, address, genesis FROM txin_full_new WHERE address != unhex('00') ORDER BY address",
+		"INSERT INTO txin_address_height SELECT height, txid, idx, address, genesis FROM txin_new WHERE address != unhex('00') ORDER BY address",
 		// 更新溯源ID参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin_full_new WHERE genesis != unhex('00') ORDER BY genesis",
+		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin_new WHERE genesis != unhex('00') ORDER BY genesis",
 
 		"DROP TABLE IF EXISTS blk_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",
 		"DROP TABLE IF EXISTS txout_new",
-		"DROP TABLE IF EXISTS txin_full_new",
+		"DROP TABLE IF EXISTS txin_new",
 	}
 )
 

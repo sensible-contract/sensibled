@@ -49,7 +49,7 @@ func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 
 func GetSpentUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.CalcData, err error) {
 	psql := fmt.Sprintf(`
-SELECT utxid, vout, address, genesis, satoshi, script_type, script_pk, height_txo, utxidx FROM txin_full
+SELECT utxid, vout, address, genesis, satoshi, script_type, script_pk, height_txo, utxidx FROM txin
    WHERE satoshi > 0 AND
       height >= %d`, height)
 	return GetUtxoBySql(psql)
