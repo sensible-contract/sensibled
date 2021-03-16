@@ -34,8 +34,6 @@ func ParseBlockParallel(block *model.Block) {
 	}
 
 	if IsSync {
-		serial.SyncBlock(block)
-		serial.SyncBlockTx(block)
 		serial.SyncBlockTxOutputInfo(block)
 	} else {
 		serial.DumpBlock(block)
@@ -57,6 +55,9 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 				serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
 			}
 			serial.SyncBlockTxInputDetail(block)
+
+			serial.SyncBlock(block)
+			serial.SyncBlockTx(block)
 		} else {
 			serial.DumpBlockTxInputDetail(block)
 		}

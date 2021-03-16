@@ -9,12 +9,26 @@ import (
 
 // SyncBlock block id
 func SyncBlock(block *model.Block) {
+	coinbase := block.Txs[0]
+	coinbaseOut := coinbase.OutputsValue
+
+	txInputsValue := uint64(0)
+	txOutputsValue := uint64(0)
+
+	for _, tx := range block.Txs[1:] {
+		txInputsValue += tx.InputsValue
+		txOutputsValue += tx.OutputsValue
+	}
+
 	if _, err := utils.SyncStmtBlk.Exec(
 		uint32(block.Height),
 		string(block.Hash),
 		string(block.Parent),
 		string(block.MerkleRoot),
 		uint64(block.TxCnt),
+		txInputsValue,
+		txOutputsValue,
+		coinbaseOut,
 		block.BlockTime,
 		block.Bits,
 		block.Size,
@@ -36,6 +50,8 @@ func SyncBlockTx(block *model.Block) {
 			tx.TxOutCnt,
 			tx.Size,
 			tx.LockTime,
+			tx.InputsValue,
+			tx.OutputsValue,
 			uint32(block.Height),
 			string(block.Hash),
 			uint64(txIdx),
@@ -53,9 +69,7 @@ func SyncBlockTx(block *model.Block) {
 func SyncBlockTxOutputInfo(block *model.Block) {
 	for txIdx, tx := range block.Txs {
 		for vout, output := range tx.TxOuts {
-			// if output.Value == 0 || !output.LockingScriptMatch {
-			// 	continue
-			// }
+			tx.OutputsValue += output.Value
 
 			if _, err := utils.SyncStmtTxOut.Exec(
 				string(tx.Hash),
@@ -84,6 +98,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 	var commonObjData *model.CalcData = &model.CalcData{
 		GenesisId:  make([]byte, 1),
 		AddressPkh: make([]byte, 1),
+		Value:      utils.CalcBlockSubsidy(block.Height),
 	}
 
 	for txIdx, tx := range block.Txs {
@@ -92,6 +107,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 		for vin, input := range tx.TxIns {
 			objData := commonObjData
 			if !isCoinbase {
+				objData.Value = 0
 				if obj, ok := block.ParseData.NewUtxoDataMap[input.InputOutpointKey]; ok {
 					objData = obj
 				} else if obj, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]; ok {
@@ -107,6 +123,8 @@ func SyncBlockTxInputDetail(block *model.Block) {
 					)
 				}
 			}
+			tx.InputsValue += objData.Value
+
 			DumpTxFullCount++
 			if _, err := utils.SyncStmtTxIn.Exec(
 				uint32(block.Height),

@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS blk_height (
 	previd       FixedString(32),
 	merkle       FixedString(32),
 	ntx          UInt64,
+	invalue      UInt64,        -- without coinbase
+	outvalue     UInt64,        -- without coinbase
+	coinbase_out UInt64,
 	blocktime    UInt32,
 	bits         UInt32,
 	blocksize    UInt32
@@ -32,6 +35,9 @@ CREATE TABLE IF NOT EXISTS blk (
 	previd       FixedString(32),
 	merkle       FixedString(32),
 	ntx          UInt64,
+	invalue      UInt64,        -- without coinbase
+	outvalue     UInt64,        -- without coinbase
+	coinbase_out UInt64,
 	blocktime    UInt32,
 	bits         UInt32,
 	blocksize    UInt32
@@ -51,29 +57,13 @@ CREATE TABLE IF NOT EXISTS blktx_height (
 	nout         UInt32,
 	txsize       UInt32,
 	locktime     UInt32,
+	invalue      UInt64,
+	outvalue     UInt64,
 	height       UInt32,
 	blkid        FixedString(32),
 	txidx        UInt64
 ) engine=MergeTree()
-ORDER BY height
-PARTITION BY intDiv(height, 2100)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
-
-		// 区块包含的交易列表，分区内按交易txid排序、索引。仅按txid查询时将遍历所有分区 (慢)
-		// 查询需附带height。可配合tx_height表查询
-		"DROP TABLE IF EXISTS tx",
-		`
-CREATE TABLE IF NOT EXISTS tx (
-	txid         FixedString(32),
-	nin          UInt32,
-	nout         UInt32,
-	txsize       UInt32,
-	locktime     UInt32,
-	height       UInt32,
-	blkid        FixedString(32),
-	txidx        UInt64
-) engine=MergeTree()
-ORDER BY txid
+ORDER BY (height, txid)
 PARTITION BY intDiv(height, 2100)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
@@ -241,10 +231,8 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 生成区块id索引
 		"INSERT INTO blk SELECT * FROM blk_height",
 
-		// 生成区块内tx索引
-		"INSERT INTO tx SELECT * FROM blktx_height",
 		// 生成tx到区块高度索引
-		"INSERT INTO tx_height SELECT txid, height FROM tx",
+		"INSERT INTO tx_height SELECT txid, height FROM blktx_height",
 
 		// 生成txo被花费的tx索引
 		"INSERT INTO txin_spent SELECT height, txid, idx, utxid, vout FROM txin",
@@ -268,7 +256,6 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"ALTER TABLE blk DELETE WHERE height >= ",
 
 		"ALTER TABLE blktx_height DELETE WHERE height >= ",
-		"ALTER TABLE tx DELETE WHERE height >= ",
 
 		"ALTER TABLE txin_spent DELETE WHERE height >= ",
 
@@ -301,8 +288,6 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 更新区块id索引
 		"INSERT INTO blk SELECT * FROM blk_height_new",
 
-		// 更新区块内tx索引
-		"INSERT INTO tx SELECT * FROM blktx_height_new",
 		// 更新tx到区块高度索引，注意这里并未清除孤立区块的数据
 		"INSERT INTO tx_height SELECT txid, height FROM blktx_height_new ORDER BY txid",
 

@@ -18,14 +18,14 @@ var (
 	syncTxTxIn  *sql.Tx
 
 	// full sync
-	sqlBlk   string = "INSERT INTO blk_height (height, blkid, previd, merkle, ntx, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTx    string = "INSERT INTO blktx_height (txid, nin, nout, txsize, locktime, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlBlk   string = "INSERT INTO blk_height (height, blkid, previd, merkle, ntx, invalue, outvalue, coinbase_out, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTx    string = "INSERT INTO blktx_height (txid, nin, nout, txsize, locktime, invalue, outvalue, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxOut string = "INSERT INTO txout (utxid, vout, address, genesis, satoshi, script_type, script_pk, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxIn  string = "INSERT INTO txin (height, txidx, txid, idx, script_sig, nsequence, height_txo, utxidx, utxid, vout, address, genesis, satoshi, script_type, script_pk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	// part sync
-	sqlBlkNew   string = "INSERT INTO blk_height_new (height, blkid, previd, merkle, ntx, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxNew    string = "INSERT INTO blktx_height_new (txid, nin, nout, txsize, locktime, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlBlkNew   string = "INSERT INTO blk_height_new (height, blkid, previd, merkle, ntx, invalue, outvalue, coinbase_out, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTxNew    string = "INSERT INTO blktx_height_new (txid, nin, nout, txsize, locktime, invalue, outvalue, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxOutNew string = "INSERT INTO txout_new (utxid, vout, address, genesis, satoshi, script_type, script_pk, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxInNew  string = "INSERT INTO txin_new (height, txidx, txid, idx, script_sig, nsequence, height_txo, utxidx, utxid, vout, address, genesis, satoshi, script_type, script_pk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 )

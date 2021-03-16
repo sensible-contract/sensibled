@@ -10,13 +10,9 @@ import (
 	"log"
 )
 
-const (
-	SQL_FIELEDS_BLOCK = "height, blkid, previd, merkle, ntx, blocktime, bits, blocksize"
-)
-
 func blockResultSRF(rows *sql.Rows) (interface{}, error) {
 	var ret model.BlockDO
-	err := rows.Scan(&ret.Height, &ret.BlockId, &ret.PrevBlockId, &ret.MerkleRoot, &ret.TxCount, &ret.BlockTime, &ret.Bits, &ret.BlockSize)
+	err := rows.Scan(&ret.Height, &ret.BlockId)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +20,7 @@ func blockResultSRF(rows *sql.Rows) (interface{}, error) {
 }
 
 func GetLatestBlocks() (blksRsp []*model.BlockDO, err error) {
-	psql := fmt.Sprintf("SELECT %s FROM blk_height ORDER BY height DESC LIMIT 1000", SQL_FIELEDS_BLOCK)
+	psql := "SELECT height, blkid FROM blk_height ORDER BY height DESC LIMIT 1000"
 
 	blksRet, err := clickhouse.ScanAll(psql, blockResultSRF)
 	if err != nil {

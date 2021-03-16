@@ -6,6 +6,14 @@ import (
 	"encoding/hex"
 )
 
+func CalcBlockSubsidy(height int) uint64 {
+	var SubsidyReductionInterval = 210000
+	var SatoshiPerBitcoin uint64 = 100000000
+	var baseSubsidy = 50 * SatoshiPerBitcoin
+	// Equivalent to: baseSubsidy / 2^(height/subsidyHalvingInterval)
+	return baseSubsidy >> uint(height/SubsidyReductionInterval)
+}
+
 func DecodeVarInt(raw []byte) (cnt uint, cnt_size uint) {
 	if raw[0] < 0xfd {
 		return uint(raw[0]), 1

@@ -9,17 +9,19 @@ import (
 )
 
 type Tx struct {
-	HashHex   string // 32
-	Hash      []byte // 32
-	Size      uint32
-	WitOffset uint
-	LockTime  uint32
-	Version   uint32
-	TxInCnt   uint32
-	TxOutCnt  uint32
-	TxIns     TxIns
-	TxOuts    TxOuts
-	TxWits    []*TxWit
+	HashHex      string // 32
+	Hash         []byte // 32
+	Size         uint32
+	WitOffset    uint
+	LockTime     uint32
+	Version      uint32
+	TxInCnt      uint32
+	TxOutCnt     uint32
+	InputsValue  uint64
+	OutputsValue uint64
+	TxIns        TxIns
+	TxOuts       TxOuts
+	TxWits       []*TxWit
 }
 
 type TxIn struct {
