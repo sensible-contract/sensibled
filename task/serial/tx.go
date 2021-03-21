@@ -45,47 +45,10 @@ func init() {
 	})
 }
 
-// ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用。
-// 稍慢但占用内存较少
-func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
-	pipe := rdb.Pipeline()
-
-	m := map[string]*redis.StringCmd{}
-	for key := range block.SpentUtxoKeysMap {
-		if _, ok := block.NewUtxoDataMap[key]; ok {
-			continue
-		}
-		m[key] = pipe.Get(ctx, key)
-	}
-	_, err := pipe.Exec(ctx)
-	if err != nil && err != redis.Nil {
-		panic(err)
-	}
-
-	for key, v := range m {
-		res, err := v.Result()
-		if err == redis.Nil {
-			continue
-		} else if err != nil {
-			panic(err)
-		}
-		d := model.CalcDataPool.Get().(*model.CalcData)
-		d.Unmarshal([]byte(res))
-
-		// 补充数据
-		d.ScriptType = script.GetLockingScriptType(d.Script)
-		d.GenesisId, d.AddressPkh = script.ExtractPkScriptAddressPkh(d.Script, d.ScriptType)
-		if d.AddressPkh == nil {
-			d.GenesisId, d.AddressPkh = script.ExtractPkScriptGenesisIdAndAddressPkh(d.Script)
-		}
-
-		block.SpentUtxoDataMap[key] = d
-	}
-}
-
-// ParseGetSpentUtxoDataFromMapSerial 部分utxo信息在程序内存，missing的utxo将从redis查询。区块同步结束时会批量更新缓存的utxo到redis。
+// ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用。稍慢但占用内存较少
+// 如果withMap=true，部分utxo信息在程序内存，missing的utxo将从redis查询。区块同步结束时会批量更新缓存的utxo到redis。
 // 稍快但占用内存较多
-func ParseGetSpentUtxoDataFromMapSerial(block *model.ProcessBlock) {
+func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock, withMap bool) {
 	pipe := rdb.Pipeline()
 	m := map[string]*redis.StringCmd{}
 	needExec := false
@@ -93,17 +56,23 @@ func ParseGetSpentUtxoDataFromMapSerial(block *model.ProcessBlock) {
 		if _, ok := block.NewUtxoDataMap[key]; ok {
 			continue
 		}
-		if data, ok := GlobalNewUtxoDataMap[key]; ok {
-			block.SpentUtxoDataMap[key] = data
-			delete(GlobalNewUtxoDataMap, key)
-		} else {
-			needExec = true
-			m[key] = pipe.Get(ctx, key)
+
+		if withMap {
+			if data, ok := GlobalNewUtxoDataMap[key]; ok {
+				block.SpentUtxoDataMap[key] = data
+				delete(GlobalNewUtxoDataMap, key)
+				continue
+			}
 		}
+
+		needExec = true
+		m[key] = pipe.Get(ctx, key)
 	}
+
 	if !needExec {
 		return
 	}
+
 	_, err := pipe.Exec(ctx)
 	if err != nil && err != redis.Nil {
 		panic(err)
@@ -126,7 +95,9 @@ func ParseGetSpentUtxoDataFromMapSerial(block *model.ProcessBlock) {
 		}
 
 		block.SpentUtxoDataMap[key] = d
-		GlobalSpentUtxoDataMap[key] = d
+		if withMap {
+			GlobalSpentUtxoDataMap[key] = d
+		}
 	}
 }
 

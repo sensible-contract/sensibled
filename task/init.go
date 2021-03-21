@@ -52,11 +52,7 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 
 	if WithUtxo {
 		if IsSync {
-			if UseMap {
-				serial.ParseGetSpentUtxoDataFromMapSerial(block.ParseData)
-			} else {
-				serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
-			}
+			serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData, UseMap)
 			serial.SyncBlockTxInputDetail(block)
 
 			serial.SyncBlock(block)
