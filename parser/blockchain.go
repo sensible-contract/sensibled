@@ -200,8 +200,7 @@ func (bc *Blockchain) InitLongestChainHeader() {
 	if len(bc.Blocks) > lastBlockHeadersCount {
 		loader.DumpToGobFile("./headers-list.gob", bc.Blocks)
 	}
-	// 如果遗漏中间block header，可能导致最长链无法延长
-	// 造成 bc.BlocksOfChainById 中区块数量远小于 bc.Blocks
+
 	bc.SetBlockHeight()
 	bc.SelectLongestChain()
 }
@@ -316,12 +315,6 @@ func (bc *Blockchain) SelectLongestChain() {
 	}
 	log.Printf("genesis block: %s", bc.GenesisBlock.HashHex)
 	log.Printf("chain blocks count: %d", len(bc.BlocksOfChainById))
-
-	// 孤块太多，可能出现区块头遗漏，需要更多的区块文件扫描回撤
-	// 见：InitLongestChainHeader
-	if len(bc.Blocks) > len(bc.BlocksOfChainById)+1000 {
-		panic("too many orphan blocks. block header may missing")
-	}
 }
 
 // GetBlockSyncCommonBlockHeight 获取区块同步起始的共同区块高度

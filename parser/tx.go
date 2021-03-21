@@ -8,7 +8,7 @@ import (
 
 func NewTxs(txsraw []byte) (txs []*model.Tx) {
 	offset := uint(0)
-	txcnt, txcnt_size := utils.DecodeVarInt(txsraw[offset:])
+	txcnt, txcnt_size := utils.DecodeVarIntForBlock(txsraw[offset:])
 	offset += txcnt_size
 
 	txs = make([]*model.Tx, txcnt)
@@ -42,7 +42,7 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 		offset += 2
 	}
 
-	txincnt, txincntsize := utils.DecodeVarInt(rawtx[offset:])
+	txincnt, txincntsize := utils.DecodeVarIntForBlock(rawtx[offset:])
 	offset += txincntsize
 
 	tx.TxInCnt = uint32(txincnt)
@@ -54,7 +54,7 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 		offset += txoffset
 	}
 
-	txoutcnt, txoutcntsize := utils.DecodeVarInt(rawtx[offset:])
+	txoutcnt, txoutcntsize := utils.DecodeVarIntForBlock(rawtx[offset:])
 	offset += txoutcntsize
 
 	tx.TxOutCnt = uint32(txoutcnt)
@@ -80,11 +80,11 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 
 func NewTxWit(txwitraw []byte) (txwit *model.TxWit, offset uint) {
 	txwit = new(model.TxWit)
-	txWitcnt, txWitcntsize := utils.DecodeVarInt(txwitraw[0:])
+	txWitcnt, txWitcntsize := utils.DecodeVarIntForBlock(txwitraw[0:])
 	offset = txWitcntsize
 
 	for witIndex := uint(0); witIndex < txWitcnt; witIndex++ {
-		txWitScriptcnt, txWitScriptcntsize := utils.DecodeVarInt(txwitraw[offset:])
+		txWitScriptcnt, txWitScriptcntsize := utils.DecodeVarIntForBlock(txwitraw[offset:])
 		offset += txWitScriptcntsize
 
 		// txwit.Pkscript = txwitraw[offset : offset+pkscript]
@@ -100,7 +100,7 @@ func NewTxIn(txinraw []byte) (txin *model.TxIn, offset uint) {
 	txin.InputVout = binary.LittleEndian.Uint32(txinraw[32:36])
 	offset = 36
 
-	scriptsig, scriptsigsize := utils.DecodeVarInt(txinraw[offset:])
+	scriptsig, scriptsigsize := utils.DecodeVarIntForBlock(txinraw[offset:])
 	offset += scriptsigsize
 
 	txin.ScriptSig = txinraw[offset : offset+scriptsig]
@@ -120,7 +120,7 @@ func NewTxOut(txoutraw []byte) (txout *model.TxOut, offset uint) {
 	txout.Value = binary.LittleEndian.Uint64(txoutraw[0:8])
 	offset = 8
 
-	pkscript, pkscriptsize := utils.DecodeVarInt(txoutraw[offset:])
+	pkscript, pkscriptsize := utils.DecodeVarIntForBlock(txoutraw[offset:])
 	offset += pkscriptsize
 
 	txout.Pkscript = make([]byte, pkscript)

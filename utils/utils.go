@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+
+	"golang.org/x/crypto/ripemd160"
 )
 
 func CalcBlockSubsidy(height int) uint64 {
@@ -14,7 +16,7 @@ func CalcBlockSubsidy(height int) uint64 {
 	return baseSubsidy >> uint(height/SubsidyReductionInterval)
 }
 
-func DecodeVarInt(raw []byte) (cnt uint, cnt_size uint) {
+func DecodeVarIntForBlock(raw []byte) (cnt uint, cnt_size uint) {
 	if raw[0] < 0xfd {
 		return uint(raw[0]), 1
 	}
@@ -64,6 +66,17 @@ func GetHash256(data []byte) (hash []byte) {
 	sha.Reset()
 	sha.Write(tmp)
 	hash = sha.Sum(nil)
+	return
+}
+
+func GetHash160(data []byte) (hash []byte) {
+	sha := sha256.New()
+	sha.Write(data[:])
+	tmp := sha.Sum(nil)
+
+	rp := ripemd160.New()
+	rp.Write(tmp)
+	hash = rp.Sum(nil)
 	return
 }
 

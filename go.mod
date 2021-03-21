@@ -10,4 +10,5 @@ require (
 	github.com/zeromq/goczmq v4.1.0+incompatible
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.16.0
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
