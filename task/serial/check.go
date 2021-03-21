@@ -1,8 +1,8 @@
 package serial
 
 import (
+	"blkparser/logger"
 	"blkparser/model"
-	"blkparser/utils"
 	"log"
 
 	"go.uber.org/zap"
@@ -17,7 +17,7 @@ func ParseBlockCount(block *model.Block) {
 	countValueTx := countValueOfTxsInBlock(txs)
 	countZeroValueTx := countZeroValueOfTxsInBlock(txs)
 
-	utils.Log.Info("parsing",
+	logger.Log.Info("parsing",
 		zap.String("log", "block"),
 		zap.Int("height", block.Height),
 		zap.Uint32("timestamp", block.BlockTime),

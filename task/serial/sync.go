@@ -1,7 +1,9 @@
 package serial
 
 import (
+	"blkparser/logger"
 	"blkparser/model"
+	"blkparser/store"
 	"blkparser/utils"
 
 	"go.uber.org/zap"
@@ -20,7 +22,7 @@ func SyncBlock(block *model.Block) {
 		txOutputsValue += tx.OutputsValue
 	}
 
-	if _, err := utils.SyncStmtBlk.Exec(
+	if _, err := store.SyncStmtBlk.Exec(
 		uint32(block.Height),
 		string(block.Hash),
 		string(block.Parent),
@@ -33,7 +35,7 @@ func SyncBlock(block *model.Block) {
 		block.Bits,
 		block.Size,
 	); err != nil {
-		utils.Log.Info("sync-block-err",
+		logger.Log.Info("sync-block-err",
 			zap.String("sync", "block err"),
 			zap.String("txid", block.HashHex),
 			zap.String("err", err.Error()),
@@ -44,7 +46,7 @@ func SyncBlock(block *model.Block) {
 // SyncBlockTx all tx in block height
 func SyncBlockTx(block *model.Block) {
 	for txIdx, tx := range block.Txs {
-		if _, err := utils.SyncStmtTx.Exec(
+		if _, err := store.SyncStmtTx.Exec(
 			string(tx.Hash),
 			tx.TxInCnt,
 			tx.TxOutCnt,
@@ -56,7 +58,7 @@ func SyncBlockTx(block *model.Block) {
 			string(block.Hash),
 			uint64(txIdx),
 		); err != nil {
-			utils.Log.Info("sync-tx-err",
+			logger.Log.Info("sync-tx-err",
 				zap.String("sync", "tx err"),
 				zap.String("txid", tx.HashHex),
 				zap.String("err", err.Error()),
@@ -71,7 +73,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 		for vout, output := range tx.TxOuts {
 			tx.OutputsValue += output.Value
 
-			if _, err := utils.SyncStmtTxOut.Exec(
+			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.Hash),
 				uint32(vout),
 				string(output.AddressPkh), // 20 byte
@@ -82,7 +84,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				uint32(block.Height),
 				uint64(txIdx),
 			); err != nil {
-				utils.Log.Info("sync-txout-err",
+				logger.Log.Info("sync-txout-err",
 					zap.String("sync", "txout err"),
 					zap.String("utxid", tx.HashHex),
 					zap.Uint32("vout", uint32(vout)),
@@ -113,7 +115,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				} else if obj, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]; ok {
 					objData = obj
 				} else {
-					utils.Log.Info("tx-input-err",
+					logger.Log.Info("tx-input-err",
 						zap.String("txin", "input missing utxo"),
 						zap.String("txid", tx.HashHex),
 						zap.Int("vin", vin),
@@ -126,7 +128,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			tx.InputsValue += objData.Value
 
 			DumpTxFullCount++
-			if _, err := utils.SyncStmtTxIn.Exec(
+			if _, err := store.SyncStmtTxIn.Exec(
 				uint32(block.Height),
 				uint64(txIdx),
 				string(tx.Hash),
@@ -144,7 +146,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				string(objData.ScriptType),
 				string(objData.Script),
 			); err != nil {
-				utils.Log.Info("sync-txin-full-err",
+				logger.Log.Info("sync-txin-full-err",
 					zap.String("sync", "txin full err"),
 					zap.String("txid", tx.HashHex),
 					zap.Uint32("vin", uint32(vin)),

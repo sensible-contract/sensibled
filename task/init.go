@@ -1,10 +1,11 @@
 package task
 
 import (
+	"blkparser/logger"
 	"blkparser/model"
+	"blkparser/store"
 	"blkparser/task/parallel"
 	"blkparser/task/serial"
-	"blkparser/utils"
 )
 
 var (
@@ -82,7 +83,7 @@ func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int
 
 // ParseEnd 最后分析执行
 func ParseEnd() {
-	defer utils.SyncLog()
+	defer logger.SyncLog()
 
 	if WithUtxo {
 		if UseMap {
@@ -92,12 +93,12 @@ func ParseEnd() {
 	}
 
 	if IsSync {
-		utils.CommitSyncCk()
-		utils.CommitFullSyncCk(serial.DumpTxFullCount > 0)
+		store.CommitSyncCk()
+		store.CommitFullSyncCk(serial.DumpTxFullCount > 0)
 		if IsFull {
-			utils.ProcessAllSyncCk()
+			store.ProcessAllSyncCk()
 		} else {
-			utils.ProcessPartSyncCk()
+			store.ProcessPartSyncCk()
 		}
 	}
 

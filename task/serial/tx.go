@@ -1,13 +1,13 @@
 package serial
 
 import (
+	"blkparser/logger"
 	"blkparser/model"
 	"blkparser/script"
-	"blkparser/utils"
 	"context"
 	"fmt"
 
-	"github.com/go-redis/redis/v8"
+	redis "github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -243,7 +243,7 @@ func DumpLockingScriptType(block *model.Block) {
 				calcMap[key] = &model.CalcData{Value: 1}
 			}
 
-			utils.Log.Info("pkscript",
+			logger.Log.Info("pkscript",
 				zap.String("tx", tx.HashHex),
 				zap.Int("vout", idx),
 				zap.Uint64("v", output.Value),

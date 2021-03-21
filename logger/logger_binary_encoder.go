@@ -1,4 +1,4 @@
-package utils
+package logger
 
 import (
 	"encoding/binary"
@@ -76,4 +76,21 @@ func (enc *RowBinaryEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.F
 	// buf.AppendByte('\n')
 	putRowBinaryEncoder(myEnc)
 	return buf, nil
+}
+
+// https://github.com/golang/go/blob/0ff9df6b53076a9402f691b07707f7d88d352722/src/cmd/internal/dwarf/dwarf.go#L194
+// AppendUleb128 appends v to b using DWARF's unsigned LEB128 encoding.
+func appendUleb128(b []byte, v uint64) []byte {
+	for {
+		c := uint8(v & 0x7f)
+		v >>= 7
+		if v != 0 {
+			c |= 0x80
+		}
+		b = append(b, c)
+		if c&0x80 == 0 {
+			break
+		}
+	}
+	return b
 }

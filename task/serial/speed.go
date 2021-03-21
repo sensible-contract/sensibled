@@ -1,7 +1,7 @@
 package serial
 
 import (
-	"blkparser/utils"
+	"blkparser/logger"
 	"time"
 
 	"go.uber.org/zap"
@@ -32,7 +32,7 @@ func ParseBlockSpeed(nTx int, nextBlockHeight, blockCountInBuffer, maxBlockHeigh
 		timeLeft = (maxBlockHeight - nextBlockHeight) / (nextBlockHeight - lastBlockHeight)
 	}
 
-	utils.LogErr.Info("parsing",
+	logger.LogErr.Info("parsing",
 		zap.Int("height", nextBlockHeight),
 		zap.Int("~height", maxBlockHeightParallel-nextBlockHeight),
 		zap.Int("buff", blockCountInBuffer),

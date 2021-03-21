@@ -1,8 +1,8 @@
 package serial
 
 import (
+	"blkparser/logger"
 	"blkparser/model"
-	"blkparser/utils"
 
 	"go.uber.org/zap"
 )
@@ -13,7 +13,7 @@ var (
 
 // DumpBlock block id
 func DumpBlock(block *model.Block) {
-	utils.LogBlk.Info("blk-list",
+	logger.LogBlk.Info("blk-list",
 		zap.Uint32("height", uint32(block.Height)),
 		zap.Binary("blkid", block.Hash),
 		zap.Binary("previd", block.Parent),
@@ -28,7 +28,7 @@ func DumpBlock(block *model.Block) {
 // DumpBlockTx all tx in block height
 func DumpBlockTx(block *model.Block) {
 	for idx, tx := range block.Txs {
-		utils.LogTx.Info("tx-list",
+		logger.LogTx.Info("tx-list",
 			zap.Binary("txid", tx.Hash),
 			zap.Uint32("nTxIn", tx.TxInCnt),
 			zap.Uint32("nTxOut", tx.TxOutCnt),
@@ -50,7 +50,7 @@ func DumpBlockTxOutputInfo(block *model.Block) {
 			// 	continue
 			// }
 
-			utils.LogTxOut.Info("tx-txo",
+			logger.LogTxOut.Info("tx-txo",
 				zap.Binary("utxoPoint", output.Outpoint),     // 36 byte
 				zap.ByteString("address", output.AddressPkh), // 20 byte
 				zap.ByteString("genesis", output.GenesisId),  // 20 byte
@@ -67,7 +67,7 @@ func DumpBlockTxOutputInfo(block *model.Block) {
 func DumpBlockTxInputInfo(block *model.Block) {
 	for _, tx := range block.Txs {
 		for _, input := range tx.TxIns {
-			utils.LogTxIn.Info("tx-input",
+			logger.LogTxIn.Info("tx-input",
 				zap.Binary("txidIdx", input.InputPoint),
 				zap.Binary("utxoPoint", input.InputOutpoint),
 				zap.ByteString("scriptSig", input.ScriptSig),
@@ -96,7 +96,7 @@ func DumpBlockTxInputDetail(block *model.Block) {
 				} else if obj, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]; ok {
 					objData = obj
 				} else {
-					utils.Log.Info("tx-input-err",
+					logger.Log.Info("tx-input-err",
 						zap.String("txin", "input missing utxo"),
 						zap.String("txid", tx.HashHex),
 						zap.Int("idx", inputIndex),
@@ -107,7 +107,7 @@ func DumpBlockTxInputDetail(block *model.Block) {
 				}
 			}
 			DumpTxFullCount++
-			utils.LogTxIn.Info("tx-input-detail",
+			logger.LogTxIn.Info("tx-input-detail",
 				zap.Uint32("height", uint32(block.Height)),
 				zap.Binary("txidIdx", input.InputPoint),
 				zap.ByteString("scriptSig", input.ScriptSig),

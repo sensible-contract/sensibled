@@ -3,9 +3,9 @@ package main
 import (
 	"blkparser/loader"
 	"blkparser/parser"
+	"blkparser/store"
 	"blkparser/task"
 	"blkparser/task/serial"
-	"blkparser/utils"
 	"context"
 	"flag"
 	"fmt"
@@ -71,8 +71,8 @@ func main() {
 					// 重新全量扫描
 					if task.IsSync {
 						// 初始化同步数据库表
-						utils.CreateAllSyncCk()
-						utils.PrepareFullSyncCk()
+						store.CreateAllSyncCk()
+						store.PrepareFullSyncCk()
 					}
 				} else {
 					// 现有追加扫描
@@ -114,12 +114,12 @@ func main() {
 									break
 								}
 							}
-							utils.RemoveOrphanPartSyncCk(startBlockHeight)
+							store.RemoveOrphanPartSyncCk(startBlockHeight)
 						}
 
 						// 初始化同步数据库表
-						utils.CreatePartSyncCk()
-						utils.PreparePartSyncCk()
+						store.CreatePartSyncCk()
+						store.PreparePartSyncCk()
 					}
 				}
 

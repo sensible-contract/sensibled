@@ -1,4 +1,4 @@
-package utils
+package store
 
 import (
 	"blkparser/loader/clickhouse"
@@ -110,14 +110,14 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"DROP TABLE IF EXISTS txin",
 		`
 CREATE TABLE IF NOT EXISTS txin (
-	height       UInt32,         
+	height       UInt32,
 	txidx        UInt64,
 	txid         FixedString(32),
 	idx          UInt32,
 	script_sig   String,
 	nsequence    UInt32,
 
-	height_txo   UInt32,         
+	height_txo   UInt32,
 	utxidx       UInt64,
 	utxid        FixedString(32),
 	vout         UInt32,
