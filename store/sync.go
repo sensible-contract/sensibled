@@ -3,6 +3,7 @@ package store
 import (
 	"blkparser/loader/clickhouse"
 	"database/sql"
+	"fmt"
 	"log"
 )
 
@@ -17,20 +18,23 @@ var (
 	syncTxTxOut *sql.Tx
 	syncTxTxIn  *sql.Tx
 
-	// full sync
-	sqlBlk   string = "INSERT INTO blk_height (height, blkid, previd, merkle, ntx, invalue, outvalue, coinbase_out, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTx    string = "INSERT INTO blktx_height (txid, nin, nout, txsize, locktime, invalue, outvalue, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxOut string = "INSERT INTO txout (utxid, vout, address, genesis, satoshi, script_type, script_pk, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxIn  string = "INSERT INTO txin (height, txidx, txid, idx, script_sig, nsequence, height_txo, utxidx, utxid, vout, address, genesis, satoshi, script_type, script_pk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-
-	// part sync
-	sqlBlkNew   string = "INSERT INTO blk_height_new (height, blkid, previd, merkle, ntx, invalue, outvalue, coinbase_out, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxNew    string = "INSERT INTO blktx_height_new (txid, nin, nout, txsize, locktime, invalue, outvalue, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxOutNew string = "INSERT INTO txout_new (utxid, vout, address, genesis, satoshi, script_type, script_pk, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlTxInNew  string = "INSERT INTO txin_new (height, txidx, txid, idx, script_sig, nsequence, height_txo, utxidx, utxid, vout, address, genesis, satoshi, script_type, script_pk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlBlkPattern   string = "INSERT INTO %s (height, blkid, previd, merkle, ntx, invalue, outvalue, coinbase_out, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTxPattern    string = "INSERT INTO %s (txid, nin, nout, txsize, locktime, invalue, outvalue, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTxOutPattern string = "INSERT INTO %s (utxid, vout, address, codehash, genesis, data_value, satoshi, script_type, script_pk, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlTxInPattern  string = "INSERT INTO %s (height, txidx, txid, idx, script_sig, nsequence, height_txo, utxidx, utxid, vout, address, codehash, genesis, data_value, satoshi, script_type, script_pk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 )
 
-func PrepareFullSyncCk() bool {
+func prepareSyncCk(isFull bool) bool {
+	sqlBlk := fmt.Sprintf(sqlBlkPattern, "blk_height_new")
+	sqlTx := fmt.Sprintf(sqlTxPattern, "blktx_height_new")
+	sqlTxOut := fmt.Sprintf(sqlTxOutPattern, "txout_new")
+	sqlTxIn := fmt.Sprintf(sqlTxInPattern, "txin_new")
+	if isFull {
+		sqlBlk = fmt.Sprintf(sqlBlkPattern, "blk_height")
+		sqlTx = fmt.Sprintf(sqlTxPattern, "blktx_height")
+		sqlTxOut = fmt.Sprintf(sqlTxOutPattern, "txout")
+		sqlTxIn = fmt.Sprintf(sqlTxInPattern, "txin")
+	}
 	var err error
 	syncTxBlk, err = clickhouse.CK.Begin()
 	if err != nil {
@@ -79,53 +83,12 @@ func PrepareFullSyncCk() bool {
 	return true
 }
 
+func PrepareFullSyncCk() bool {
+	return prepareSyncCk(true)
+}
+
 func PreparePartSyncCk() bool {
-	var err error
-	syncTxBlk, err = clickhouse.CK.Begin()
-	if err != nil {
-		log.Println("sync-begin-blk", err.Error())
-		return false
-	}
-	SyncStmtBlk, err = syncTxBlk.Prepare(sqlBlkNew)
-	if err != nil {
-		log.Println("sync-prepare-blk", err.Error())
-		return false
-	}
-
-	syncTxTx, err = clickhouse.CK.Begin()
-	if err != nil {
-		log.Println("sync-begin-tx", err.Error())
-		return false
-	}
-	SyncStmtTx, err = syncTxTx.Prepare(sqlTxNew)
-	if err != nil {
-		log.Println("sync-prepare-tx", err.Error())
-		return false
-	}
-
-	syncTxTxOut, err = clickhouse.CK.Begin()
-	if err != nil {
-		log.Println("sync-begin-txout", err.Error())
-		return false
-	}
-	SyncStmtTxOut, err = syncTxTxOut.Prepare(sqlTxOutNew)
-	if err != nil {
-		log.Println("sync-prepare-txout", err.Error())
-		return false
-	}
-
-	syncTxTxIn, err = clickhouse.CK.Begin()
-	if err != nil {
-		log.Println("sync-begin-txinfull", err.Error())
-		return false
-	}
-	SyncStmtTxIn, err = syncTxTxIn.Prepare(sqlTxInNew)
-	if err != nil {
-		log.Println("sync-prepare-txinfull", err.Error())
-		return false
-	}
-
-	return true
+	return prepareSyncCk(false)
 }
 
 func CommitSyncCk() {

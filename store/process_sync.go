@@ -8,6 +8,8 @@ import (
 
 var (
 	createAllSQLs = []string{
+		// block list
+		// ================================================================
 		"DROP TABLE IF EXISTS blk_height",
 		`
 CREATE TABLE IF NOT EXISTS blk_height (
@@ -77,7 +79,9 @@ CREATE TABLE IF NOT EXISTS txout (
 	utxid        FixedString(32),
 	vout         UInt32,
 	address      String,
+	codehash     String,
 	genesis      String,
+	data_value   UInt64,
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String,
@@ -122,7 +126,9 @@ CREATE TABLE IF NOT EXISTS txin (
 	utxid        FixedString(32),
 	vout         UInt32,
 	address      String,
+	codehash     String,
 	genesis      String,
+	data_value   UInt64,
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String
@@ -131,6 +137,8 @@ ORDER BY (txid, idx)
 PARTITION BY intDiv(height, 2100)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
+
+      // ================================================================
 		// tx在哪个高度被打包，按txid首字节分区，分区内按交易txid排序、索引。按txid查询时可确定分区（快）
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
 		// 主要用于从txid确定所在区块height。配合其他表查询
@@ -168,10 +176,11 @@ CREATE TABLE IF NOT EXISTS txin_address_height (
 	txid         FixedString(32),
 	idx          UInt32,
 	address      String,
+	codehash     String,
 	genesis      String
 ) engine=MergeTree()
 PRIMARY KEY address
-ORDER BY (address, genesis, height)
+ORDER BY (address, codehash, genesis, height)
 PARTITION BY substring(address, 1, 1)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
@@ -185,11 +194,12 @@ CREATE TABLE IF NOT EXISTS txin_genesis_height (
 	txid         FixedString(32),
 	idx          UInt32,
 	address      String,
+	codehash     String,
 	genesis      String
 ) engine=MergeTree()
-PRIMARY KEY genesis
-ORDER BY (genesis, address, height)
-PARTITION BY substring(genesis, 1, 1)
+PRIMARY KEY (codehash, genesis)
+ORDER BY (codehash, genesis, address, height)
+PARTITION BY substring(codehash, 1, 1)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
 		// address在哪些高度的tx中出现，按address首字节分区，分区内按address+genesis+height排序，按address索引。按address查询时可确定分区 (快)
@@ -202,10 +212,11 @@ CREATE TABLE IF NOT EXISTS txout_address_height (
 	utxid        FixedString(32),
 	vout         UInt32,
 	address      String,
+	codehash     String,
 	genesis      String
 ) engine=MergeTree()
 PRIMARY KEY address
-ORDER BY (address, genesis, height)
+ORDER BY (address, codehash, genesis, height)
 PARTITION BY substring(address, 1, 1)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
@@ -219,11 +230,12 @@ CREATE TABLE IF NOT EXISTS txout_genesis_height (
 	utxid        FixedString(32),
 	vout         UInt32,
 	address      String,
+	codehash     String,
 	genesis      String
 ) engine=MergeTree()
-PRIMARY KEY genesis
-ORDER BY (genesis, address, height)
-PARTITION BY substring(genesis, 1, 1)
+PRIMARY KEY codehash
+ORDER BY (codehash, genesis, address, height)
+PARTITION BY substring(codehash, 1, 1)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 	}
 
@@ -240,14 +252,14 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_spent",
 
 		// 生成地址参与的输出索引
-		"INSERT INTO txout_address_height SELECT height, utxid, vout, address, genesis FROM txout WHERE address != unhex('00')",
+		"INSERT INTO txout_address_height SELECT height, utxid, vout, address, codehash, genesis FROM txout WHERE address != unhex('00')",
 		// 生成溯源ID参与的输出索引
-		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, genesis FROM txout WHERE genesis != unhex('00')",
+		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, codehash, genesis FROM txout WHERE codehash != unhex('00')",
 
 		// 生成地址参与输入的相关tx区块高度索引
-		"INSERT INTO txin_address_height SELECT height, txid, idx, address, genesis FROM txin WHERE address != unhex('00')",
+		"INSERT INTO txin_address_height SELECT height, txid, idx, address, codehash, genesis FROM txin WHERE address != unhex('00')",
 		// 生成溯源ID参与输入的相关tx区块高度索引
-		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin WHERE genesis != unhex('00')",
+		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin WHERE codehash != unhex('00')",
 	}
 
 	removeOrphanPartSQLs = []string{
@@ -297,14 +309,14 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_new ORDER BY utxid",
 
 		// 更新地址参与的输出索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txout_address_height SELECT height, utxid, vout, address, genesis FROM txout_new WHERE address != unhex('00') ORDER BY address",
+		"INSERT INTO txout_address_height SELECT height, utxid, vout, address, codehash, genesis FROM txout_new WHERE address != unhex('00') ORDER BY address",
 		// 更新溯源ID参与的输出索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, genesis FROM txout_new WHERE genesis != unhex('00') ORDER BY genesis",
+		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, codehash, genesis FROM txout_new WHERE codehash != unhex('00') ORDER BY codehash",
 
 		// 更新地址参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txin_address_height SELECT height, txid, idx, address, genesis FROM txin_new WHERE address != unhex('00') ORDER BY address",
+		"INSERT INTO txin_address_height SELECT height, txid, idx, address, codehash, genesis FROM txin_new WHERE address != unhex('00') ORDER BY address",
 		// 更新溯源ID参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin_new WHERE genesis != unhex('00') ORDER BY genesis",
+		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, codehash, genesis FROM txin_new WHERE codehash != unhex('00') ORDER BY codehash",
 
 		"DROP TABLE IF EXISTS blk_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",

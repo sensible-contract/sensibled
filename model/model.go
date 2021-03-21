@@ -133,6 +133,7 @@ type CalcData struct {
 	BlockHeight uint32
 	TxIdx       uint64
 	AddressPkh  []byte
+	CodeHash    []byte
 	GenesisId   []byte
 	Value       uint64
 	ScriptType  []byte
