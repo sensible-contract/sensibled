@@ -1,4 +1,4 @@
-package serial
+package utils
 
 import (
 	"blkparser/logger"
@@ -14,7 +14,7 @@ var (
 	lastBlockTxCount int
 )
 
-func ParseBlockSpeed(nTx int, nextBlockHeight, blockCountInBuffer, maxBlockHeightParallel, maxBlockHeight int) {
+func ParseBlockSpeed(nTx, lenGlobalNewUtxoDataMap, nextBlockHeight, blockCountInBuffer, maxBlockHeightParallel, maxBlockHeight int) {
 	lastBlockTxCount += nTx
 
 	if nextBlockHeight != maxBlockHeight-1 && time.Since(lastLogTime) < time.Second {
@@ -38,10 +38,7 @@ func ParseBlockSpeed(nTx int, nextBlockHeight, blockCountInBuffer, maxBlockHeigh
 		zap.Int("buff", blockCountInBuffer),
 		zap.Int("nblk", nextBlockHeight-lastBlockHeight),
 		zap.Int("ntx", lastBlockTxCount),
-		// zap.Int("+u", lastUtxoMapAddCount),
-		// zap.Int("-u", lastUtxoMapRemoveCount),
-		// zap.Int("=u", lastUtxoMapAddCount-lastUtxoMapRemoveCount),
-		zap.Int("utxo", len(GlobalNewUtxoDataMap)),
+		zap.Int("utxo", lenGlobalNewUtxoDataMap),
 		// zap.Int("calc", len(calcMap)),
 		zap.Int("time", timeLeft),
 		zap.Duration("elapse", time.Since(start)/time.Second),
@@ -49,6 +46,4 @@ func ParseBlockSpeed(nTx int, nextBlockHeight, blockCountInBuffer, maxBlockHeigh
 
 	lastBlockHeight = nextBlockHeight
 	lastBlockTxCount = 0
-	lastUtxoMapAddCount = 0
-	lastUtxoMapRemoveCount = 0
 }

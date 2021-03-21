@@ -5,6 +5,7 @@ import (
 	"blkparser/model"
 	"blkparser/task"
 	serialTask "blkparser/task/serial"
+	utilsTask "blkparser/task/utils"
 	"blkparser/utils"
 	"bytes"
 	"encoding/hex"
@@ -241,7 +242,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 		}(rawblock, bc.BlockData.CurrentId, bc.BlockData.LastOffset)
 
 		// header speed
-		serialTask.ParseBlockSpeed(0, idx, idx, 0, 0)
+		utilsTask.ParseBlockSpeed(0, idx, idx, 0, 0, len(serialTask.GlobalNewUtxoDataMap))
 	}
 	wg.Wait()
 }

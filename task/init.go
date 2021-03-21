@@ -6,6 +6,7 @@ import (
 	"blkparser/store"
 	"blkparser/task/parallel"
 	"blkparser/task/serial"
+	"blkparser/task/utils"
 )
 
 var (
@@ -46,7 +47,8 @@ func ParseBlockParallel(block *model.Block) {
 
 // ParseBlockSerial 再串行分析区块
 func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int) {
-	serial.ParseBlockSpeed(len(block.Txs), block.Height, blockCountInBuffer, MaxBlockHeightParallel, maxBlockHeight)
+	utils.ParseBlockSpeed(len(block.Txs), block.Height, blockCountInBuffer, MaxBlockHeightParallel, maxBlockHeight,
+		len(serial.GlobalNewUtxoDataMap))
 
 	if WithUtxo {
 		if IsSync {

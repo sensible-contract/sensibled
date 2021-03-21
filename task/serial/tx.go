@@ -13,10 +13,8 @@ import (
 )
 
 var (
-	lastUtxoMapAddCount    int
-	lastUtxoMapRemoveCount int
-	rdb                    *redis.Client
-	ctx                    = context.Background()
+	rdb *redis.Client
+	ctx = context.Background()
 )
 
 func init() {
@@ -47,7 +45,8 @@ func init() {
 	})
 }
 
-// ParseGetSpentUtxoDataFromRedisSerial utxo 信息
+// ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用。
+// 稍慢但占用内存较少
 func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 	pipe := rdb.Pipeline()
 
@@ -84,7 +83,8 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 	}
 }
 
-// ParseGetSpentUtxoDataFromMapSerial utxo 信息
+// ParseGetSpentUtxoDataFromMapSerial 部分utxo信息在程序内存，missing的utxo将从redis查询。区块同步结束时会批量更新缓存的utxo到redis。
+// 稍快但占用内存较多
 func ParseGetSpentUtxoDataFromMapSerial(block *model.ProcessBlock) {
 	pipe := rdb.Pipeline()
 	m := map[string]*redis.StringCmd{}
@@ -130,7 +130,7 @@ func ParseGetSpentUtxoDataFromMapSerial(block *model.ProcessBlock) {
 	}
 }
 
-// UpdateUtxoInMapSerial utxo 信息
+// UpdateUtxoInMapSerial 顺序更新当前区块的utxo信息变化到程序全局缓存
 func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	insideTxo := make([]string, len(block.SpentUtxoKeysMap))
 	for key := range block.SpentUtxoKeysMap {
@@ -146,9 +146,6 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 		delete(block.SpentUtxoKeysMap, key)
 	}
 
-	lastUtxoMapAddCount += len(block.NewUtxoDataMap)
-	lastUtxoMapRemoveCount += len(block.SpentUtxoKeysMap)
-
 	for key, data := range block.NewUtxoDataMap {
 		GlobalNewUtxoDataMap[key] = data
 	}
@@ -158,7 +155,7 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	}
 }
 
-// UpdateUtxoInRedisSerial utxo 信息
+// UpdateUtxoInRedisSerial 顺序更新当前区块的utxo信息变化到redis
 func UpdateUtxoInRedisSerial(block *model.ProcessBlock) {
 	insideTxo := make([]string, len(block.SpentUtxoKeysMap))
 	for key := range block.SpentUtxoKeysMap {
@@ -172,12 +169,10 @@ func UpdateUtxoInRedisSerial(block *model.ProcessBlock) {
 		delete(block.SpentUtxoKeysMap, key)
 	}
 
-	lastUtxoMapAddCount += len(block.NewUtxoDataMap)
-	lastUtxoMapRemoveCount += len(block.SpentUtxoKeysMap)
-
 	UpdateUtxoInRedis(block.NewUtxoDataMap, block.SpentUtxoDataMap)
 }
 
+// UpdateUtxoInRedis 批量更新redis utxo
 func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.CalcData) (err error) {
 	pipe := rdb.Pipeline()
 	for key, data := range utxoToRestore {
