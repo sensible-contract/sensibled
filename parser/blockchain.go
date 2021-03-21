@@ -33,7 +33,7 @@ func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
 	bc.Blocks = make(map[string]*model.Block, 0)
 	bc.ParsedBlocks = make(map[string]bool, 0)
 
-	utils.LoadFromGobFile("./headers-list.gob", bc.Blocks)
+	loader.LoadFromGobFile("./headers-list.gob", bc.Blocks)
 
 	bc.BlockData, err = loader.NewBlockData(path, magic)
 	if err != nil {
@@ -198,7 +198,7 @@ func (bc *Blockchain) InitLongestChainHeader() {
 	}
 
 	if len(bc.Blocks) > lastBlockHeadersCount {
-		utils.DumpToGobFile("./headers-list.gob", bc.Blocks)
+		loader.DumpToGobFile("./headers-list.gob", bc.Blocks)
 	}
 	// 如果遗漏中间block header，可能导致最长链无法延长
 	// 造成 bc.BlocksOfChainById 中区块数量远小于 bc.Blocks

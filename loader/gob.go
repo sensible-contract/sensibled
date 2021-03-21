@@ -1,8 +1,9 @@
-package utils
+package loader
 
 import (
 	"blkparser/logger"
 	"blkparser/model"
+	"blkparser/utils"
 	"encoding/gob"
 	"os"
 
@@ -30,14 +31,14 @@ func LoadFromGobFile(fname string, data map[string]*model.Block) {
 		)
 	}
 	for _, blk := range cacheData {
-		hashHex := HashString(blk.Hash)
+		hashHex := utils.HashString(blk.Hash)
 		data[hashHex] = &model.Block{
 			Hash:       blk.Hash,
 			HashHex:    hashHex,
 			FileIdx:    blk.FileIdx,
 			FileOffset: blk.FileOffset,
 			Parent:     blk.Parent,
-			ParentHex:  HashString(blk.Parent),
+			ParentHex:  utils.HashString(blk.Parent),
 		}
 	}
 }
