@@ -156,8 +156,6 @@ type TxoData struct {
 	Script      []byte
 }
 
-// from script: d.ScriptType, d.CodeHash, d.GenesisId, d.AddressPkh, d.DataValue
-
 func (d *TxoData) Marshal(buf []byte) {
 	binary.LittleEndian.PutUint32(buf, d.BlockHeight)  // 4
 	binary.LittleEndian.PutUint64(buf[4:], d.TxIdx)    // 8
@@ -168,6 +166,7 @@ func (d *TxoData) Marshal(buf []byte) {
 	copy(buf[20:], d.Script) // n
 }
 
+// no need marshal: ScriptType, IsNFT, CodeHash, GenesisId, AddressPkh, DataValue
 func (d *TxoData) Unmarshal(buf []byte) {
 	d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
 	d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
