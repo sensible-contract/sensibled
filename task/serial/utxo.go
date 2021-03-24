@@ -7,11 +7,11 @@ import (
 )
 
 var (
-	calcMap   map[string]*model.CalcData
+	calcMap   map[string]int
 	calcMutex sync.Mutex
 
-	GlobalSpentUtxoDataMap map[string]*model.CalcData
-	GlobalNewUtxoDataMap   map[string]*model.CalcData
+	GlobalSpentUtxoDataMap map[string]*model.TxoData
+	GlobalNewUtxoDataMap   map[string]*model.TxoData
 )
 
 func init() {
@@ -20,9 +20,9 @@ func init() {
 }
 
 func CleanUtxoMap() {
-	calcMap = make(map[string]*model.CalcData, 0)
-	GlobalNewUtxoDataMap = make(map[string]*model.CalcData, 0)
-	GlobalSpentUtxoDataMap = make(map[string]*model.CalcData, 0)
+	calcMap = make(map[string]int, 0)
+	GlobalNewUtxoDataMap = make(map[string]*model.TxoData, 0)
+	GlobalSpentUtxoDataMap = make(map[string]*model.TxoData, 0)
 
 	runtime.GC()
 }

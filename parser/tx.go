@@ -117,7 +117,7 @@ func NewTxIn(txinraw []byte) (txin *model.TxIn, offset uint) {
 
 func NewTxOut(txoutraw []byte) (txout *model.TxOut, offset uint) {
 	txout = new(model.TxOut)
-	txout.Value = binary.LittleEndian.Uint64(txoutraw[0:8])
+	txout.Satoshi = binary.LittleEndian.Uint64(txoutraw[0:8])
 	offset = 8
 
 	pkscript, pkscriptsize := utils.DecodeVarIntForBlock(txoutraw[offset:])

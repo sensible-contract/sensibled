@@ -48,6 +48,25 @@ ORDER BY blkid
 PARTITION BY intDiv(height, 2100)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
+		"DROP TABLE IF EXISTS blk_codehash_height",
+		`
+CREATE TABLE IF NOT EXISTS blk_codehash_height (
+	height       UInt32,
+	codehash     String,
+	genesis      String,
+
+	in_data_value   UInt64,
+	out_data_value   UInt64,
+
+	invalue      UInt64,        -- without coinbase
+	outvalue     UInt64,        -- without coinbase
+
+	blkid        FixedString(32)
+) engine=MergeTree()
+ORDER BY (height, codehash, genesis)
+PARTITION BY intDiv(height, 2100)
+SETTINGS storage_policy = 'prefer_nvme_policy'`,
+
 		// tx list
 		// ================================================================
 		// 区块包含的交易列表，分区内按区块高度height排序、索引。按blk height查询时可确定分区 (快)
@@ -137,8 +156,7 @@ ORDER BY (txid, idx)
 PARTITION BY intDiv(height, 2100)
 SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
-
-      // ================================================================
+		// ================================================================
 		// tx在哪个高度被打包，按txid首字节分区，分区内按交易txid排序、索引。按txid查询时可确定分区（快）
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
 		// 主要用于从txid确定所在区块height。配合其他表查询
@@ -259,13 +277,14 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 生成地址参与输入的相关tx区块高度索引
 		"INSERT INTO txin_address_height SELECT height, txid, idx, address, codehash, genesis FROM txin WHERE address != unhex('00')",
 		// 生成溯源ID参与输入的相关tx区块高度索引
-		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, genesis FROM txin WHERE codehash != unhex('00')",
+		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, codehash, genesis FROM txin WHERE codehash != unhex('00')",
 	}
 
 	removeOrphanPartSQLs = []string{
 		// ================ 如果没有孤块，则无需处理
 		"ALTER TABLE blk_height DELETE WHERE height >= ",
 		"ALTER TABLE blk DELETE WHERE height >= ",
+		"ALTER TABLE blk_codehash_height DELETE WHERE height >= ",
 
 		"ALTER TABLE blktx_height DELETE WHERE height >= ",
 
@@ -277,11 +296,13 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 
 	createPartSQLs = []string{
 		"DROP TABLE IF EXISTS blk_height_new",
+		"DROP TABLE IF EXISTS blk_codehash_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",
 		"DROP TABLE IF EXISTS txout_new",
 		"DROP TABLE IF EXISTS txin_new",
 
 		"CREATE TABLE IF NOT EXISTS blk_height_new AS blk_height",
+		"CREATE TABLE IF NOT EXISTS blk_codehash_height_new AS blk_codehash_height",
 		"CREATE TABLE IF NOT EXISTS blktx_height_new AS blktx_height",
 		"CREATE TABLE IF NOT EXISTS txout_new AS txout",
 		"CREATE TABLE IF NOT EXISTS txin_new AS txin",
@@ -290,12 +311,13 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 	// 更新现有基础数据表blk_height、blktx_height、txin、txout
 	processPartSQLs = []string{
 		"INSERT INTO blk_height SELECT * FROM blk_height_new;",
+		"INSERT INTO blk_codehash_height SELECT * FROM blk_codehash_height_new;",
 		"INSERT INTO blktx_height SELECT * FROM blktx_height_new;",
 		"INSERT INTO txout SELECT * FROM txout_new;",
 		"INSERT INTO txin SELECT * FROM txin_new",
 
 		// 优化blk表，以便统一按height排序查询
-		"OPTIMIZE TABLE blk_height FINAL",
+		// "OPTIMIZE TABLE blk_height FINAL",
 
 		// 更新区块id索引
 		"INSERT INTO blk SELECT * FROM blk_height_new",
@@ -319,6 +341,7 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, codehash, genesis FROM txin_new WHERE codehash != unhex('00') ORDER BY codehash",
 
 		"DROP TABLE IF EXISTS blk_height_new",
+		"DROP TABLE IF EXISTS blk_codehash_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",
 		"DROP TABLE IF EXISTS txout_new",
 		"DROP TABLE IF EXISTS txin_new",

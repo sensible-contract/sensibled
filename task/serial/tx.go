@@ -84,15 +84,12 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock, withMap boo
 		} else if err != nil {
 			panic(err)
 		}
-		d := model.CalcDataPool.Get().(*model.CalcData)
+		d := model.TxoDataPool.Get().(*model.TxoData)
 		d.Unmarshal([]byte(res))
 
 		// 补充数据
 		d.ScriptType = script.GetLockingScriptType(d.Script)
-		d.GenesisId, d.AddressPkh = script.ExtractPkScriptAddressPkh(d.Script, d.ScriptType)
-		if d.AddressPkh == nil {
-			d.GenesisId, d.AddressPkh = script.ExtractPkScriptGenesisIdAndAddressPkh(d.Script)
-		}
+		d.CodeHash, d.GenesisId, d.AddressPkh, d.DataValue = script.ExtractPkScriptAddressPkh(d.Script, d.ScriptType)
 
 		block.SpentUtxoDataMap[key] = d
 		if withMap {
@@ -108,7 +105,7 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 		if data, ok := block.NewUtxoDataMap[key]; !ok {
 			continue
 		} else {
-			model.CalcDataPool.Put(data)
+			model.TxoDataPool.Put(data)
 		}
 		insideTxo = append(insideTxo, key)
 	}
@@ -122,7 +119,7 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	}
 
 	for _, data := range block.SpentUtxoDataMap {
-		model.CalcDataPool.Put(data)
+		model.TxoDataPool.Put(data)
 	}
 }
 
@@ -144,7 +141,7 @@ func UpdateUtxoInRedisSerial(block *model.ProcessBlock) {
 }
 
 // UpdateUtxoInRedis 批量更新redis utxo
-func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.CalcData) (err error) {
+func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (err error) {
 	pipe := rdb.Pipeline()
 	for key, data := range utxoToRestore {
 		buf := make([]byte, 20+len(data.Script))
@@ -196,23 +193,22 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.CalcData) (
 func DumpLockingScriptType(block *model.Block) {
 	for _, tx := range block.Txs {
 		for idx, output := range tx.TxOuts {
-			if output.Value == 0 || !output.LockingScriptMatch {
+			if output.Satoshi == 0 || !output.LockingScriptMatch {
 				continue
 			}
 
 			key := string(output.LockingScriptType)
 
-			if data, ok := calcMap[key]; ok {
-				data.Value += 1
-				calcMap[key] = data
+			if value, ok := calcMap[key]; ok {
+				calcMap[key] = value + 1
 			} else {
-				calcMap[key] = &model.CalcData{Value: 1}
+				calcMap[key] = 1
 			}
 
 			logger.Log.Info("pkscript",
 				zap.String("tx", tx.HashHex),
 				zap.Int("vout", idx),
-				zap.Uint64("v", output.Value),
+				zap.Uint64("v", output.Satoshi),
 				zap.String("type", output.LockingScriptTypeHex),
 			)
 		}

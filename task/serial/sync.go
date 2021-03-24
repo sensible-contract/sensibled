@@ -71,14 +71,15 @@ func SyncBlockTx(block *model.Block) {
 func SyncBlockTxOutputInfo(block *model.Block) {
 	for txIdx, tx := range block.Txs {
 		for vout, output := range tx.TxOuts {
-			tx.OutputsValue += output.Value
+			tx.OutputsValue += output.Satoshi
 
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.Hash),
 				uint32(vout),
 				string(output.AddressPkh), // 20 byte
+				string(output.CodeHash),   // 20 byte
 				string(output.GenesisId),  // 20 byte
-				output.Value,
+				output.Satoshi,
 				string(output.LockingScriptType),
 				string(output.Pkscript),
 				uint32(block.Height),
@@ -97,10 +98,11 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 
 // SyncBlockTxInputDetail all tx input info
 func SyncBlockTxInputDetail(block *model.Block) {
-	var commonObjData *model.CalcData = &model.CalcData{
+	var commonObjData *model.TxoData = &model.TxoData{
+		CodeHash:   make([]byte, 1),
 		GenesisId:  make([]byte, 1),
 		AddressPkh: make([]byte, 1),
-		Value:      utils.CalcBlockSubsidy(block.Height),
+		Satoshi:    utils.CalcBlockSubsidy(block.Height),
 	}
 
 	for txIdx, tx := range block.Txs {
@@ -109,7 +111,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 		for vin, input := range tx.TxIns {
 			objData := commonObjData
 			if !isCoinbase {
-				objData.Value = 0
+				objData.Satoshi = 0
 				if obj, ok := block.ParseData.NewUtxoDataMap[input.InputOutpointKey]; ok {
 					objData = obj
 				} else if obj, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]; ok {
@@ -125,7 +127,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 					)
 				}
 			}
-			tx.InputsValue += objData.Value
+			tx.InputsValue += objData.Satoshi
 
 			DumpTxFullCount++
 			if _, err := store.SyncStmtTxIn.Exec(
@@ -141,8 +143,10 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				string(input.InputHash),
 				input.InputVout,
 				string(objData.AddressPkh), // 20 byte
+				string(objData.CodeHash),   // 20 byte
 				string(objData.GenesisId),  // 20 byte
-				objData.Value,
+				objData.DataValue,
+				objData.Satoshi,
 				string(objData.ScriptType),
 				string(objData.Script),
 			); err != nil {

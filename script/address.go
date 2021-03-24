@@ -2,21 +2,23 @@ package script
 
 import "blkparser/utils"
 
-func ExtractPkScriptAddressPkh(Pkscript, scriptType []byte) (genesisId, addressPkh []byte) {
-	// if isPubkey(scriptType) {
-	// 	return Pkscript[3:23]
-	// }
+func ExtractPkScriptAddressPkh(Pkscript, scriptType []byte) (codeHash, genesisId, addressPkh []byte, amount uint64) {
+	if isPubkey(scriptType) {
+		addressPkh = utils.GetHash160(Pkscript[1 : len(Pkscript)-1])
+		return empty, empty, addressPkh, 0
+	}
 
 	if isPubkeyHash(scriptType) {
 		addressPkh = make([]byte, 20)
 		copy(addressPkh, Pkscript[3:23])
-		return empty, addressPkh
+		return empty, empty, addressPkh, 0
 	}
 
 	// if isMultiSig(scriptType) {
 	// 	return Pkscript[:]
 	// }
-	return
+
+	return ExtractPkScriptGenesisIdAndAddressPkh(Pkscript)
 }
 
 func GetLockingScriptType(pkscript []byte) (scriptType []byte) {

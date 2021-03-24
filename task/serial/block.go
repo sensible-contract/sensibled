@@ -53,8 +53,9 @@ func DumpBlockTxOutputInfo(block *model.Block) {
 			logger.LogTxOut.Info("tx-txo",
 				zap.Binary("utxoPoint", output.Outpoint),     // 36 byte
 				zap.ByteString("address", output.AddressPkh), // 20 byte
+				zap.ByteString("codehash", output.CodeHash),  // 20 byte
 				zap.ByteString("genesis", output.GenesisId),  // 20 byte
-				zap.Uint64("value", output.Value),
+				zap.Uint64("satoshi", output.Satoshi),
 				zap.ByteString("scriptType", output.LockingScriptType),
 				zap.ByteString("script", output.Pkscript),
 				zap.Uint32("height", uint32(block.Height)),
@@ -80,7 +81,8 @@ func DumpBlockTxInputInfo(block *model.Block) {
 
 // DumpBlockTxInputDetail all tx input info
 func DumpBlockTxInputDetail(block *model.Block) {
-	var commonObjData *model.CalcData = &model.CalcData{
+	var commonObjData *model.TxoData = &model.TxoData{
+		CodeHash:   make([]byte, 1),
 		GenesisId:  make([]byte, 1),
 		AddressPkh: make([]byte, 1),
 	}
@@ -116,8 +118,10 @@ func DumpBlockTxInputDetail(block *model.Block) {
 				zap.Uint32("height_out", uint32(objData.BlockHeight)),
 				zap.Binary("utxoPoint", input.InputOutpoint),
 				zap.ByteString("address", objData.AddressPkh), // 20 byte
+				zap.ByteString("codehash", objData.CodeHash),  // 20 byte
 				zap.ByteString("genesis", objData.GenesisId),  // 20 byte
-				zap.Uint64("value", objData.Value),
+				zap.Uint64("dataValue", objData.DataValue),
+				zap.Uint64("satoshi", objData.Satoshi),
 				zap.ByteString("scriptType", objData.ScriptType),
 				zap.ByteString("script", objData.Script),
 			)

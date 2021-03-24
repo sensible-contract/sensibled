@@ -44,12 +44,14 @@ func (t *TxIn) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 }
 
 type TxOut struct {
-	Value    uint64
+	Satoshi  uint64
 	Pkscript []byte
 
 	// other:
 	AddressPkh           []byte
+	CodeHash             []byte
 	GenesisId            []byte
+	DataValue            uint64
 	Outpoint             []byte // 32 + 4
 	OutpointKey          string // 32 + 4
 	LockingScriptType    []byte
@@ -58,7 +60,7 @@ type TxOut struct {
 }
 
 func (t *TxOut) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	enc.AddUint64("v", t.Value)
+	enc.AddUint64("v", t.Satoshi)
 	return nil
 }
 
@@ -123,11 +125,11 @@ type BlockCache struct {
 type ProcessBlock struct {
 	Height           uint32
 	SpentUtxoKeysMap map[string]bool
-	SpentUtxoDataMap map[string]*CalcData
-	NewUtxoDataMap   map[string]*CalcData
+	SpentUtxoDataMap map[string]*TxoData
+	NewUtxoDataMap   map[string]*TxoData
 }
 
-type CalcData struct {
+type TxoData struct {
 	UTxid       []byte
 	Vout        uint32
 	BlockHeight uint32
@@ -135,25 +137,26 @@ type CalcData struct {
 	AddressPkh  []byte
 	CodeHash    []byte
 	GenesisId   []byte
-	Value       uint64
+	DataValue   uint64
+	Satoshi     uint64
 	ScriptType  []byte
 	Script      []byte
 }
 
-func (d *CalcData) Marshal(buf []byte) {
-	binary.LittleEndian.PutUint32(buf, d.BlockHeight) // 4
-	binary.LittleEndian.PutUint64(buf[4:], d.TxIdx)   // 8
-	binary.LittleEndian.PutUint64(buf[12:], d.Value)  // 8
+func (d *TxoData) Marshal(buf []byte) {
+	binary.LittleEndian.PutUint32(buf, d.BlockHeight)  // 4
+	binary.LittleEndian.PutUint64(buf[4:], d.TxIdx)    // 8
+	binary.LittleEndian.PutUint64(buf[12:], d.Satoshi) // 8
 	// copy(buf[12:], d.AddressPkh)                      // 20
 	// copy(buf[32:], d.GenesisId)                       // 20
 	// copy(buf[60:], d.ScriptType)                      // 32
 	copy(buf[20:], d.Script) // n
 }
 
-func (d *CalcData) Unmarshal(buf []byte) {
+func (d *TxoData) Unmarshal(buf []byte) {
 	d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
 	d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
-	d.Value = binary.LittleEndian.Uint64(buf[12:20])    // 8
+	d.Satoshi = binary.LittleEndian.Uint64(buf[12:20])  // 8
 	// copy(d.AddressPkh, buf[12:32])                      // 20
 	// copy(d.GenesisId, buf[32:52])                       // 20
 	// copy(d.ScriptType, buf[60:92])                      // 32
@@ -162,8 +165,8 @@ func (d *CalcData) Unmarshal(buf []byte) {
 	// copy(d.Script, buf[20:]) // n
 }
 
-var CalcDataPool = sync.Pool{
+var TxoDataPool = sync.Pool{
 	New: func() interface{} {
-		return &CalcData{}
+		return &TxoData{}
 	},
 }

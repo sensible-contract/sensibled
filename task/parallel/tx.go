@@ -17,7 +17,7 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 	}
 
 	for idx, output := range tx.TxOuts {
-		// if output.Value == 0 {
+		// if output.Satoshi == 0 {
 		// 	continue
 		// }
 
@@ -32,11 +32,7 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		output.LockingScriptTypeHex = hex.EncodeToString(output.LockingScriptType)
 
 		// address
-		output.GenesisId, output.AddressPkh = script.ExtractPkScriptAddressPkh(output.Pkscript, output.LockingScriptType)
-
-		if output.AddressPkh == nil {
-			output.GenesisId, output.AddressPkh = script.ExtractPkScriptGenesisIdAndAddressPkh(output.Pkscript)
-		}
+		output.CodeHash, output.GenesisId, output.AddressPkh, output.DataValue = script.ExtractPkScriptAddressPkh(output.Pkscript, output.LockingScriptType)
 
 		// test locking script
 		// output.LockingScriptMatch = true
@@ -66,16 +62,18 @@ func ParseTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.Proce
 // ParseNewUtxoInTxParallel utxo 信息
 func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock) {
 	for _, output := range tx.TxOuts {
-		if output.Value == 0 || !output.LockingScriptMatch {
+		if output.Satoshi == 0 || !output.LockingScriptMatch {
 			continue
 		}
 
-		d := model.CalcDataPool.Get().(*model.CalcData)
+		d := model.TxoDataPool.Get().(*model.TxoData)
 		d.BlockHeight = block.Height
 		d.TxIdx = uint64(txIdx)
 		d.AddressPkh = output.AddressPkh
+		d.CodeHash = output.CodeHash
 		d.GenesisId = output.GenesisId
-		d.Value = output.Value
+		d.DataValue = output.DataValue
+		d.Satoshi = output.Satoshi
 		d.ScriptType = output.LockingScriptType
 		d.Script = output.Pkscript
 
@@ -84,9 +82,9 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock
 		// if _, ok := block.UtxoMissingMap[output.OutpointKey]; ok {
 		// 	delete(block.UtxoMissingMap, output.OutpointKey)
 		// } else {
-		// 	block.UtxoMap[output.OutpointKey] = model.CalcData{
+		// 	block.UtxoMap[output.OutpointKey] = model.TxoData{
 		// 		BlockHeight: block.Height,
-		// 		Value:       output.Value,
+		// 		Satoshi:     output.Satoshi,
 		// 		ScriptType:  output.LockingScriptType,
 		// 		AddressPkh:  output.AddressPkh,
 		// 		GenesisId:   output.GenesisId,

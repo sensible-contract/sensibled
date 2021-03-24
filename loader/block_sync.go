@@ -35,25 +35,25 @@ func GetLatestBlocks() (blksRsp []*model.BlockDO, err error) {
 }
 
 func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
-	var ret model.CalcData
-	err := rows.Scan(&ret.UTxid, &ret.Vout, &ret.AddressPkh, &ret.CodeHash, &ret.GenesisId, &ret.Value, &ret.ScriptType, &ret.Script, &ret.BlockHeight, &ret.TxIdx)
+	var ret model.TxoData
+	err := rows.Scan(&ret.UTxid, &ret.Vout, &ret.AddressPkh, &ret.CodeHash, &ret.GenesisId, &ret.DataValue, &ret.Satoshi, &ret.ScriptType, &ret.Script, &ret.BlockHeight, &ret.TxIdx)
 	if err != nil {
 		return nil, err
 	}
 	return &ret, nil
 }
 
-func GetSpentUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.CalcData, err error) {
+func GetSpentUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.TxoData, err error) {
 	psql := fmt.Sprintf(`
-SELECT utxid, vout, address, codehash, genesis, satoshi, script_type, script_pk, height_txo, utxidx FROM txin
+SELECT utxid, vout, address, codehash, genesis, data_value, satoshi, script_type, script_pk, height_txo, utxidx FROM txin
    WHERE satoshi > 0 AND
       height >= %d`, height)
 	return getUtxoBySql(psql)
 }
 
-func GetNewUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.CalcData, err error) {
+func GetNewUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.TxoData, err error) {
 	psql := fmt.Sprintf(`
-SELECT utxid, vout, address, codehash, genesis, 0, '', '', 0, 0 FROM txout
+SELECT utxid, vout, address, codehash, genesis, data_value, satoshi, '', '', 0, 0 FROM txout
    WHERE satoshi > 0 AND
       NOT startsWith(script_type, char(0x6a)) AND
       NOT startsWith(script_type, char(0x00, 0x6a)) AND
@@ -61,7 +61,7 @@ SELECT utxid, vout, address, codehash, genesis, 0, '', '', 0, 0 FROM txout
 	return getUtxoBySql(psql)
 }
 
-func getUtxoBySql(psql string) (utxosMapRsp map[string]*model.CalcData, err error) {
+func getUtxoBySql(psql string) (utxosMapRsp map[string]*model.TxoData, err error) {
 	utxosRet, err := clickhouse.ScanAll(psql, utxoResultSRF)
 	if err != nil {
 		log.Printf("query blk failed: %v", err)
@@ -70,9 +70,9 @@ func getUtxoBySql(psql string) (utxosMapRsp map[string]*model.CalcData, err erro
 	if utxosRet == nil {
 		return nil, nil
 	}
-	utxosRsp := utxosRet.([]*model.CalcData)
+	utxosRsp := utxosRet.([]*model.TxoData)
 
-	utxosMapRsp = make(map[string]*model.CalcData, len(utxosRsp))
+	utxosMapRsp = make(map[string]*model.TxoData, len(utxosRsp))
 	for _, data := range utxosRsp {
 		key := make([]byte, 36)
 		copy(key, data.UTxid)

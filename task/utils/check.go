@@ -46,7 +46,7 @@ func countValueOfTxsInBlock(txs []*model.Tx) uint64 {
 	allValue := uint64(0)
 	for _, tx := range txs {
 		for _, output := range tx.TxOuts {
-			allValue += output.Value
+			allValue += output.Satoshi
 		}
 	}
 	return allValue
@@ -58,7 +58,7 @@ func countZeroValueOfTxsInBlock(txs []*model.Tx) uint64 {
 	for _, tx := range txs {
 		hasZero := false
 		for _, output := range tx.TxOuts {
-			if output.Value == 0 {
+			if output.Satoshi == 0 {
 				hasZero = true
 				break
 			}
