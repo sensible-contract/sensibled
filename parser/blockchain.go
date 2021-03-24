@@ -109,6 +109,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 				NewUtxoDataMap:   make(map[string]*model.TxoData, 1),
 				SpentUtxoDataMap: make(map[string]*model.TxoData, 1),
 				SpentUtxoKeysMap: make(map[string]bool, 1),
+				TokenSummaryMap:  make(map[string]*model.TokenData, 1), // key: CodeHash+GenesisId
 			}
 			block.ParseData = processBlock
 

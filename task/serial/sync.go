@@ -9,6 +9,11 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	SyncTxFullCount     int
+	SyncTxCodeHashCount int
+)
+
 // SyncBlock block id
 func SyncBlock(block *model.Block) {
 	coinbase := block.Txs[0]
@@ -20,6 +25,26 @@ func SyncBlock(block *model.Block) {
 	for _, tx := range block.Txs[1:] {
 		txInputsValue += tx.InputsValue
 		txOutputsValue += tx.OutputsValue
+	}
+
+	for _, tokenSummary := range block.ParseData.TokenSummaryMap {
+		if _, err := store.SyncStmtBlkCodeHash.Exec(
+			uint32(block.Height),
+			string(tokenSummary.CodeHash),
+			string(tokenSummary.GenesisId),
+			tokenSummary.InDataValue,
+			tokenSummary.OutDataValue,
+			tokenSummary.InSatoshi,
+			tokenSummary.OutSatoshi,
+			string(block.Hash),
+		); err != nil {
+			logger.Log.Info("sync-block-codehash-err",
+				zap.String("sync", "block codehash err"),
+				zap.String("blkid", block.HashHex),
+				zap.String("err", err.Error()),
+			)
+		}
+		SyncTxCodeHashCount++
 	}
 
 	if _, err := store.SyncStmtBlk.Exec(
@@ -37,7 +62,7 @@ func SyncBlock(block *model.Block) {
 	); err != nil {
 		logger.Log.Info("sync-block-err",
 			zap.String("sync", "block err"),
-			zap.String("txid", block.HashHex),
+			zap.String("blkid", block.HashHex),
 			zap.String("err", err.Error()),
 		)
 	}
@@ -129,7 +154,28 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			}
 			tx.InputsValue += objData.Satoshi
 
-			DumpTxFullCount++
+			// token summary
+			if len(objData.CodeHash) == 32 && len(objData.GenesisId) > 32 {
+				key := string(objData.CodeHash) + string(objData.GenesisId)
+				tokenSummary, ok := block.ParseData.TokenSummaryMap[key]
+				if !ok {
+					tokenSummary = &model.TokenData{
+						IsNFT:     objData.IsNFT,
+						CodeHash:  objData.CodeHash,
+						GenesisId: objData.GenesisId,
+					}
+					block.ParseData.TokenSummaryMap[key] = tokenSummary
+				}
+
+				tokenSummary.InSatoshi += objData.Satoshi
+				if objData.IsNFT {
+					tokenSummary.InDataValue += 1
+				} else {
+					tokenSummary.InDataValue += objData.DataValue
+				}
+			}
+
+			SyncTxFullCount++
 			if _, err := store.SyncStmtTxIn.Exec(
 				uint32(block.Height),
 				uint64(txIdx),

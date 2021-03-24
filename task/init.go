@@ -92,7 +92,8 @@ func ParseEnd() {
 
 	if IsSync {
 		store.CommitSyncCk()
-		store.CommitFullSyncCk(serial.DumpTxFullCount > 0)
+		store.CommitFullSyncCk(serial.SyncTxFullCount > 0)
+		store.CommitCodeHashSyncCk(serial.SyncTxCodeHashCount > 0)
 		if IsFull {
 			store.ProcessAllSyncCk()
 		} else {

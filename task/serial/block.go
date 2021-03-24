@@ -7,10 +7,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	DumpTxFullCount int
-)
-
 // DumpBlock block id
 func DumpBlock(block *model.Block) {
 	logger.LogBlk.Info("blk-list",
@@ -108,7 +104,6 @@ func DumpBlockTxInputDetail(block *model.Block) {
 					)
 				}
 			}
-			DumpTxFullCount++
 			logger.LogTxIn.Info("tx-input-detail",
 				zap.Uint32("height", uint32(block.Height)),
 				zap.Binary("txidIdx", input.InputPoint),

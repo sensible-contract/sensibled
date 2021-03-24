@@ -32,10 +32,31 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		output.LockingScriptTypeHex = hex.EncodeToString(output.LockingScriptType)
 
 		// address
-		output.CodeHash, output.GenesisId, output.AddressPkh, output.DataValue = script.ExtractPkScriptAddressPkh(output.Pkscript, output.LockingScriptType)
+		output.IsNFT, output.CodeHash, output.GenesisId, output.AddressPkh, output.DataValue = script.ExtractPkScriptForTxo(output.Pkscript, output.LockingScriptType)
 
 		// test locking script
 		// output.LockingScriptMatch = true
+
+		// token summary
+		if len(output.CodeHash) == 32 && len(output.GenesisId) > 32 {
+			key := string(output.CodeHash) + string(output.GenesisId)
+			tokenSummary, ok := block.TokenSummaryMap[key]
+			if !ok {
+				tokenSummary = &model.TokenData{
+					IsNFT:     output.IsNFT,
+					CodeHash:  output.CodeHash,
+					GenesisId: output.GenesisId,
+				}
+				block.TokenSummaryMap[key] = tokenSummary
+			}
+
+			tokenSummary.OutSatoshi += output.Satoshi
+			if output.IsNFT {
+				tokenSummary.OutDataValue += 1
+			} else {
+				tokenSummary.OutDataValue += output.DataValue
+			}
+		}
 
 		if !script.IsOpreturn(output.LockingScriptType) {
 			output.LockingScriptMatch = true

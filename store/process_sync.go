@@ -54,13 +54,10 @@ CREATE TABLE IF NOT EXISTS blk_codehash_height (
 	height       UInt32,
 	codehash     String,
 	genesis      String,
-
 	in_data_value   UInt64,
 	out_data_value   UInt64,
-
 	invalue      UInt64,        -- without coinbase
 	outvalue     UInt64,        -- without coinbase
-
 	blkid        FixedString(32)
 ) engine=MergeTree()
 ORDER BY (height, codehash, genesis)

@@ -49,6 +49,7 @@ type TxOut struct {
 
 	// other:
 	AddressPkh           []byte
+	IsNFT                bool
 	CodeHash             []byte
 	GenesisId            []byte
 	DataValue            uint64
@@ -127,6 +128,17 @@ type ProcessBlock struct {
 	SpentUtxoKeysMap map[string]bool
 	SpentUtxoDataMap map[string]*TxoData
 	NewUtxoDataMap   map[string]*TxoData
+	TokenSummaryMap  map[string]*TokenData // key: CodeHash+GenesisId
+}
+
+type TokenData struct {
+	IsNFT        bool
+	CodeHash     []byte
+	GenesisId    []byte
+	InDataValue  uint64 // ft amount / nft tokenIdx
+	OutDataValue uint64 // ft amount / nft tokenIdx
+	InSatoshi    uint64
+	OutSatoshi   uint64
 }
 
 type TxoData struct {
@@ -135,13 +147,16 @@ type TxoData struct {
 	BlockHeight uint32
 	TxIdx       uint64
 	AddressPkh  []byte
+	IsNFT       bool
 	CodeHash    []byte
 	GenesisId   []byte
-	DataValue   uint64
+	DataValue   uint64 // ft amount / nft tokenIdx
 	Satoshi     uint64
 	ScriptType  []byte
 	Script      []byte
 }
+
+// from script: d.ScriptType, d.CodeHash, d.GenesisId, d.AddressPkh, d.DataValue
 
 func (d *TxoData) Marshal(buf []byte) {
 	binary.LittleEndian.PutUint32(buf, d.BlockHeight)  // 4
