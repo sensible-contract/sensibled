@@ -242,7 +242,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 		}(rawblock, bc.BlockData.CurrentId, bc.BlockData.LastOffset)
 
 		// header speed
-		utilsTask.ParseBlockSpeed(0, idx, idx, 0, 0, len(serialTask.GlobalNewUtxoDataMap))
+		utilsTask.ParseBlockSpeed(0, len(serialTask.GlobalNewUtxoDataMap), idx, idx, 0, 0)
 	}
 	wg.Wait()
 }
