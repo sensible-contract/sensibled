@@ -138,18 +138,11 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksDone chan struct{}, blocksRea
 	}
 
 	nextBlockHeight := startBlockHeight
-	buffCount := 0
 	blockParseBufferBlock := make([]*model.Block, maxBlockHeight)
 	for block := range blocksReady {
 		// 暂存block
 		if block.Height < maxBlockHeight {
 			blockParseBufferBlock[block.Height] = block
-			buffCount++
-		}
-
-		// 注意如果在开始分析之前暂存的量非常大则可能是异常情况
-		if nextBlockHeight == startBlockHeight && buffCount > 1000 {
-			panic("too many buff blocks. starting block may missing")
 		}
 
 		// 按序
@@ -166,9 +159,7 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksDone chan struct{}, blocksRea
 
 			// 再串行分析区块。可执行一些严格要求按序处理的任务，区块会串行依次执行
 			// 当串行执行到某个区块时，这个区块一定运行完毕了相应的并行预处理任务
-			task.ParseBlockSerial(block,
-				startBlockHeight+buffCount-nextBlockHeight,
-				maxBlockHeight)
+			task.ParseBlockSerial(block, maxBlockHeight)
 
 			block.Txs = nil
 			nextBlockHeight++
@@ -243,7 +234,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 		}(rawblock, bc.BlockData.CurrentId, bc.BlockData.LastOffset)
 
 		// header speed
-		utilsTask.ParseBlockSpeed(0, len(serialTask.GlobalNewUtxoDataMap), idx, idx, 0, 0)
+		utilsTask.ParseBlockSpeed(0, len(serialTask.GlobalNewUtxoDataMap), len(serialTask.GlobalSpentUtxoDataMap), idx, 0)
 	}
 	wg.Wait()
 }

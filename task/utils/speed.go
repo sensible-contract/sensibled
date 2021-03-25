@@ -14,7 +14,7 @@ var (
 	lastBlockTxCount int
 )
 
-func ParseBlockSpeed(nTx, lenGlobalNewUtxoDataMap, nextBlockHeight, blockCountInBuffer, maxBlockHeightParallel, maxBlockHeight int) {
+func ParseBlockSpeed(nTx, lenGlobalNewUtxoDataMap, lenGlobalSpentUtxoDataMap, nextBlockHeight, maxBlockHeight int) {
 	lastBlockTxCount += nTx
 
 	if nextBlockHeight != maxBlockHeight-1 && time.Since(lastLogTime) < time.Second {
@@ -34,10 +34,9 @@ func ParseBlockSpeed(nTx, lenGlobalNewUtxoDataMap, nextBlockHeight, blockCountIn
 
 	logger.LogErr.Info("parsing",
 		zap.Int("height", nextBlockHeight),
-		zap.Int("~height", maxBlockHeightParallel-nextBlockHeight),
-		zap.Int("buff", blockCountInBuffer),
 		zap.Int("nblk", nextBlockHeight-lastBlockHeight),
 		zap.Int("ntx", lastBlockTxCount),
+		zap.Int("txo", lenGlobalSpentUtxoDataMap),
 		zap.Int("utxo", lenGlobalNewUtxoDataMap),
 		// zap.Int("calc", len(calcMap)),
 		zap.Int("time", timeLeft),

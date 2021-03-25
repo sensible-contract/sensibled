@@ -46,9 +46,8 @@ func ParseBlockParallel(block *model.Block) {
 }
 
 // ParseBlockSerial 再串行分析区块
-func ParseBlockSerial(block *model.Block, blockCountInBuffer, maxBlockHeight int) {
-	utils.ParseBlockSpeed(len(block.Txs), len(serial.GlobalNewUtxoDataMap),
-		block.Height, blockCountInBuffer, MaxBlockHeightParallel, maxBlockHeight)
+func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
+	utils.ParseBlockSpeed(len(block.Txs), len(serial.GlobalNewUtxoDataMap), len(serial.GlobalSpentUtxoDataMap), block.Height, maxBlockHeight)
 
 	if WithUtxo {
 		if IsSync {
