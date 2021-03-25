@@ -38,7 +38,7 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		// output.LockingScriptMatch = true
 
 		// token summary
-		if len(output.CodeHash) == 32 && len(output.GenesisId) > 32 {
+		if len(output.CodeHash) == 20 && len(output.GenesisId) > 32 {
 			key := string(output.CodeHash) + string(output.GenesisId)
 			tokenSummary, ok := block.TokenSummaryMap[key]
 			if !ok {

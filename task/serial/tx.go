@@ -154,16 +154,17 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 		if err := pipe.ZAdd(ctx, "utxo", &redis.Z{Score: score, Member: key}).Err(); err != nil {
 			panic(err)
 		}
-		// redis有序address utxo数据添加
+
 		if len(data.AddressPkh) == 20 {
-			if err := pipe.ZAdd(ctx, "a"+string(data.AddressPkh), &redis.Z{Score: score, Member: key}).Err(); err != nil {
+			// redis有序address utxo数据添加
+			if err := pipe.ZAdd(ctx, "ua"+string(data.AddressPkh), &redis.Z{Score: score, Member: key}).Err(); err != nil {
 				panic(err)
 			}
 
+			// balance of address
 			if err := pipe.ZIncrBy(ctx, "balance", float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
 				panic(err)
 			}
-
 		}
 		// redis有序genesis utxo数据添加
 		if len(data.GenesisId) > 32 {
@@ -219,10 +220,11 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 
 		if len(data.AddressPkh) == 20 {
 			// redis有序address utxo数据清除
-			if err := pipe.ZRem(ctx, "a"+string(data.AddressPkh), key).Err(); err != nil {
+			if err := pipe.ZRem(ctx, "ua"+string(data.AddressPkh), key).Err(); err != nil {
 				panic(err)
 			}
 
+			// balance of address
 			if err := pipe.ZIncrBy(ctx, "balance", -float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
 				panic(err)
 			}

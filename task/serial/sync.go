@@ -104,6 +104,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				string(output.AddressPkh), // 20 byte
 				string(output.CodeHash),   // 20 byte
 				string(output.GenesisId),  // 20 byte
+				output.DataValue,
 				output.Satoshi,
 				string(output.LockingScriptType),
 				string(output.Pkscript),
@@ -155,7 +156,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			tx.InputsValue += objData.Satoshi
 
 			// token summary
-			if len(objData.CodeHash) == 32 && len(objData.GenesisId) > 32 {
+			if len(objData.CodeHash) == 20 && len(objData.GenesisId) > 32 {
 				key := string(objData.CodeHash) + string(objData.GenesisId)
 				tokenSummary, ok := block.ParseData.TokenSummaryMap[key]
 				if !ok {
