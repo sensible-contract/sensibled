@@ -28,10 +28,15 @@ func SyncBlock(block *model.Block) {
 	}
 
 	for _, tokenSummary := range block.ParseData.TokenSummaryMap {
+		codeType := 0
+		if !tokenSummary.IsNFT {
+			codeType = 1
+		}
 		if _, err := store.SyncStmtBlkCodeHash.Exec(
 			uint32(block.Height),
 			string(tokenSummary.CodeHash),
 			string(tokenSummary.GenesisId),
+			uint8(codeType),
 			tokenSummary.InDataValue,
 			tokenSummary.OutDataValue,
 			tokenSummary.InSatoshi,
