@@ -28,6 +28,15 @@ func isPubkey(scriptType []byte) bool {
 		scriptType[1] == OP_CHECKSIG
 }
 
+// Recent output script type, pays to hash160(script)
+func isPayToScriptHash(scriptType []byte) bool {
+	return len(scriptType) == 3 &&
+		scriptType[0] == OP_HASH160 &&
+		scriptType[1] == OP_DATA_20 &&
+		scriptType[2] == OP_EQUAL
+
+}
+
 // isPubkeyHash returns true if the script passed is a pay-to-pubkey-hash
 // transaction, false otherwise.
 func isPubkeyHash(scriptType []byte) bool {

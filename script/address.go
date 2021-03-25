@@ -3,14 +3,19 @@ package script
 import "blkparser/utils"
 
 func ExtractPkScriptForTxo(Pkscript, scriptType []byte) (isNFT bool, codeHash, genesisId, addressPkh []byte, value uint64) {
-	if isPubkey(scriptType) {
-		addressPkh = utils.GetHash160(Pkscript[1 : len(Pkscript)-1])
-		return false, empty, empty, addressPkh, 0
-	}
-
 	if isPubkeyHash(scriptType) {
 		addressPkh = make([]byte, 20)
 		copy(addressPkh, Pkscript[3:23])
+		return false, empty, empty, addressPkh, 0
+	}
+
+	if isPayToScriptHash(scriptType) {
+		addressPkh = utils.GetHash160(Pkscript[2 : len(Pkscript)-1])
+		return false, empty, empty, addressPkh, 0
+	}
+
+	if isPubkey(scriptType) {
+		addressPkh = utils.GetHash160(Pkscript[1 : len(Pkscript)-1])
 		return false, empty, empty, addressPkh, 0
 	}
 
