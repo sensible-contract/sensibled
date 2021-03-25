@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS blk_codehash_height (
 	height       UInt32,
 	codehash     String,
 	genesis      String,
-    code_type       UInt8,      -- 0: nft 1: ft
+    code_type    UInt8,      -- 0: nft 1: ft
+	nft_idx      UInt64,
 	in_data_value   UInt64,
 	out_data_value  UInt64,
 	invalue      UInt64,        -- without coinbase

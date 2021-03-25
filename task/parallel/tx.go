@@ -5,6 +5,7 @@ import (
 	"blkparser/script"
 	"encoding/binary"
 	"encoding/hex"
+	"strconv"
 )
 
 // ParseTx 先并行分析交易tx，不同区块并行，同区块内串行
@@ -39,11 +40,17 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 
 		// token summary
 		if len(output.CodeHash) == 20 && len(output.GenesisId) > 32 {
+			NFTIdx := uint64(0)
 			key := string(output.CodeHash) + string(output.GenesisId)
+			if output.IsNFT {
+				key += strconv.Itoa(int(output.DataValue))
+				NFTIdx = output.DataValue
+			}
 			tokenSummary, ok := block.TokenSummaryMap[key]
 			if !ok {
 				tokenSummary = &model.TokenData{
 					IsNFT:     output.IsNFT,
+					NFTIdx:    NFTIdx,
 					CodeHash:  output.CodeHash,
 					GenesisId: output.GenesisId,
 				}

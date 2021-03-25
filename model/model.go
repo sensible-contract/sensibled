@@ -128,13 +128,14 @@ type ProcessBlock struct {
 	SpentUtxoKeysMap map[string]bool
 	SpentUtxoDataMap map[string]*TxoData
 	NewUtxoDataMap   map[string]*TxoData
-	TokenSummaryMap  map[string]*TokenData // key: CodeHash+GenesisId
+	TokenSummaryMap  map[string]*TokenData // key: CodeHash+GenesisId;  nft: CodeHash+GenesisId+tokenIdx
 }
 
 type TokenData struct {
 	IsNFT        bool
 	CodeHash     []byte
 	GenesisId    []byte
+	NFTIdx       uint64 // nft tokenIdx
 	InDataValue  uint64 // ft amount / nft tokenIdx
 	OutDataValue uint64 // ft amount / nft tokenIdx
 	InSatoshi    uint64

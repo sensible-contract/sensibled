@@ -21,7 +21,7 @@ var (
 	syncTxTxIn        *sql.Tx
 
 	sqlBlkPattern         string = "INSERT INTO %s (height, blkid, previd, merkle, ntx, invalue, outvalue, coinbase_out, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	sqlBlkCodeHashPattern string = "INSERT INTO %s (height, codehash, genesis, code_type, in_data_value, out_data_value, invalue, outvalue, blkid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlBlkCodeHashPattern string = "INSERT INTO %s (height, codehash, genesis, code_type, nft_idx, in_data_value, out_data_value, invalue, outvalue, blkid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxPattern          string = "INSERT INTO %s (txid, nin, nout, txsize, locktime, invalue, outvalue, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxOutPattern       string = "INSERT INTO %s (utxid, vout, address, codehash, genesis, data_value, satoshi, script_type, script_pk, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxInPattern        string = "INSERT INTO %s (height, txidx, txid, idx, script_sig, nsequence, height_txo, utxidx, utxid, vout, address, codehash, genesis, data_value, satoshi, script_type, script_pk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"

@@ -5,6 +5,7 @@ import (
 	"blkparser/model"
 	"blkparser/store"
 	"blkparser/utils"
+	"strconv"
 
 	"go.uber.org/zap"
 )
@@ -37,6 +38,7 @@ func SyncBlock(block *model.Block) {
 			string(tokenSummary.CodeHash),
 			string(tokenSummary.GenesisId),
 			uint8(codeType),
+			tokenSummary.NFTIdx,
 			tokenSummary.InDataValue,
 			tokenSummary.OutDataValue,
 			tokenSummary.InSatoshi,
@@ -162,11 +164,18 @@ func SyncBlockTxInputDetail(block *model.Block) {
 
 			// token summary
 			if len(objData.CodeHash) == 20 && len(objData.GenesisId) > 32 {
+				NFTIdx := uint64(0)
 				key := string(objData.CodeHash) + string(objData.GenesisId)
+				if objData.IsNFT {
+					key += strconv.Itoa(int(objData.DataValue))
+					NFTIdx = objData.DataValue
+				}
+
 				tokenSummary, ok := block.ParseData.TokenSummaryMap[key]
 				if !ok {
 					tokenSummary = &model.TokenData{
 						IsNFT:     objData.IsNFT,
+						NFTIdx:    NFTIdx,
 						CodeHash:  objData.CodeHash,
 						GenesisId: objData.GenesisId,
 					}
