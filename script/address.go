@@ -2,7 +2,7 @@ package script
 
 import "blkparser/utils"
 
-func ExtractPkScriptForTxo(Pkscript, scriptType []byte) (isNFT bool, codeHash, genesisId, addressPkh []byte, value uint64) {
+func ExtractPkScriptForTxo(txid, Pkscript, scriptType []byte) (isNFT bool, codeHash, genesisId, addressPkh []byte, value uint64) {
 	if isPubkeyHash(scriptType) {
 		addressPkh = make([]byte, 20)
 		copy(addressPkh, Pkscript[3:23])
@@ -23,7 +23,7 @@ func ExtractPkScriptForTxo(Pkscript, scriptType []byte) (isNFT bool, codeHash, g
 	// 	return Pkscript[:]
 	// }
 
-	return ExtractPkScriptGenesisIdAndAddressPkh(Pkscript)
+	return ExtractPkScriptGenesisIdAndAddressPkh(txid, Pkscript)
 }
 
 func GetLockingScriptType(pkscript []byte) (scriptType []byte) {

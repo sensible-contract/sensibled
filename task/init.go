@@ -13,6 +13,7 @@ var (
 	MaxBlockHeightParallel int
 
 	IsSync   bool
+	IsDump   bool
 	WithUtxo bool
 	IsFull   bool
 	UseMap   bool
@@ -37,7 +38,7 @@ func ParseBlockParallel(block *model.Block) {
 
 	if IsSync {
 		serial.SyncBlockTxOutputInfo(block)
-	} else {
+	} else if IsDump {
 		serial.DumpBlock(block)
 		serial.DumpBlockTx(block)
 		serial.DumpBlockTxOutputInfo(block)
@@ -56,7 +57,7 @@ func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 
 			serial.SyncBlock(block)
 			serial.SyncBlockTx(block)
-		} else {
+		} else if IsDump {
 			serial.DumpBlockTxInputDetail(block)
 		}
 

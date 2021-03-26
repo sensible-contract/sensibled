@@ -26,9 +26,10 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&task.IsSync, "sync", false, "sync into db")
-	flag.BoolVar(&task.IsFull, "full", false, "full dump")
-	flag.BoolVar(&task.WithUtxo, "utxo", true, "with utxo dump")
+	flag.BoolVar(&task.IsDump, "dump", false, "dump to file")
+	flag.BoolVar(&task.IsSync, "sync", false, "sync to db")
+	flag.BoolVar(&task.IsFull, "full", false, "start from genesis")
+	flag.BoolVar(&task.WithUtxo, "utxo", true, "with utxo")
 	flag.BoolVar(&task.UseMap, "map", false, "use map, instead of redis")
 
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
