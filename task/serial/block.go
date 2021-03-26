@@ -47,10 +47,10 @@ func DumpBlockTxOutputInfo(block *model.Block) {
 			// }
 
 			logger.LogTxOut.Info("tx-txo",
-				zap.Binary("utxoPoint", output.Outpoint),     // 36 byte
-				zap.ByteString("address", output.AddressPkh), // 20 byte
-				zap.ByteString("codehash", output.CodeHash),  // 20 byte
-				zap.ByteString("genesis", output.GenesisId),  // 20 byte
+				zap.Binary("utxoPoint", output.Outpoint),     // 36 bytes
+				zap.ByteString("address", output.AddressPkh), // 20 bytes
+				zap.ByteString("codehash", output.CodeHash),  // 20 bytes
+				zap.ByteString("genesis", output.GenesisId),  // 20/36/40 bytes
 				zap.Uint64("satoshi", output.Satoshi),
 				zap.ByteString("scriptType", output.LockingScriptType),
 				zap.ByteString("script", output.Pkscript),

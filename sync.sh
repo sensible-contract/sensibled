@@ -8,5 +8,4 @@
 ./blkparser -map -sync -end 550000
 ./blkparser -map -sync -end 600000
 ./blkparser -map -sync -end 650000
-
-# ./blkparser -map -sync
+./blkparser -map -sync

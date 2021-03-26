@@ -39,7 +39,7 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		// output.LockingScriptMatch = true
 
 		// token summary
-		if len(output.CodeHash) == 20 && len(output.GenesisId) > 32 {
+		if len(output.CodeHash) == 20 && len(output.GenesisId) >= 20 {
 			NFTIdx := uint64(0)
 			key := string(output.CodeHash) + string(output.GenesisId)
 			if output.IsNFT {

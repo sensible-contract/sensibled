@@ -108,9 +108,9 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.Hash),
 				uint32(vout),
-				string(output.AddressPkh), // 20 byte
-				string(output.CodeHash),   // 20 byte
-				string(output.GenesisId),  // 20 byte
+				string(output.AddressPkh), // 20 bytes
+				string(output.CodeHash),   // 20 bytes
+				string(output.GenesisId),  // 20/36/40 bytes
 				output.DataValue,
 				output.Satoshi,
 				string(output.LockingScriptType),
@@ -163,7 +163,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			tx.InputsValue += objData.Satoshi
 
 			// token summary
-			if len(objData.CodeHash) == 20 && len(objData.GenesisId) > 32 {
+			if len(objData.CodeHash) == 20 && len(objData.GenesisId) >= 20 {
 				NFTIdx := uint64(0)
 				key := string(objData.CodeHash) + string(objData.GenesisId)
 				if objData.IsNFT {
