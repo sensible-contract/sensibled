@@ -98,6 +98,7 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock
 		d.BlockHeight = block.Height
 		d.TxIdx = uint64(txIdx)
 		d.AddressPkh = output.AddressPkh
+		d.IsNFT = output.IsNFT
 		d.CodeHash = output.CodeHash
 		d.GenesisId = output.GenesisId
 		d.DataValue = output.DataValue

@@ -308,12 +308,33 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 	}
 
 	// 更新现有基础数据表blk_height、blktx_height、txin、txout
+	processPartSQLsForTxIn = []string{
+		"INSERT INTO txin SELECT * FROM txin_new",
+		// 更新txo被花费的tx索引
+		"INSERT INTO txin_spent SELECT height, txid, idx, utxid, vout FROM txin_new",
+		// 更新txo被花费的tx区块高度索引，注意这里并未清除孤立区块的数据
+		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_new ORDER BY utxid",
+		// 更新地址参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
+		"INSERT INTO txin_address_height SELECT height, txid, idx, address, codehash, genesis FROM txin_new WHERE address != unhex('00') ORDER BY address",
+		// 更新溯源ID参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
+		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, codehash, genesis FROM txin_new WHERE codehash != unhex('00') ORDER BY codehash",
+
+		"DROP TABLE IF EXISTS txin_new",
+	}
+	processPartSQLsForTxOut = []string{
+		"INSERT INTO txout SELECT * FROM txout_new;",
+		// 更新地址参与的输出索引，注意这里并未清除孤立区块的数据
+		"INSERT INTO txout_address_height SELECT height, utxid, vout, address, codehash, genesis FROM txout_new WHERE address != unhex('00') ORDER BY address",
+		// 更新溯源ID参与的输出索引，注意这里并未清除孤立区块的数据
+		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, codehash, genesis FROM txout_new WHERE codehash != unhex('00') ORDER BY codehash",
+
+		"DROP TABLE IF EXISTS txout_new",
+	}
+
 	processPartSQLs = []string{
 		"INSERT INTO blk_height SELECT * FROM blk_height_new;",
 		"INSERT INTO blk_codehash_height SELECT * FROM blk_codehash_height_new;",
 		"INSERT INTO blktx_height SELECT * FROM blktx_height_new;",
-		"INSERT INTO txout SELECT * FROM txout_new;",
-		"INSERT INTO txin SELECT * FROM txin_new",
 
 		// 优化blk表，以便统一按height排序查询
 		// "OPTIMIZE TABLE blk_height FINAL",
@@ -324,26 +345,9 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 		// 更新tx到区块高度索引，注意这里并未清除孤立区块的数据
 		"INSERT INTO tx_height SELECT txid, height FROM blktx_height_new ORDER BY txid",
 
-		// 更新txo被花费的tx索引
-		"INSERT INTO txin_spent SELECT height, txid, idx, utxid, vout FROM txin_new",
-		// 更新txo被花费的tx区块高度索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_new ORDER BY utxid",
-
-		// 更新地址参与的输出索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txout_address_height SELECT height, utxid, vout, address, codehash, genesis FROM txout_new WHERE address != unhex('00') ORDER BY address",
-		// 更新溯源ID参与的输出索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txout_genesis_height SELECT height, utxid, vout, address, codehash, genesis FROM txout_new WHERE codehash != unhex('00') ORDER BY codehash",
-
-		// 更新地址参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txin_address_height SELECT height, txid, idx, address, codehash, genesis FROM txin_new WHERE address != unhex('00') ORDER BY address",
-		// 更新溯源ID参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txin_genesis_height SELECT height, txid, idx, address, codehash, genesis FROM txin_new WHERE codehash != unhex('00') ORDER BY codehash",
-
 		"DROP TABLE IF EXISTS blk_height_new",
 		"DROP TABLE IF EXISTS blk_codehash_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",
-		"DROP TABLE IF EXISTS txout_new",
-		"DROP TABLE IF EXISTS txin_new",
 	}
 )
 
@@ -370,7 +374,13 @@ func CreatePartSyncCk() bool {
 }
 
 func ProcessPartSyncCk() bool {
-	return ProcessSyncCk(processPartSQLs)
+	if !ProcessSyncCk(processPartSQLs) {
+		return false
+	}
+	if !ProcessSyncCk(processPartSQLsForTxIn) {
+		return false
+	}
+	return ProcessSyncCk(processPartSQLsForTxOut)
 }
 
 func ProcessSyncCk(processSQLs []string) bool {
