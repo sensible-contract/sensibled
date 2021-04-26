@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"runtime"
 	"time"
 
@@ -21,8 +22,10 @@ import (
 var (
 	startBlockHeight int
 	endBlockHeight   int
+	zmqEndpoint      string
 	blocksPath       string
 	blockMagic       string
+	listen_address   = os.Getenv("LISTEN")
 )
 
 func init() {
@@ -45,6 +48,7 @@ func init() {
 		}
 	}
 
+	zmqEndpoint = viper.GetString("zmq")
 	blocksPath = viper.GetString("blocks")
 	blockMagic = viper.GetString("magic")
 }
@@ -56,7 +60,8 @@ func main() {
 		return
 	}
 
-	server := &http.Server{Addr: "0.0.0.0:8080", Handler: nil}
+	// "0.0.0.0:8080"
+	server := &http.Server{Addr: listen_address, Handler: nil}
 
 	newBlockNotify := make(chan string)
 
@@ -148,7 +153,8 @@ func main() {
 
 	// 监听新块确认
 	go func() {
-		loader.ZmqNotify(newBlockNotify)
+		// zmqEndpoint := "tcp://192.168.31.236:16331"
+		loader.ZmqNotify(zmqEndpoint, newBlockNotify)
 	}()
 
 	go func() {
@@ -162,5 +168,7 @@ func main() {
 	}()
 
 	// go tool pprof http://localhost:8080/debug/pprof/profile
-	server.ListenAndServe()
+	if err := server.ListenAndServe(); err != nil {
+		log.Printf("profile listen failed: %v", err)
+	}
 }

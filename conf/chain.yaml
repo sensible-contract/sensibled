@@ -10,3 +10,4 @@
 # "./blocks-bsv"
 blocks: "/data/bitcoin-sv-blocks/blocks"
 magic: "f9beb4d9"
+zmq: "tcp://192.168.31.236:16331"

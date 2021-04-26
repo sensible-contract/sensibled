@@ -218,62 +218,62 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 			panic(err)
 		}
 
-		if len(data.AddressPkh) == 20 {
-			// redis有序address utxo数据清除
-			if err := pipe.ZRem(ctx, "au"+string(data.AddressPkh), key).Err(); err != nil {
-				panic(err)
-			}
+		if len(data.AddressPkh) < 20 || len(data.GenesisId) < 20 {
+			continue
+		}
 
-			// balance of address
-			if err := pipe.ZIncrBy(ctx, "balance", -float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
-				panic(err)
-			}
+		// redis有序address utxo数据清除
+		if err := pipe.ZRem(ctx, "au"+string(data.AddressPkh), key).Err(); err != nil {
+			panic(err)
+		}
 
+		// balance of address
+		if err := pipe.ZIncrBy(ctx, "balance", -float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
+			panic(err)
 		}
 
 		// redis有序genesis utxo数据清除
-		if len(data.GenesisId) >= 20 {
-			if data.IsNFT {
-				// nft:utxo
-				nftId := make([]byte, 8)
-				binary.LittleEndian.PutUint64(nftId, data.DataValue) // 8
-				if err := pipe.ZRem(ctx, "nu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
-					key+string(nftId)).Err(); err != nil {
-					panic(err)
-				}
-
-				// nft:owners
-				if err := pipe.ZIncrBy(ctx, "no"+string(data.CodeHash)+string(data.GenesisId),
-					-1, string(data.AddressPkh)).Err(); err != nil {
-					panic(err)
-				}
-				// nft:summary
-				if err := pipe.ZIncrBy(ctx, "ns"+string(data.AddressPkh),
-					-1, string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
-					panic(err)
-				}
-			} else {
-				// ft:utxo
-				if err := pipe.ZRem(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh), key).Err(); err != nil {
-					panic(err)
-				}
-				// ft:balance
-				if err := pipe.ZIncrBy(ctx, "fb"+string(data.CodeHash)+string(data.GenesisId),
-					-float64(data.DataValue),
-					string(data.AddressPkh)).Err(); err != nil {
-					panic(err)
-				}
-				// ft:summary
-				if err := pipe.ZIncrBy(ctx, "fs"+string(data.AddressPkh),
-					-float64(data.DataValue),
-					string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
-					panic(err)
-				}
+		if data.IsNFT {
+			// nft:utxo
+			nftId := make([]byte, 8)
+			binary.LittleEndian.PutUint64(nftId, data.DataValue) // 8
+			if err := pipe.ZRem(ctx, "nu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
+				key+string(nftId)).Err(); err != nil {
+				panic(err)
 			}
 
-			tokenToRemove[string(data.CodeHash)+string(data.GenesisId)] = true
-			addrToRemove[string(data.AddressPkh)] = true
+			// nft:owners
+			if err := pipe.ZIncrBy(ctx, "no"+string(data.CodeHash)+string(data.GenesisId),
+				-1, string(data.AddressPkh)).Err(); err != nil {
+				panic(err)
+			}
+			// nft:summary
+			if err := pipe.ZIncrBy(ctx, "ns"+string(data.AddressPkh),
+				-1, string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
+				panic(err)
+			}
+		} else {
+			// ft:utxo
+			if err := pipe.ZRem(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh), key).Err(); err != nil {
+				panic(err)
+			}
+			// ft:balance
+			if err := pipe.ZIncrBy(ctx, "fb"+string(data.CodeHash)+string(data.GenesisId),
+				-float64(data.DataValue),
+				string(data.AddressPkh)).Err(); err != nil {
+				panic(err)
+			}
+			// ft:summary
+			if err := pipe.ZIncrBy(ctx, "fs"+string(data.AddressPkh),
+				-float64(data.DataValue),
+				string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
+				panic(err)
+			}
 		}
+
+		// 记录key以备删除
+		tokenToRemove[string(data.CodeHash)+string(data.GenesisId)] = true
+		addrToRemove[string(data.AddressPkh)] = true
 	}
 
 	// 删除summary 为0的记录

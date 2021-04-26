@@ -8,8 +8,7 @@ import (
 	"github.com/zeromq/goczmq"
 )
 
-func ZmqNotify(block chan string) {
-	endpoint := "tcp://192.168.31.236:16331"
+func ZmqNotify(endpoint string, block chan string) {
 
 	subscriber, err := goczmq.NewSub(endpoint, "hashblock")
 	defer subscriber.Destroy()

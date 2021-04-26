@@ -34,7 +34,6 @@ func isPayToScriptHash(scriptType []byte) bool {
 		scriptType[0] == OP_HASH160 &&
 		scriptType[1] == OP_DATA_20 &&
 		scriptType[2] == OP_EQUAL
-
 }
 
 // isPubkeyHash returns true if the script passed is a pay-to-pubkey-hash
@@ -46,7 +45,6 @@ func isPubkeyHash(scriptType []byte) bool {
 		scriptType[2] == OP_DATA_20 &&
 		scriptType[3] == OP_EQUALVERIFY &&
 		scriptType[4] == OP_CHECKSIG
-
 }
 
 // isMultiSig returns true if the passed script is a multisig transaction, false
