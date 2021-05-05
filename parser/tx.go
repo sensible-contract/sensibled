@@ -1,9 +1,9 @@
 package parser
 
 import (
-	"blkparser/model"
-	"blkparser/utils"
 	"encoding/binary"
+	"satoblock/model"
+	"satoblock/utils"
 )
 
 func NewTxs(txsraw []byte) (txs []*model.Tx) {

@@ -1,10 +1,10 @@
 package parallel
 
 import (
-	"blkparser/model"
-	"blkparser/script"
 	"encoding/binary"
 	"encoding/hex"
+	"satoblock/model"
+	"satoblock/script"
 	"strconv"
 )
 

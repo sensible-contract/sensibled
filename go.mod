@@ -1,4 +1,4 @@
-module blkparser
+module satoblock
 
 go 1.15
 

@@ -1,11 +1,11 @@
 package loader
 
 import (
-	"blkparser/logger"
-	"blkparser/model"
-	"blkparser/utils"
 	"encoding/gob"
 	"os"
+	"satoblock/logger"
+	"satoblock/model"
+	"satoblock/utils"
 
 	"go.uber.org/zap"
 )

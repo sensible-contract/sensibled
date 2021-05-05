@@ -1,12 +1,12 @@
 package serial
 
 import (
-	"blkparser/logger"
-	"blkparser/model"
-	"blkparser/script"
 	"context"
 	"encoding/binary"
 	"fmt"
+	"satoblock/logger"
+	"satoblock/model"
+	"satoblock/script"
 
 	redis "github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"

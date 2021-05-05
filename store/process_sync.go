@@ -1,8 +1,8 @@
 package store
 
 import (
-	"blkparser/loader/clickhouse"
 	"log"
+	"satoblock/loader/clickhouse"
 	"strconv"
 )
 

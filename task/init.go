@@ -1,12 +1,12 @@
 package task
 
 import (
-	"blkparser/logger"
-	"blkparser/model"
-	"blkparser/store"
-	"blkparser/task/parallel"
-	"blkparser/task/serial"
-	"blkparser/task/utils"
+	"satoblock/logger"
+	"satoblock/model"
+	"satoblock/store"
+	"satoblock/task/parallel"
+	"satoblock/task/serial"
+	"satoblock/task/utils"
 )
 
 var (

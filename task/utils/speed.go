@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"blkparser/logger"
+	"satoblock/logger"
 	"time"
 
 	"go.uber.org/zap"

@@ -1,10 +1,10 @@
 package serial
 
 import (
-	"blkparser/logger"
-	"blkparser/model"
-	"blkparser/store"
-	"blkparser/utils"
+	"satoblock/logger"
+	"satoblock/model"
+	"satoblock/store"
+	"satoblock/utils"
 	"strconv"
 
 	"go.uber.org/zap"

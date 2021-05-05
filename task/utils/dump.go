@@ -1,10 +1,10 @@
 package utils
 
 import (
-	"blkparser/model"
-	"blkparser/utils"
 	"encoding/binary"
 	"encoding/hex"
+	"satoblock/model"
+	"satoblock/utils"
 
 	"go.uber.org/zap"
 )

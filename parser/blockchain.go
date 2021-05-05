@@ -1,15 +1,15 @@
 package parser
 
 import (
-	"blkparser/loader"
-	"blkparser/model"
-	"blkparser/task"
-	serialTask "blkparser/task/serial"
-	utilsTask "blkparser/task/utils"
-	"blkparser/utils"
 	"bytes"
 	"encoding/hex"
 	"log"
+	"satoblock/loader"
+	"satoblock/model"
+	"satoblock/task"
+	serialTask "satoblock/task/serial"
+	utilsTask "satoblock/task/utils"
+	"satoblock/utils"
 	"sync"
 )
 

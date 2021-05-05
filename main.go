@@ -1,11 +1,6 @@
 package main
 
 import (
-	"blkparser/loader"
-	"blkparser/parser"
-	"blkparser/store"
-	"blkparser/task"
-	"blkparser/task/serial"
 	"context"
 	"flag"
 	"fmt"
@@ -14,6 +9,11 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"runtime"
+	"satoblock/loader"
+	"satoblock/parser"
+	"satoblock/store"
+	"satoblock/task"
+	"satoblock/task/serial"
 	"time"
 
 	"github.com/spf13/viper"
@@ -153,7 +153,6 @@ func main() {
 
 	// 监听新块确认
 	go func() {
-		// zmqEndpoint := "tcp://192.168.31.236:16331"
 		loader.ZmqNotify(zmqEndpoint, newBlockNotify)
 	}()
 

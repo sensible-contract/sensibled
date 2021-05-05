@@ -1,10 +1,10 @@
 package store
 
 import (
-	"blkparser/loader/clickhouse"
 	"database/sql"
 	"fmt"
 	"log"
+	"satoblock/loader/clickhouse"
 )
 
 var (

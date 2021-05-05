@@ -1,8 +1,8 @@
 package serial
 
 import (
-	"blkparser/logger"
-	"blkparser/model"
+	"satoblock/logger"
+	"satoblock/model"
 
 	"go.uber.org/zap"
 )

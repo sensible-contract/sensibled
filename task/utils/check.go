@@ -1,9 +1,9 @@
 package utils
 
 import (
-	"blkparser/logger"
-	"blkparser/model"
 	"log"
+	"satoblock/logger"
+	"satoblock/model"
 
 	"go.uber.org/zap"
 )

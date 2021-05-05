@@ -1,9 +1,9 @@
 package script
 
 import (
-	"blkparser/utils"
 	"bytes"
 	"encoding/binary"
+	"satoblock/utils"
 )
 
 var empty = make([]byte, 1)

@@ -1,13 +1,13 @@
 package loader
 
 import (
-	"blkparser/loader/clickhouse"
-	"blkparser/model"
 	"database/sql"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
+	"satoblock/loader/clickhouse"
+	"satoblock/model"
 )
 
 func blockResultSRF(rows *sql.Rows) (interface{}, error) {

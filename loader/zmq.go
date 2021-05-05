@@ -1,15 +1,14 @@
 package loader
 
 import (
-	"blkparser/utils"
 	"encoding/hex"
 	"log"
+	"satoblock/utils"
 
 	"github.com/zeromq/goczmq"
 )
 
 func ZmqNotify(endpoint string, block chan string) {
-
 	subscriber, err := goczmq.NewSub(endpoint, "hashblock")
 	defer subscriber.Destroy()
 	if err != nil {

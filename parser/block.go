@@ -1,9 +1,9 @@
 package parser
 
 import (
-	"blkparser/model"
-	"blkparser/utils"
 	"encoding/binary"
+	"satoblock/model"
+	"satoblock/utils"
 )
 
 func NewBlock(rawblock []byte) (block *model.Block) {

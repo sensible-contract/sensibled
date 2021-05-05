@@ -1,8 +1,8 @@
 package serial
 
 import (
-	"blkparser/model"
 	"runtime"
+	"satoblock/model"
 	"sync"
 )
 
