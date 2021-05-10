@@ -150,58 +150,58 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 		pipe.Set(ctx, key, buf, 0)
 		// redis有序utxo数据添加
 		score := float64(data.BlockHeight)*1000000000 + float64(data.TxIdx)
-		if err := pipe.ZAdd(ctx, "utxo", &redis.Z{Score: score, Member: key}).Err(); err != nil {
+		if len(data.AddressPkh) < 20 || len(data.GenesisId) < 20 {
+			if err := pipe.ZAdd(ctx, "utxo", &redis.Z{Score: score, Member: key}).Err(); err != nil {
+				panic(err)
+			}
+			continue
+		}
+
+		// redis有序address utxo数据添加
+		if err := pipe.ZAdd(ctx, "au"+string(data.AddressPkh), &redis.Z{Score: score, Member: key}).Err(); err != nil {
 			panic(err)
 		}
 
-		if len(data.AddressPkh) == 20 {
-			// redis有序address utxo数据添加
-			if err := pipe.ZAdd(ctx, "au"+string(data.AddressPkh), &redis.Z{Score: score, Member: key}).Err(); err != nil {
-				panic(err)
-			}
-
-			// balance of address
-			if err := pipe.ZIncrBy(ctx, "balance", float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
-				panic(err)
-			}
+		// balance of address
+		if err := pipe.ZIncrBy(ctx, "balance", float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
+			panic(err)
 		}
+
 		// redis有序genesis utxo数据添加
-		if len(data.GenesisId) >= 20 {
-			if data.IsNFT {
-				nftId := float64(data.DataValue)
-				// nft:utxo
-				if err := pipe.ZAdd(ctx, "nu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
-					&redis.Z{Score: nftId, Member: key}).Err(); err != nil {
-					panic(err)
-				}
-				// nft:owners
-				if err := pipe.ZIncrBy(ctx, "no"+string(data.CodeHash)+string(data.GenesisId),
-					1, string(data.AddressPkh)).Err(); err != nil {
-					panic(err)
-				}
-				// nft:summary
-				if err := pipe.ZIncrBy(ctx, "ns"+string(data.AddressPkh),
-					1, string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
-					panic(err)
-				}
-			} else {
-				// ft:utxo
-				if err := pipe.ZAdd(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
-					&redis.Z{Score: score, Member: key}).Err(); err != nil {
-					panic(err)
-				}
-				// ft:balance
-				if err := pipe.ZIncrBy(ctx, "fb"+string(data.CodeHash)+string(data.GenesisId),
-					float64(data.DataValue),
-					string(data.AddressPkh)).Err(); err != nil {
-					panic(err)
-				}
-				// ft:summary
-				if err := pipe.ZIncrBy(ctx, "fs"+string(data.AddressPkh),
-					float64(data.DataValue),
-					string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
-					panic(err)
-				}
+		if data.IsNFT {
+			nftId := float64(data.DataValue)
+			// nft:utxo
+			if err := pipe.ZAdd(ctx, "nu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
+				&redis.Z{Score: nftId, Member: key}).Err(); err != nil {
+				panic(err)
+			}
+			// nft:owners
+			if err := pipe.ZIncrBy(ctx, "no"+string(data.CodeHash)+string(data.GenesisId),
+				1, string(data.AddressPkh)).Err(); err != nil {
+				panic(err)
+			}
+			// nft:summary
+			if err := pipe.ZIncrBy(ctx, "ns"+string(data.AddressPkh),
+				1, string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
+				panic(err)
+			}
+		} else {
+			// ft:utxo
+			if err := pipe.ZAdd(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
+				&redis.Z{Score: score, Member: key}).Err(); err != nil {
+				panic(err)
+			}
+			// ft:balance
+			if err := pipe.ZIncrBy(ctx, "fb"+string(data.CodeHash)+string(data.GenesisId),
+				float64(data.DataValue),
+				string(data.AddressPkh)).Err(); err != nil {
+				panic(err)
+			}
+			// ft:summary
+			if err := pipe.ZIncrBy(ctx, "fs"+string(data.AddressPkh),
+				float64(data.DataValue),
+				string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
+				panic(err)
 			}
 		}
 	}
@@ -212,11 +212,10 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 		// redis全局utxo数据清除
 		pipe.Del(ctx, key)
 		// redis有序utxo数据清除
-		if err := pipe.ZRem(ctx, "utxo", key).Err(); err != nil {
-			panic(err)
-		}
-
 		if len(data.AddressPkh) < 20 || len(data.GenesisId) < 20 {
+			if err := pipe.ZRem(ctx, "utxo", key).Err(); err != nil {
+				panic(err)
+			}
 			continue
 		}
 
