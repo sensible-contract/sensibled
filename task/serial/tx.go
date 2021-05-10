@@ -2,7 +2,6 @@ package serial
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"satoblock/logger"
 	"satoblock/model"
@@ -169,11 +168,10 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 		// redis有序genesis utxo数据添加
 		if len(data.GenesisId) >= 20 {
 			if data.IsNFT {
+				nftId := float64(data.DataValue)
 				// nft:utxo
-				nftId := make([]byte, 8)
-				binary.LittleEndian.PutUint64(nftId, data.DataValue) // 8
 				if err := pipe.ZAdd(ctx, "nu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
-					&redis.Z{Score: score, Member: key + string(nftId)}).Err(); err != nil {
+					&redis.Z{Score: nftId, Member: key}).Err(); err != nil {
 					panic(err)
 				}
 				// nft:owners
@@ -235,10 +233,8 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 		// redis有序genesis utxo数据清除
 		if data.IsNFT {
 			// nft:utxo
-			nftId := make([]byte, 8)
-			binary.LittleEndian.PutUint64(nftId, data.DataValue) // 8
 			if err := pipe.ZRem(ctx, "nu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
-				key+string(nftId)).Err(); err != nil {
+				key).Err(); err != nil {
 				panic(err)
 			}
 
