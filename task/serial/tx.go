@@ -175,6 +175,12 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 				&redis.Z{Score: nftId, Member: key}).Err(); err != nil {
 				panic(err)
 			}
+			// nft:utxo-detail
+			if err := pipe.ZAdd(ctx, "nd"+string(data.CodeHash)+string(data.GenesisId),
+				&redis.Z{Score: nftId, Member: key}).Err(); err != nil {
+				panic(err)
+			}
+
 			// nft:owners
 			if err := pipe.ZIncrBy(ctx, "no"+string(data.CodeHash)+string(data.GenesisId),
 				1, string(data.AddressPkh)).Err(); err != nil {
@@ -233,6 +239,11 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 		if data.IsNFT {
 			// nft:utxo
 			if err := pipe.ZRem(ctx, "nu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
+				key).Err(); err != nil {
+				panic(err)
+			}
+			// nft:utxo-detail
+			if err := pipe.ZRem(ctx, "nd"+string(data.CodeHash)+string(data.GenesisId),
 				key).Err(); err != nil {
 				panic(err)
 			}
