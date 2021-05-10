@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS blktx_height (
 	locktime     UInt32,
 	invalue      UInt64,
 	outvalue     UInt64,
+	rawtx        String,
 	height       UInt32,
 	blkid        FixedString(32),
 	txidx        UInt64

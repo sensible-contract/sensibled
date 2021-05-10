@@ -9,6 +9,7 @@ import (
 )
 
 type Tx struct {
+	Raw          []byte
 	HashHex      string // 32
 	Hash         []byte // 32
 	Size         uint32

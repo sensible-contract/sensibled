@@ -86,6 +86,7 @@ func SyncBlockTx(block *model.Block) {
 			tx.LockTime,
 			tx.InputsValue,
 			tx.OutputsValue,
+			string(tx.Raw),
 			uint32(block.Height),
 			string(block.Hash),
 			uint64(txIdx),
