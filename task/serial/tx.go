@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	rdb *redis.Client
-	ctx = context.Background()
+	rdb      *redis.Client
+	rdbBlock *redis.Client
+	ctx      = context.Background()
 )
 
 func init() {
@@ -30,6 +31,7 @@ func init() {
 	address := viper.GetString("address")
 	password := viper.GetString("password")
 	database := viper.GetInt("database")
+	databaseBlock := viper.GetInt("database_block")
 	dialTimeout := viper.GetDuration("dialTimeout")
 	readTimeout := viper.GetDuration("readTimeout")
 	writeTimeout := viper.GetDuration("writeTimeout")
@@ -43,13 +45,23 @@ func init() {
 		WriteTimeout: writeTimeout,
 		PoolSize:     poolSize,
 	})
+
+	rdbBlock = redis.NewClient(&redis.Options{
+		Addr:         address,
+		Password:     password,
+		DB:           databaseBlock,
+		DialTimeout:  dialTimeout,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		PoolSize:     poolSize,
+	})
 }
 
 // ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用。稍慢但占用内存较少
 // 如果withMap=true，部分utxo信息在程序内存，missing的utxo将从redis查询。区块同步结束时会批量更新缓存的utxo到redis。
 // 稍快但占用内存较多
 func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock, withMap bool) {
-	pipe := rdb.Pipeline()
+	pipe := rdbBlock.Pipeline()
 	m := map[string]*redis.StringCmd{}
 	needExec := false
 	for key := range block.SpentUtxoKeysMap {
@@ -143,11 +155,12 @@ func UpdateUtxoInRedisSerial(block *model.ProcessBlock) {
 // UpdateUtxoInRedis 批量更新redis utxo
 func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (err error) {
 	pipe := rdb.Pipeline()
+	pipeBlock := rdbBlock.Pipeline()
 	for key, data := range utxoToRestore {
 		buf := make([]byte, 20+len(data.Script))
 		data.Marshal(buf)
 		// redis全局utxo数据添加
-		pipe.Set(ctx, key, buf, 0)
+		pipeBlock.Set(ctx, key, buf, 0)
 		// redis有序utxo数据添加
 		score := float64(data.BlockHeight)*1000000000 + float64(data.TxIdx)
 		if len(data.AddressPkh) < 20 {
@@ -221,9 +234,10 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 	tokenToRemove := make(map[string]bool, 1)
 	for key, data := range utxoToRemove {
 		// redis全局utxo数据清除
-		pipe.Del(ctx, key)
+		pipeBlock.Del(ctx, key)
 		// redis有序utxo数据清除
 		if len(data.AddressPkh) < 20 {
+			// 无法识别地址，只记录utxo
 			if err := pipe.ZRem(ctx, "utxo", key).Err(); err != nil {
 				panic(err)
 			}
@@ -318,6 +332,11 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 	if err != nil {
 		panic(err)
 	}
+	_, err = pipeBlock.Exec(ctx)
+	if err != nil {
+		panic(err)
+	}
+
 	return nil
 }
 
