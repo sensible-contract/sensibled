@@ -57,6 +57,10 @@ func init() {
 	})
 }
 
+func PublishBlockSyncFinished() {
+	rdbBlock.Publish(ctx, "channel_block_sync", "finished")
+}
+
 // ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用。稍慢但占用内存较少
 // 如果withMap=true，部分utxo信息在程序内存，missing的utxo将从redis查询。区块同步结束时会批量更新缓存的utxo到redis。
 // 稍快但占用内存较多

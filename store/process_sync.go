@@ -353,14 +353,17 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 )
 
 func CreateAllSyncCk() bool {
+	log.Println("create sql: all")
 	return ProcessSyncCk(createAllSQLs)
 }
 
 func ProcessAllSyncCk() bool {
+	log.Println("sync sql: all")
 	return ProcessSyncCk(processAllSQLs)
 }
 
 func RemoveOrphanPartSyncCk(startBlockHeight int) bool {
+	log.Println("remove sql: part")
 	removeOrphanPartSQLsWithHeight := []string{}
 	for _, psql := range removeOrphanPartSQLs {
 		removeOrphanPartSQLsWithHeight = append(removeOrphanPartSQLsWithHeight,
@@ -371,10 +374,12 @@ func RemoveOrphanPartSyncCk(startBlockHeight int) bool {
 }
 
 func CreatePartSyncCk() bool {
+	log.Println("create sql: part")
 	return ProcessSyncCk(createPartSQLs)
 }
 
 func ProcessPartSyncCk() bool {
+	log.Println("sync sql: part")
 	if !ProcessSyncCk(processPartSQLs) {
 		return false
 	}
@@ -390,9 +395,9 @@ func ProcessSyncCk(processSQLs []string) bool {
 		if partLen > 128 {
 			partLen = 128
 		}
-		log.Println("sync exec:", psql[:partLen])
+		// log.Println("sync exec:", psql[:partLen])
 		if _, err := clickhouse.CK.Exec(psql); err != nil {
-			log.Println("sync exec err", psql, err.Error())
+			log.Println("sync exec err", psql[:partLen], err.Error())
 			return false
 		}
 	}

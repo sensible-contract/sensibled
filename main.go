@@ -141,6 +141,7 @@ func main() {
 				task.IsFull = false
 				startBlockHeight = -1
 				log.Printf("waiting new block...")
+				serial.PublishBlockSyncFinished()
 				<-newBlockNotify
 			} else {
 				// 结束
