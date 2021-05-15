@@ -18,10 +18,6 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 	}
 
 	for idx, output := range tx.TxOuts {
-		// if output.Satoshi == 0 {
-		// 	continue
-		// }
-
 		key := make([]byte, 36)
 		copy(key, tx.Hash)
 
