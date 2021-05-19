@@ -1,7 +1,8 @@
 # 地址(必需)
 address: "localhost:6379"
 # DB名字(必需)
-database: 0
+database_block: 0
+database: 1
 # 密码(可选)
 password: ""
 

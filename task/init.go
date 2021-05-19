@@ -100,15 +100,4 @@ func ParseEnd() {
 			store.ProcessPartSyncCk()
 		}
 	}
-
-	// loggerMap, _ := zap.Config{
-	// 	Encoding:    "console",                                // 配置编码方式（json 或 console）
-	// 	Level:       zap.NewAtomicLevelAt(zapcore.DebugLevel), // 输出级别
-	// 	OutputPaths: []string{"/data/calcMap.log"},            // 输出目的地
-	// }.Build()
-	// defer loggerMap.Sync()
-
-	// serial.DumpUtxoToGobFile()
-	// serial.ParseEndDumpUtxo(loggerMap)
-	// serial.ParseEndDumpScriptType(loggerMap)
 }

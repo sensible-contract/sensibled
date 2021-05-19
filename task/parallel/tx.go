@@ -28,41 +28,41 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		output.LockingScriptType = script.GetLockingScriptType(output.Pkscript)
 		output.LockingScriptTypeHex = hex.EncodeToString(output.LockingScriptType)
 
+		if !script.IsOpreturn(output.LockingScriptType) {
+			output.LockingScriptMatch = true
+		}
+
 		// address
 		output.IsNFT, output.CodeHash, output.GenesisId, output.AddressPkh, output.DataValue = script.ExtractPkScriptForTxo(tx.Hash, output.Pkscript, output.LockingScriptType)
 
-		// test locking script
-		// output.LockingScriptMatch = true
-
-		// token summary
-		if len(output.CodeHash) == 20 && len(output.GenesisId) >= 20 {
-			NFTIdx := uint64(0)
-			key := string(output.CodeHash) + string(output.GenesisId)
-			if output.IsNFT {
-				key += strconv.Itoa(int(output.DataValue))
-				NFTIdx = output.DataValue
-			}
-			tokenSummary, ok := block.TokenSummaryMap[key]
-			if !ok {
-				tokenSummary = &model.TokenData{
-					IsNFT:     output.IsNFT,
-					NFTIdx:    NFTIdx,
-					CodeHash:  output.CodeHash,
-					GenesisId: output.GenesisId,
-				}
-				block.TokenSummaryMap[key] = tokenSummary
-			}
-
-			tokenSummary.OutSatoshi += output.Satoshi
-			if output.IsNFT {
-				tokenSummary.OutDataValue += 1
-			} else {
-				tokenSummary.OutDataValue += output.DataValue
-			}
+		if len(output.CodeHash) < 20 || len(output.GenesisId) < 20 {
+			// not token
+			continue
 		}
 
-		if !script.IsOpreturn(output.LockingScriptType) {
-			output.LockingScriptMatch = true
+		// update token summary
+		NFTIdx := uint64(0)
+		key := string(output.CodeHash) + string(output.GenesisId)
+		if output.IsNFT {
+			key += strconv.Itoa(int(output.DataValue))
+			NFTIdx = output.DataValue
+		}
+		tokenSummary, ok := block.TokenSummaryMap[key]
+		if !ok {
+			tokenSummary = &model.TokenData{
+				IsNFT:     output.IsNFT,
+				NFTIdx:    NFTIdx,
+				CodeHash:  output.CodeHash,
+				GenesisId: output.GenesisId,
+			}
+			block.TokenSummaryMap[key] = tokenSummary
+		}
+
+		tokenSummary.OutSatoshi += output.Satoshi
+		if output.IsNFT {
+			tokenSummary.OutDataValue += 1
+		} else {
+			tokenSummary.OutDataValue += output.DataValue
 		}
 	}
 }
