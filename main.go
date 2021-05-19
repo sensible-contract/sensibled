@@ -29,8 +29,6 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&task.IsDump, "dump", false, "dump to file")
-	flag.BoolVar(&task.IsSync, "sync", false, "sync to db")
 	flag.BoolVar(&task.IsFull, "full", false, "start from genesis")
 	flag.BoolVar(&task.WithUtxo, "utxo", true, "with utxo")
 	flag.BoolVar(&task.UseMap, "map", false, "use map, instead of redis")
@@ -75,58 +73,54 @@ func main() {
 				if task.IsFull {
 					startBlockHeight = 0
 					// 重新全量扫描
-					if task.IsSync {
-						// 初始化同步数据库表
-						store.CreateAllSyncCk()
-						store.PrepareFullSyncCk()
-					}
+					// 初始化同步数据库表
+					store.CreateAllSyncCk()
+					store.PrepareFullSyncCk()
 				} else {
 					// 现有追加扫描
-					if task.IsSync {
-						needRemove := false
-						if startBlockHeight < 0 {
-							// 从clickhouse读取现有同步区块，判断同步位置
-							commonHeigth, orphanCount, newblock := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
-							// 从公有块高度（COMMON_HEIGHT）下一个开始扫描
-							startBlockHeight = commonHeigth + 1
-							if orphanCount > 0 {
-								needRemove = true
-							}
-							if newblock == 0 {
-								break
-							}
-						} else {
+					needRemove := false
+					if startBlockHeight < 0 {
+						// 从clickhouse读取现有同步区块，判断同步位置
+						commonHeigth, orphanCount, newblock := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
+						// 从公有块高度（COMMON_HEIGHT）下一个开始扫描
+						startBlockHeight = commonHeigth + 1
+						if orphanCount > 0 {
 							needRemove = true
 						}
-
-						if needRemove {
-							log.Printf("remove")
-							if task.WithUtxo {
-								// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
-								// 获取需要补回的utxo
-								utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight)
-								if err != nil {
-									log.Printf("get utxo to restore failed: %v", err)
-									break
-								}
-								utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight)
-								if err != nil {
-									log.Printf("get utxo to remove failed: %v", err)
-									break
-								}
-
-								if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove); err != nil {
-									log.Printf("restore/remove utxo from redis failed: %v", err)
-									break
-								}
-							}
-							store.RemoveOrphanPartSyncCk(startBlockHeight)
+						if newblock == 0 {
+							break
 						}
-
-						// 初始化同步数据库表
-						store.CreatePartSyncCk()
-						store.PreparePartSyncCk()
+					} else {
+						needRemove = true
 					}
+
+					if needRemove {
+						log.Printf("remove")
+						if task.WithUtxo {
+							// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
+							// 获取需要补回的utxo
+							utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight)
+							if err != nil {
+								log.Printf("get utxo to restore failed: %v", err)
+								break
+							}
+							utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight)
+							if err != nil {
+								log.Printf("get utxo to remove failed: %v", err)
+								break
+							}
+
+							if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove); err != nil {
+								log.Printf("restore/remove utxo from redis failed: %v", err)
+								break
+							}
+						}
+						store.RemoveOrphanPartSyncCk(startBlockHeight)
+					}
+
+					// 初始化同步数据库表
+					store.CreatePartSyncCk()
+					store.PreparePartSyncCk()
 				}
 
 				// 开始扫描区块，包括start，不包括end
@@ -136,7 +130,7 @@ func main() {
 				break
 			}
 
-			if task.IsSync && endBlockHeight < 0 {
+			if endBlockHeight < 0 {
 				// 等待新块出现，再重新追加扫描
 				task.IsFull = false
 				startBlockHeight = -1

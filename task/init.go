@@ -12,8 +12,6 @@ import (
 var (
 	MaxBlockHeightParallel int
 
-	IsSync   bool
-	IsDump   bool
 	WithUtxo bool
 	IsFull   bool
 	UseMap   bool
@@ -36,14 +34,7 @@ func ParseBlockParallel(block *model.Block) {
 		}
 	}
 
-	if IsSync {
-		serial.SyncBlockTxOutputInfo(block)
-	} else if IsDump {
-		serial.DumpBlock(block)
-		serial.DumpBlockTx(block)
-		serial.DumpBlockTxOutputInfo(block)
-		serial.DumpBlockTxInputInfo(block)
-	}
+	serial.SyncBlockTxOutputInfo(block)
 }
 
 // ParseBlockSerial 再串行分析区块
@@ -51,15 +42,11 @@ func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 	utils.ParseBlockSpeed(len(block.Txs), len(serial.GlobalNewUtxoDataMap), len(serial.GlobalSpentUtxoDataMap), block.Height, maxBlockHeight)
 
 	if WithUtxo {
-		if IsSync {
-			serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData, UseMap)
-			serial.SyncBlockTxInputDetail(block)
+		serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData, UseMap)
+		serial.SyncBlockTxInputDetail(block)
 
-			serial.SyncBlock(block)
-			serial.SyncBlockTx(block)
-		} else if IsDump {
-			serial.DumpBlockTxInputDetail(block)
-		}
+		serial.SyncBlock(block)
+		serial.SyncBlockTx(block)
 
 		// for txin dump
 		if UseMap {
@@ -68,12 +55,6 @@ func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 			serial.UpdateUtxoInRedisSerial(block.ParseData)
 		}
 	}
-
-	// serial.DumpBlockTxInfo(block)
-	// serial.DumpLockingScriptType(block)
-
-	// ParseBlock
-	// serial.ParseBlockCount(block)
 
 	block.ParseData = nil
 	block.Txs = nil
@@ -90,14 +71,12 @@ func ParseEnd() {
 		serial.CleanUtxoMap()
 	}
 
-	if IsSync {
-		store.CommitSyncCk()
-		store.CommitFullSyncCk(serial.SyncTxFullCount > 0)
-		store.CommitCodeHashSyncCk(serial.SyncTxCodeHashCount > 0)
-		if IsFull {
-			store.ProcessAllSyncCk()
-		} else {
-			store.ProcessPartSyncCk()
-		}
+	store.CommitSyncCk()
+	store.CommitFullSyncCk(serial.SyncTxFullCount > 0)
+	store.CommitCodeHashSyncCk(serial.SyncTxCodeHashCount > 0)
+	if IsFull {
+		store.ProcessAllSyncCk()
+	} else {
+		store.ProcessPartSyncCk()
 	}
 }

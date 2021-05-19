@@ -42,12 +42,12 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 
 		// update token summary
 		NFTIdx := uint64(0)
-		key := string(output.CodeHash) + string(output.GenesisId)
+		tokenKey := string(output.CodeHash) + string(output.GenesisId)
 		if output.IsNFT {
-			key += strconv.Itoa(int(output.DataValue))
+			tokenKey += strconv.Itoa(int(output.DataValue))
 			NFTIdx = output.DataValue
 		}
-		tokenSummary, ok := block.TokenSummaryMap[key]
+		tokenSummary, ok := block.TokenSummaryMap[tokenKey]
 		if !ok {
 			tokenSummary = &model.TokenData{
 				IsNFT:     output.IsNFT,
@@ -55,7 +55,7 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 				CodeHash:  output.CodeHash,
 				GenesisId: output.GenesisId,
 			}
-			block.TokenSummaryMap[key] = tokenSummary
+			block.TokenSummaryMap[tokenKey] = tokenSummary
 		}
 
 		tokenSummary.OutSatoshi += output.Satoshi
