@@ -42,18 +42,14 @@ func ParseBlockSerial(block *model.Block, maxBlockHeight int) {
 	utils.ParseBlockSpeed(len(block.Txs), len(serial.GlobalNewUtxoDataMap), len(serial.GlobalSpentUtxoDataMap), block.Height, maxBlockHeight)
 
 	if WithUtxo {
-		serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData, UseMap)
+		serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
 		serial.SyncBlockTxInputDetail(block)
 
 		serial.SyncBlock(block)
 		serial.SyncBlockTx(block)
 
 		// for txin dump
-		if UseMap {
-			serial.UpdateUtxoInMapSerial(block.ParseData)
-		} else {
-			serial.UpdateUtxoInRedisSerial(block.ParseData)
-		}
+		serial.UpdateUtxoInMapSerial(block.ParseData)
 	}
 
 	block.ParseData = nil
@@ -65,9 +61,7 @@ func ParseEnd() {
 	defer logger.SyncLog()
 
 	if WithUtxo {
-		if UseMap {
-			serial.UpdateUtxoInRedis(serial.GlobalNewUtxoDataMap, serial.GlobalSpentUtxoDataMap)
-		}
+		serial.UpdateUtxoInRedis(serial.GlobalNewUtxoDataMap, serial.GlobalSpentUtxoDataMap)
 		serial.CleanUtxoMap()
 	}
 

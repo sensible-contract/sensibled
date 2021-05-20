@@ -64,7 +64,7 @@ func PublishBlockSyncFinished() {
 // ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用。稍慢但占用内存较少
 // 如果withMap=true，部分utxo信息在程序内存，missing的utxo将从redis查询。区块同步结束时会批量更新缓存的utxo到redis。
 // 稍快但占用内存较多
-func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock, withMap bool) {
+func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 	pipe := rdbBlock.Pipeline()
 	m := map[string]*redis.StringCmd{}
 	needExec := false
@@ -73,12 +73,10 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock, withMap boo
 			continue
 		}
 
-		if withMap {
-			if data, ok := GlobalNewUtxoDataMap[key]; ok {
-				block.SpentUtxoDataMap[key] = data
-				delete(GlobalNewUtxoDataMap, key)
-				continue
-			}
+		if data, ok := GlobalNewUtxoDataMap[key]; ok {
+			block.SpentUtxoDataMap[key] = data
+			delete(GlobalNewUtxoDataMap, key)
+			continue
 		}
 
 		needExec = true
@@ -108,9 +106,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock, withMap boo
 		d.IsNFT, d.CodeHash, d.GenesisId, d.AddressPkh, d.DataValue = script.ExtractPkScriptForTxo([]byte(key[:32]), d.Script, d.ScriptType)
 
 		block.SpentUtxoDataMap[key] = d
-		if withMap {
-			GlobalSpentUtxoDataMap[key] = d
-		}
+		GlobalSpentUtxoDataMap[key] = d
 	}
 }
 

@@ -31,7 +31,6 @@ var (
 func init() {
 	flag.BoolVar(&task.IsFull, "full", false, "start from genesis")
 	flag.BoolVar(&task.WithUtxo, "utxo", true, "with utxo")
-	flag.BoolVar(&task.UseMap, "map", false, "use map, instead of redis")
 
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
 	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
@@ -152,9 +151,6 @@ func main() {
 	}()
 
 	go func() {
-		if !task.UseMap {
-			return
-		}
 		for {
 			runtime.GC()
 			time.Sleep(time.Second * 10)
