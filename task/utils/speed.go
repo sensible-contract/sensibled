@@ -38,7 +38,6 @@ func ParseBlockSpeed(nTx, lenGlobalNewUtxoDataMap, lenGlobalSpentUtxoDataMap, ne
 		zap.Int("ntx", lastBlockTxCount),
 		zap.Int("txo", lenGlobalSpentUtxoDataMap),
 		zap.Int("utxo", lenGlobalNewUtxoDataMap),
-		// zap.Int("calc", len(calcMap)),
 		zap.Int("time", timeLeft),
 		zap.Duration("elapse", time.Since(start)/time.Second),
 	)

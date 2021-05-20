@@ -74,12 +74,6 @@ func ParseTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.Proce
 	}
 	for _, input := range tx.TxIns {
 		block.SpentUtxoKeysMap[input.InputOutpointKey] = true
-
-		// if _, ok := block.UtxoMap[input.InputOutpointKey]; !ok {
-		// 	block.UtxoMissingMap[input.InputOutpointKey] = true
-		// } else {
-		// 	delete(block.UtxoMap, input.InputOutpointKey)
-		// }
 	}
 }
 
@@ -103,17 +97,5 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock
 		d.Script = output.Pkscript
 
 		block.NewUtxoDataMap[output.OutpointKey] = d
-
-		// if _, ok := block.UtxoMissingMap[output.OutpointKey]; ok {
-		// 	delete(block.UtxoMissingMap, output.OutpointKey)
-		// } else {
-		// 	block.UtxoMap[output.OutpointKey] = model.TxoData{
-		// 		BlockHeight: block.Height,
-		// 		Satoshi:     output.Satoshi,
-		// 		ScriptType:  output.LockingScriptType,
-		// 		AddressPkh:  output.AddressPkh,
-		// 		GenesisId:   output.GenesisId,
-		// 	}
-		// }
 	}
 }

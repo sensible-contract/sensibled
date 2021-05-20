@@ -3,13 +3,11 @@ package serial
 import (
 	"context"
 	"fmt"
-	"satoblock/logger"
 	"satoblock/model"
 	"satoblock/script"
 
 	redis "github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 var (
@@ -133,23 +131,6 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	for _, data := range block.SpentUtxoDataMap {
 		model.TxoDataPool.Put(data)
 	}
-}
-
-// UpdateUtxoInRedisSerial 顺序更新当前区块的utxo信息变化到redis
-func UpdateUtxoInRedisSerial(block *model.ProcessBlock) {
-	insideTxo := make([]string, len(block.SpentUtxoKeysMap))
-	for key := range block.SpentUtxoKeysMap {
-		if _, ok := block.NewUtxoDataMap[key]; !ok {
-			continue
-		}
-		insideTxo = append(insideTxo, key)
-	}
-	for _, key := range insideTxo {
-		delete(block.NewUtxoDataMap, key)
-		delete(block.SpentUtxoKeysMap, key)
-	}
-
-	UpdateUtxoInRedis(block.NewUtxoDataMap, block.SpentUtxoDataMap)
 }
 
 // UpdateUtxoInRedis 批量更新redis utxo
@@ -338,30 +319,4 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 	}
 
 	return nil
-}
-
-// DumpLockingScriptType  信息
-func DumpLockingScriptType(block *model.Block) {
-	for _, tx := range block.Txs {
-		for idx, output := range tx.TxOuts {
-			if output.Satoshi == 0 || !output.LockingScriptMatch {
-				continue
-			}
-
-			key := string(output.LockingScriptType)
-
-			if value, ok := calcMap[key]; ok {
-				calcMap[key] = value + 1
-			} else {
-				calcMap[key] = 1
-			}
-
-			logger.Log.Info("pkscript",
-				zap.String("tx", tx.HashHex),
-				zap.Int("vout", idx),
-				zap.Uint64("v", output.Satoshi),
-				zap.String("type", output.LockingScriptTypeHex),
-			)
-		}
-	}
 }

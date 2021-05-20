@@ -50,6 +50,7 @@ func ParseEnd(isFull bool) {
 	store.CommitSyncCk()
 	store.CommitFullSyncCk(serial.SyncTxFullCount > 0)
 	store.CommitCodeHashSyncCk(serial.SyncTxCodeHashCount > 0)
+
 	if isFull {
 		store.ProcessAllSyncCk()
 	} else {
