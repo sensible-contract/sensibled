@@ -1,11 +1,11 @@
-LISTEN=0.0.0.0:8000 ./satoblock -full -end 100000
-LISTEN=0.0.0.0:8000 ./satoblock -end 200000
-LISTEN=0.0.0.0:8000 ./satoblock -end 300000
-LISTEN=0.0.0.0:8000 ./satoblock -end 350000
-LISTEN=0.0.0.0:8000 ./satoblock -end 400000
-LISTEN=0.0.0.0:8000 ./satoblock -end 450000
-LISTEN=0.0.0.0:8000 ./satoblock -end 500000
-LISTEN=0.0.0.0:8000 ./satoblock -end 550000
-LISTEN=0.0.0.0:8000 ./satoblock -end 600000
-LISTEN=0.0.0.0:8000 ./satoblock -end 650000
-LISTEN=0.0.0.0:8000 ./satoblock
+./satoblock -full -end 100000
+./satoblock -end 200000
+./satoblock -end 300000
+./satoblock -end 350000
+./satoblock -end 400000
+./satoblock -end 450000
+./satoblock -end 500000
+./satoblock -end 550000
+./satoblock -end 600000
+./satoblock -end 650000
+./satoblock

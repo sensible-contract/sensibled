@@ -1,13 +1,10 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"runtime"
 	"satoblock/loader"
 	"satoblock/parser"
@@ -24,7 +21,6 @@ var (
 	zmqEndpoint      string
 	blocksPath       string
 	blockMagic       string
-	listen_address   = os.Getenv("LISTEN")
 	isFull           bool
 )
 
@@ -56,94 +52,11 @@ func main() {
 		return
 	}
 
-	// "0.0.0.0:8080"
-	server := &http.Server{Addr: listen_address, Handler: nil}
-
 	newBlockNotify := make(chan string)
-
-	// 扫描区块
-	go func() {
-		for {
-			// 初始化载入block header
-			blockchain.InitLongestChainHeader()
-
-			for {
-				if isFull {
-					startBlockHeight = 0
-					// 重新全量扫描
-					// 初始化同步数据库表
-					store.CreateAllSyncCk()
-					store.PrepareFullSyncCk()
-				} else {
-					// 现有追加扫描
-					needRemove := false
-					if startBlockHeight < 0 {
-						// 从clickhouse读取现有同步区块，判断同步位置
-						commonHeigth, orphanCount, newblock := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
-						// 从公有块高度（COMMON_HEIGHT）下一个开始扫描
-						startBlockHeight = commonHeigth + 1
-						if orphanCount > 0 {
-							needRemove = true
-						}
-						if newblock == 0 {
-							break
-						}
-					} else {
-						needRemove = true
-					}
-
-					if needRemove {
-						log.Printf("remove")
-						// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
-						// 获取需要补回的utxo
-						utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight)
-						if err != nil {
-							log.Printf("get utxo to restore failed: %v", err)
-							break
-						}
-						utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight)
-						if err != nil {
-							log.Printf("get utxo to remove failed: %v", err)
-							break
-						}
-
-						if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove); err != nil {
-							log.Printf("restore/remove utxo from redis failed: %v", err)
-							break
-						}
-						store.RemoveOrphanPartSyncCk(startBlockHeight)
-					}
-
-					// 初始化同步数据库表
-					store.CreatePartSyncCk()
-					store.PreparePartSyncCk()
-				}
-
-				// 开始扫描区块，包括start，不包括end
-				blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, isFull)
-				log.Printf("finished")
-				// 扫描完毕
-				break
-			}
-
-			if endBlockHeight < 0 {
-				// 等待新块出现，再重新追加扫描
-				isFull = false
-				startBlockHeight = -1
-				log.Printf("waiting new block...")
-				serial.PublishBlockSyncFinished()
-				<-newBlockNotify
-			} else {
-				// 结束
-				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-				defer cancel()
-				server.Shutdown(ctx)
-			}
-		}
-	}()
-
 	// 监听新块确认
 	go func() {
+		// 启动
+		newBlockNotify <- ""
 		loader.ZmqNotify(zmqEndpoint, newBlockNotify)
 	}()
 
@@ -154,8 +67,82 @@ func main() {
 		}
 	}()
 
-	// go tool pprof http://localhost:8080/debug/pprof/profile
-	if err := server.ListenAndServe(); err != nil {
-		log.Printf("profile listen failed: %v", err)
+	// 扫描区块
+	for {
+		// 等待新块出现，再重新追加扫描
+		log.Printf("waiting new block...")
+		<-newBlockNotify
+
+		// 初始化载入block header
+		blockchain.InitLongestChainHeader()
+
+		if !isFull {
+			// 现有追加扫描
+			needRemove := false
+			if startBlockHeight < 0 {
+				// 从clickhouse读取现有同步区块，判断同步位置
+				commonHeigth, orphanCount, newblock := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
+				// 从公有块高度（COMMON_HEIGHT）下一个开始扫描
+				startBlockHeight = commonHeigth + 1
+				if orphanCount > 0 {
+					needRemove = true
+				}
+				if newblock == 0 {
+					// 无新区块，开始等待
+					continue
+				}
+			} else {
+				needRemove = true
+			}
+
+			if needRemove {
+				log.Printf("remove")
+				// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
+				// 获取需要补回的utxo
+				utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight)
+				if err != nil {
+					log.Printf("get utxo to restore failed: %v", err)
+					return
+				}
+				utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight)
+				if err != nil {
+					log.Printf("get utxo to remove failed: %v", err)
+					return
+				}
+
+				if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove); err != nil {
+					log.Printf("restore/remove utxo from redis failed: %v", err)
+					return
+				}
+				store.RemoveOrphanPartSyncCk(startBlockHeight)
+			}
+		}
+
+		if isFull {
+			// 重新全量扫描
+			startBlockHeight = 0
+
+			// 初始化同步数据库表
+			store.CreateAllSyncCk()
+			store.PrepareFullSyncCk()
+		} else {
+			// 初始化同步数据库表
+			store.CreatePartSyncCk()
+			store.PreparePartSyncCk()
+		}
+
+		// 开始扫描区块，包括start，不包括end
+		blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, isFull)
+		log.Printf("finished")
+
+		isFull = false
+		startBlockHeight = -1
+		serial.PublishBlockSyncFinished()
+
+		// 扫描完毕
+		if endBlockHeight > 0 {
+			// 结束
+			return
+		}
 	}
 }
