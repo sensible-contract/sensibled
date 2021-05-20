@@ -44,7 +44,7 @@ func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
 }
 
 // ParseLongestChain 两遍遍历区块。先获取header，再遍历区块
-func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight int) {
+func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight int, isFull bool) {
 	blocksReady := make(chan *model.Block, 64)
 	blocksDone := make(chan struct{}, 64)
 
@@ -56,7 +56,7 @@ func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight int) {
 	log.Printf("consume ok")
 
 	// 最后分析执行
-	task.ParseEnd()
+	task.ParseEnd(isFull)
 }
 
 // InitLongestChainBlock 解码区块，生产者
@@ -89,9 +89,6 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 			log.Printf("block id not match")
 			break
 		}
-
-		// 设置已经分析到的区块高度
-		task.MaxBlockHeightParallel = block.Height
 
 		blocksDone <- struct{}{}
 

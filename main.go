@@ -12,7 +12,6 @@ import (
 	"satoblock/loader"
 	"satoblock/parser"
 	"satoblock/store"
-	"satoblock/task"
 	"satoblock/task/serial"
 	"time"
 
@@ -26,11 +25,11 @@ var (
 	blocksPath       string
 	blockMagic       string
 	listen_address   = os.Getenv("LISTEN")
+	isFull           bool
 )
 
 func init() {
-	flag.BoolVar(&task.IsFull, "full", false, "start from genesis")
-	flag.BoolVar(&task.WithUtxo, "utxo", true, "with utxo")
+	flag.BoolVar(&isFull, "full", false, "start from genesis")
 
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
 	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
@@ -69,7 +68,7 @@ func main() {
 			blockchain.InitLongestChainHeader()
 
 			for {
-				if task.IsFull {
+				if isFull {
 					startBlockHeight = 0
 					// 重新全量扫描
 					// 初始化同步数据库表
@@ -95,24 +94,22 @@ func main() {
 
 					if needRemove {
 						log.Printf("remove")
-						if task.WithUtxo {
-							// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
-							// 获取需要补回的utxo
-							utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight)
-							if err != nil {
-								log.Printf("get utxo to restore failed: %v", err)
-								break
-							}
-							utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight)
-							if err != nil {
-								log.Printf("get utxo to remove failed: %v", err)
-								break
-							}
+						// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
+						// 获取需要补回的utxo
+						utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight)
+						if err != nil {
+							log.Printf("get utxo to restore failed: %v", err)
+							break
+						}
+						utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight)
+						if err != nil {
+							log.Printf("get utxo to remove failed: %v", err)
+							break
+						}
 
-							if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove); err != nil {
-								log.Printf("restore/remove utxo from redis failed: %v", err)
-								break
-							}
+						if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove); err != nil {
+							log.Printf("restore/remove utxo from redis failed: %v", err)
+							break
 						}
 						store.RemoveOrphanPartSyncCk(startBlockHeight)
 					}
@@ -123,7 +120,7 @@ func main() {
 				}
 
 				// 开始扫描区块，包括start，不包括end
-				blockchain.ParseLongestChain(startBlockHeight, endBlockHeight)
+				blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, isFull)
 				log.Printf("finished")
 				// 扫描完毕
 				break
@@ -131,7 +128,7 @@ func main() {
 
 			if endBlockHeight < 0 {
 				// 等待新块出现，再重新追加扫描
-				task.IsFull = false
+				isFull = false
 				startBlockHeight = -1
 				log.Printf("waiting new block...")
 				serial.PublishBlockSyncFinished()
