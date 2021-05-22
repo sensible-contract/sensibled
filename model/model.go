@@ -144,6 +144,7 @@ type TokenData struct {
 }
 
 type TxoData struct {
+	Keep        bool
 	UTxid       []byte
 	Vout        uint32
 	BlockHeight uint32

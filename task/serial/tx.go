@@ -3,6 +3,7 @@ package serial
 import (
 	"context"
 	"fmt"
+	"log"
 	"satoblock/model"
 	"satoblock/script"
 
@@ -59,24 +60,34 @@ func PublishBlockSyncFinished() {
 	rdbBlock.Publish(ctx, "channel_block_sync", "finished")
 }
 
-// ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用。稍慢但占用内存较少
-// 如果withMap=true，部分utxo信息在程序内存，missing的utxo将从redis查询。区块同步结束时会批量更新缓存的utxo到redis。
-// 稍快但占用内存较多
+func FlushdbInRedis() {
+	log.Println("FlushdbInRedis start")
+	rdb.FlushDB(ctx)
+	rdbBlock.FlushDB(ctx)
+	log.Println("FlushdbInRedis finish")
+}
+
+// ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用
+// 部分utxo信息在程序内存，missing的utxo将从redis查询
+// 区块同步结束时会批量更新缓存的utxo到redis
 func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 	pipe := rdbBlock.Pipeline()
 	m := map[string]*redis.StringCmd{}
 	needExec := false
 	for key := range block.SpentUtxoKeysMap {
-		if _, ok := block.NewUtxoDataMap[key]; ok {
+		// 检查是否是区块内自产自花
+		if data, ok := block.NewUtxoDataMap[key]; ok {
+			block.SpentUtxoDataMap[key] = data
+			delete(block.NewUtxoDataMap, key)
 			continue
 		}
-
+		// 检查是否在本地全局缓存
 		if data, ok := GlobalNewUtxoDataMap[key]; ok {
 			block.SpentUtxoDataMap[key] = data
 			delete(GlobalNewUtxoDataMap, key)
 			continue
 		}
-
+		// 剩余utxo需要查询redis
 		needExec = true
 		m[key] = pipe.Get(ctx, key)
 	}
@@ -102,7 +113,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 		// 补充数据
 		d.ScriptType = script.GetLockingScriptType(d.Script)
 		d.IsNFT, d.CodeHash, d.GenesisId, d.AddressPkh, d.DataValue = script.ExtractPkScriptForTxo([]byte(key[:32]), d.Script, d.ScriptType)
-
+		d.Keep = true
 		block.SpentUtxoDataMap[key] = d
 		GlobalSpentUtxoDataMap[key] = d
 	}
@@ -110,25 +121,24 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 
 // UpdateUtxoInMapSerial 顺序更新当前区块的utxo信息变化到程序全局缓存
 func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
-	insideTxo := make([]string, len(block.SpentUtxoKeysMap))
-	for key := range block.SpentUtxoKeysMap {
-		if data, ok := block.NewUtxoDataMap[key]; !ok {
-			continue
-		} else {
-			model.TxoDataPool.Put(data)
-		}
-		insideTxo = append(insideTxo, key)
-	}
-	for _, key := range insideTxo {
-		delete(block.NewUtxoDataMap, key)
-		delete(block.SpentUtxoKeysMap, key)
-	}
-
+	// 更新到本地新utxo存储
 	for key, data := range block.NewUtxoDataMap {
 		GlobalNewUtxoDataMap[key] = data
 	}
 
+	// 回收内存
 	for _, data := range block.SpentUtxoDataMap {
+		if !data.Keep {
+			model.TxoDataPool.Put(data)
+		}
+	}
+}
+
+// UpdateUtxoInMapSerial 顺序更新当前区块的utxo信息变化到程序全局缓存
+func ReUseUtxoData() {
+	// 回收内存
+	for _, data := range GlobalSpentUtxoDataMap {
+		data.Keep = false
 		model.TxoDataPool.Put(data)
 	}
 }

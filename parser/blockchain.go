@@ -48,12 +48,16 @@ func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight int, is
 	blocksReady := make(chan *model.Block, 64)
 	blocksDone := make(chan struct{}, 64)
 
-	//  解码区块，生产者
+	blocksStage := make(chan *model.Block, 64)
+
+	// 并行解码区块，生产者
 	go bc.InitLongestChainBlockByHeader(blocksDone, blocksReady, startBlockHeight, endBlockHeight)
 
 	// 按顺序消费解码后的区块
-	bc.ParseLongestChainBlock(blocksDone, blocksReady, startBlockHeight, endBlockHeight)
-	log.Printf("consume ok")
+	go bc.ParseLongestChainBlockStart(blocksDone, blocksReady, blocksStage, startBlockHeight, endBlockHeight)
+
+	// 并行消费处理后的区块
+	bc.ParseLongestChainBlockEnd(blocksStage)
 
 	// 最后分析执行
 	task.ParseEnd(isFull)
@@ -124,7 +128,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 }
 
 // ParseLongestChainBlock 按顺序消费解码后的区块
-func (bc *Blockchain) ParseLongestChainBlock(blocksDone chan struct{}, blocksReady chan *model.Block, startBlockHeight, maxBlockHeight int) {
+func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, blocksReady, blocksStage chan *model.Block, startBlockHeight, maxBlockHeight int) {
 	blocksTotal := len(bc.BlocksOfChainById)
 	if maxBlockHeight < 0 || maxBlockHeight > blocksTotal {
 		maxBlockHeight = blocksTotal
@@ -156,15 +160,35 @@ func (bc *Blockchain) ParseLongestChainBlock(blocksDone chan struct{}, blocksRea
 
 			// 再串行分析区块。可执行一些严格要求按序处理的任务，区块会串行依次执行
 			// 当串行执行到某个区块时，这个区块一定运行完毕了相应的并行预处理任务
-			task.ParseBlockSerial(block, maxBlockHeight)
+			task.ParseBlockSerialStart(block, maxBlockHeight)
+			blocksStage <- block
 
-			block.Txs = nil
 			nextBlockHeight++
 		}
 		if nextBlockHeight >= maxBlockHeight {
 			break
 		}
 	}
+	close(blocksStage)
+	log.Printf("stage ok")
+}
+
+// ParseLongestChainBlock 按顺序消费解码后的区块
+func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) {
+	var wg sync.WaitGroup
+	blocksLimit := make(chan struct{}, 64)
+	for block := range blocksStage {
+		// 再并行分析区块。接下来是无关顺序的首尾工作
+		blocksLimit <- struct{}{}
+		wg.Add(1)
+		go func(block *model.Block) {
+			defer wg.Done()
+			task.ParseBlockParallelEnd(block)
+			<-blocksLimit
+		}(block)
+	}
+	wg.Wait()
+	log.Printf("consume ok")
 }
 
 // InitLongestChainHeader 初始化block header

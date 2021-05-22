@@ -146,9 +146,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			objData := commonObjData
 			if !isCoinbase {
 				objData.Satoshi = 0
-				if obj, ok := block.ParseData.NewUtxoDataMap[input.InputOutpointKey]; ok {
-					objData = obj
-				} else if obj, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]; ok {
+				if obj, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]; ok {
 					objData = obj
 				} else {
 					logger.Log.Info("tx-input-err",

@@ -122,6 +122,9 @@ func main() {
 			// 重新全量扫描
 			startBlockHeight = 0
 
+			// 清空redis
+			serial.FlushdbInRedis()
+
 			// 初始化同步数据库表
 			store.CreateAllSyncCk()
 			store.PrepareFullSyncCk()
