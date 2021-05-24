@@ -134,16 +134,12 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 		maxBlockHeight = blocksTotal
 	}
 
-	if startBlockHeight >= maxBlockHeight {
-		return
-	}
-
 	nextBlockHeight := startBlockHeight
-	blockParseBufferBlock := make([]*model.Block, maxBlockHeight)
+	blockParseBufferBlock := make([]*model.Block, maxBlockHeight-startBlockHeight)
 	for block := range blocksReady {
 		// 暂存block
 		if block.Height < maxBlockHeight {
-			blockParseBufferBlock[block.Height] = block
+			blockParseBufferBlock[block.Height-startBlockHeight] = block
 		}
 
 		// 按序
@@ -151,7 +147,7 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 			continue
 		}
 		for nextBlockHeight < maxBlockHeight {
-			block = blockParseBufferBlock[nextBlockHeight]
+			block = blockParseBufferBlock[nextBlockHeight-startBlockHeight]
 			if block == nil { // 检查是否准备好
 				break
 			}
@@ -159,8 +155,12 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 			<-blocksDone
 
 			// 再串行分析区块。可执行一些严格要求按序处理的任务，区块会串行依次执行
-			// 当串行执行到某个区块时，这个区块一定运行完毕了相应的并行预处理任务
-			task.ParseBlockSerialStart(block, maxBlockHeight)
+			// 当串行执行到某个区块时，一定运行完毕了之前区块的所有任务和本区块的预处理任务
+			task.ParseBlockSerialStart(block)
+			// block speed
+			utilsTask.ParseBlockSpeed(len(block.Txs), len(serialTask.GlobalNewUtxoDataMap), len(serialTask.GlobalSpentUtxoDataMap),
+				block.Height, maxBlockHeight)
+
 			blocksStage <- block
 
 			nextBlockHeight++
@@ -173,12 +173,11 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 	log.Printf("stage ok")
 }
 
-// ParseLongestChainBlock 按顺序消费解码后的区块
+// ParseLongestChainBlock 再并行分析区块。接下来是无关顺序的收尾工作
 func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) {
 	var wg sync.WaitGroup
 	blocksLimit := make(chan struct{}, 64)
 	for block := range blocksStage {
-		// 再并行分析区块。接下来是无关顺序的首尾工作
 		blocksLimit <- struct{}{}
 		wg.Add(1)
 		go func(block *model.Block) {

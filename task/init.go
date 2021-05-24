@@ -6,7 +6,6 @@ import (
 	"satoblock/store"
 	"satoblock/task/parallel"
 	"satoblock/task/serial"
-	"satoblock/task/utils"
 )
 
 // ParseBlockParallel 先并行分析区块，不同区块并行，同区块内串行
@@ -26,9 +25,9 @@ func ParseBlockParallel(block *model.Block) {
 	serial.SyncBlockTxOutputInfo(block)
 }
 
-// ParseBlockSerialStart 再串行分析区块
-func ParseBlockSerialStart(block *model.Block, maxBlockHeight int) {
-	// 从redis中补全查询当前block所有Tx所花费的utxo信息来使用
+// ParseBlockSerialStart 再串行处理区块
+func ParseBlockSerialStart(block *model.Block) {
+	// 从redis中补全查询当前block内所有Tx花费的utxo信息来使用
 	serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
 
 	// DB更新txin，需要前序和当前区块的txout处理完毕，且依赖从redis查来的utxo。
@@ -36,12 +35,9 @@ func ParseBlockSerialStart(block *model.Block, maxBlockHeight int) {
 
 	// 需要串行，更新当前区块的utxo信息变化到程序内存缓存
 	serial.UpdateUtxoInMapSerial(block.ParseData)
-
-	// 显示区块分析速度
-	utils.ParseBlockSpeed(len(block.Txs), len(serial.GlobalNewUtxoDataMap), len(serial.GlobalSpentUtxoDataMap), block.Height, maxBlockHeight)
 }
 
-// ParseBlockParallelEnd 再串行分析区块
+// ParseBlockParallelEnd 再并行处理区块
 func ParseBlockParallelEnd(block *model.Block) {
 	// DB更新block, 需要依赖txout、txin执行完毕，以统计区块Fee
 	serial.SyncBlock(block)

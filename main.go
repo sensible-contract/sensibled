@@ -70,7 +70,7 @@ func main() {
 	// 扫描区块
 	for {
 		// 等待新块出现，再重新追加扫描
-		log.Printf("waiting new block...")
+		log.Println("waiting new block...")
 		<-newBlockNotify
 
 		// 初始化载入block header
@@ -96,7 +96,7 @@ func main() {
 			}
 
 			if needRemove {
-				log.Printf("remove")
+				log.Println("remove")
 				// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
 				// 获取需要补回的utxo
 				utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight)
@@ -136,7 +136,7 @@ func main() {
 
 		// 开始扫描区块，包括start，不包括end
 		blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, isFull)
-		log.Printf("finished")
+		log.Println("finished")
 
 		isFull = false
 		startBlockHeight = -1
