@@ -112,7 +112,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 
 		// 补充数据
 		d.ScriptType = script.GetLockingScriptType(d.Script)
-		d.IsNFT, d.CodeHash, d.GenesisId, d.AddressPkh, d.DataValue = script.ExtractPkScriptForTxo(d.Script, d.ScriptType)
+		d.IsNFT, d.CodeHash, d.GenesisId, d.AddressPkh, d.DataValue, d.Decimal = script.ExtractPkScriptForTxo(d.Script, d.ScriptType)
 		d.Keep = true
 		block.SpentUtxoDataMap[key] = d
 		GlobalSpentUtxoDataMap[key] = d

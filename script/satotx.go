@@ -8,16 +8,17 @@ import (
 
 var empty = make([]byte, 1)
 
-func ExtractPkScriptGenesisIdAndAddressPkh(pkscript []byte) (isNFT bool, codeHash, genesisId, addressPkh []byte, value uint64) {
+func ExtractPkScriptGenesisIdAndAddressPkh(pkscript []byte) (isNFT bool, codeHash, genesisId, addressPkh []byte, value, decimal uint64) {
 	scriptLen := len(pkscript)
-	if scriptLen < 2048 {
-		return false, empty, empty, empty, 0
+	if scriptLen < 1024 {
+		return false, empty, empty, empty, 0, 0
 	}
 	dataLen := 0
 	genesisIdLen := 0
 	genesisOffset := scriptLen - 8 - 4
 	valueOffset := scriptLen - 8 - 4 - 8
 	addressOffset := scriptLen - 8 - 4 - 8 - 20
+	decimalOffset := scriptLen - 8 - 4 - 8 - 20 - 1
 
 	if (bytes.HasSuffix(pkscript, []byte("sensible")) || bytes.HasSuffix(pkscript, []byte("oraclesv"))) &&
 		pkscript[scriptLen-8-4] == 1 { // PROTO_TYPE == 1
@@ -42,6 +43,8 @@ func ExtractPkScriptGenesisIdAndAddressPkh(pkscript []byte) (isNFT bool, codeHas
 		genesisOffset -= genesisIdLen
 		valueOffset -= genesisIdLen
 		addressOffset -= genesisIdLen
+		decimalOffset -= genesisIdLen
+		decimal = uint64(pkscript[decimalOffset])
 
 	} else if pkscript[scriptLen-1] < 2 && pkscript[scriptLen-37-1] == 37 && pkscript[scriptLen-37-1-40-1] == 40 && pkscript[scriptLen-37-1-40-1-1] == OP_RETURN {
 		// nft issue
@@ -62,7 +65,7 @@ func ExtractPkScriptGenesisIdAndAddressPkh(pkscript []byte) (isNFT bool, codeHas
 
 		dataLen = 1 + 1 + 1 + 61 // opreturn + pushdata + pushdata + data
 	} else {
-		return false, empty, empty, empty, 0
+		return false, empty, empty, empty, 0, 0
 	}
 
 	genesisId = make([]byte, genesisIdLen)
@@ -74,5 +77,5 @@ func ExtractPkScriptGenesisIdAndAddressPkh(pkscript []byte) (isNFT bool, codeHas
 
 	codeHash = utils.GetHash160(pkscript[:scriptLen-genesisIdLen-dataLen])
 
-	return isNFT, codeHash, genesisId, addressPkh, value
+	return isNFT, codeHash, genesisId, addressPkh, value, decimal
 }

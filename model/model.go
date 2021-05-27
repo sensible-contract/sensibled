@@ -54,6 +54,7 @@ type TxOut struct {
 	CodeHash             []byte
 	GenesisId            []byte
 	DataValue            uint64
+	Decimal              uint64
 	Outpoint             []byte // 32 + 4
 	OutpointKey          string // 32 + 4
 	LockingScriptType    []byte
@@ -154,6 +155,7 @@ type TxoData struct {
 	CodeHash    []byte
 	GenesisId   []byte
 	DataValue   uint64 // ft amount / nft tokenIdx
+	Decimal     uint64
 	Satoshi     uint64
 	ScriptType  []byte
 	Script      []byte
