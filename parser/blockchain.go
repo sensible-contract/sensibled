@@ -170,7 +170,6 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 		}
 	}
 	close(blocksStage)
-	log.Printf("stage ok")
 }
 
 // ParseLongestChainBlock 再并行分析区块。接下来是无关顺序的收尾工作
@@ -261,7 +260,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 
 // SetBlockHeight 设置所有区块的高度，包括分支链的高度
 func (bc *Blockchain) SetBlockHeight() {
-	log.Printf("plain blocks count: %d", len(bc.Blocks))
+	// log.Printf("plain blocks count: %d", len(bc.Blocks))
 	// 初始化
 	for _, block := range bc.Blocks {
 		block.Height = 0
@@ -326,8 +325,8 @@ func (bc *Blockchain) SelectLongestChain() {
 			break
 		}
 	}
-	log.Printf("genesis block: %s", bc.GenesisBlock.HashHex)
-	log.Printf("chain blocks count: %d", len(bc.BlocksOfChainById))
+	// log.Printf("genesis block: %s", bc.GenesisBlock.HashHex)
+	// log.Printf("chain blocks count: %d", len(bc.BlocksOfChainById))
 }
 
 // GetBlockSyncCommonBlockHeight 获取区块同步起始的共同区块高度
