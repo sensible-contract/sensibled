@@ -8,7 +8,7 @@ import (
 
 var empty = make([]byte, 1)
 
-func ExtractPkScriptGenesisIdAndAddressPkh(txid, pkscript []byte) (isNFT bool, codeHash, genesisId, addressPkh []byte, value uint64) {
+func ExtractPkScriptGenesisIdAndAddressPkh(pkscript []byte) (isNFT bool, codeHash, genesisId, addressPkh []byte, value uint64) {
 	scriptLen := len(pkscript)
 	if scriptLen < 2048 {
 		return false, empty, empty, empty, 0
@@ -73,17 +73,6 @@ func ExtractPkScriptGenesisIdAndAddressPkh(txid, pkscript []byte) (isNFT bool, c
 	value = binary.LittleEndian.Uint64(pkscript[valueOffset : valueOffset+8])
 
 	codeHash = utils.GetHash160(pkscript[:scriptLen-genesisIdLen-dataLen])
-
-	// logger.Log.Info("sensible",
-	// 	// zap.String("script", hex.EncodeToString(pkscript)),
-	// 	zap.String("txid", utils.HashString(txid)),
-	// 	zap.String("hash", hex.EncodeToString(codeHash)),
-	// 	zap.String("genesis", hex.EncodeToString(genesisId)),
-	// 	zap.String("address", hex.EncodeToString(addressPkh)),
-	// 	zap.Bool("nft", isNFT),
-	// 	zap.Uint64("v", value),
-	// 	zap.Uint8("last_byte", pkscript[scriptLen-1]),
-	// )
 
 	return isNFT, codeHash, genesisId, addressPkh, value
 }

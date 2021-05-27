@@ -2,7 +2,7 @@ package script
 
 import "satoblock/utils"
 
-func ExtractPkScriptForTxo(txid, Pkscript, scriptType []byte) (isNFT bool, codeHash, genesisId, addressPkh []byte, value uint64) {
+func ExtractPkScriptForTxo(Pkscript, scriptType []byte) (isNFT bool, codeHash, genesisId, addressPkh []byte, value uint64) {
 	if isPubkeyHash(scriptType) {
 		addressPkh = make([]byte, 20)
 		copy(addressPkh, Pkscript[3:23])
@@ -23,7 +23,7 @@ func ExtractPkScriptForTxo(txid, Pkscript, scriptType []byte) (isNFT bool, codeH
 	// 	return Pkscript[:]
 	// }
 
-	return ExtractPkScriptGenesisIdAndAddressPkh(txid, Pkscript)
+	return ExtractPkScriptGenesisIdAndAddressPkh(Pkscript)
 }
 
 func GetLockingScriptType(pkscript []byte) (scriptType []byte) {
