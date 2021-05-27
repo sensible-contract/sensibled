@@ -138,6 +138,7 @@ type TokenData struct {
 	CodeHash     []byte
 	GenesisId    []byte
 	NFTIdx       uint64 // nft tokenIdx
+	Decimal      uint64 // ft decimal
 	InDataValue  uint64 // ft amount / nft tokenIdx
 	OutDataValue uint64 // ft amount / nft tokenIdx
 	InSatoshi    uint64

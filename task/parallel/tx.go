@@ -52,6 +52,7 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 			tokenSummary = &model.TokenData{
 				IsNFT:     output.IsNFT,
 				NFTIdx:    NFTIdx,
+				Decimal:   output.Decimal,
 				CodeHash:  output.CodeHash,
 				GenesisId: output.GenesisId,
 			}
@@ -92,6 +93,7 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock
 		d.CodeHash = output.CodeHash
 		d.GenesisId = output.GenesisId
 		d.DataValue = output.DataValue
+		d.Decimal = output.Decimal
 		d.Satoshi = output.Satoshi
 		d.ScriptType = output.LockingScriptType
 		d.Script = output.Pkscript

@@ -201,6 +201,9 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 				panic(err)
 			}
 		} else {
+			// ft:info
+			pipe.HSet(ctx, "fi"+string(data.CodeHash)+string(data.GenesisId), "decimal", data.Decimal)
+
 			// ft:utxo
 			if err := pipe.ZAdd(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
 				&redis.Z{Score: score, Member: key}).Err(); err != nil {
