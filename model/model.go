@@ -2,7 +2,6 @@ package model
 
 import (
 	"encoding/binary"
-	"sync"
 
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
@@ -181,10 +180,4 @@ func (d *TxoData) Unmarshal(buf []byte) {
 	d.Script = buf[20:]
 	// d.Script = make([]byte, len(buf)-20)
 	// copy(d.Script, buf[20:]) // n
-}
-
-var TxoDataPool = sync.Pool{
-	New: func() interface{} {
-		return &TxoData{}
-	},
 }

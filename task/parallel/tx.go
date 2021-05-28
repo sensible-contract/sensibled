@@ -85,7 +85,7 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock
 			continue
 		}
 
-		d := model.TxoDataPool.Get().(*model.TxoData)
+		d := &model.TxoData{}
 		d.BlockHeight = block.Height
 		d.TxIdx = uint64(txIdx)
 		d.AddressPkh = output.AddressPkh

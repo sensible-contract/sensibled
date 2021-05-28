@@ -107,7 +107,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 		} else if err != nil {
 			panic(err)
 		}
-		d := model.TxoDataPool.Get().(*model.TxoData)
+		d := &model.TxoData{}
 		d.Unmarshal([]byte(res))
 
 		// 补充数据
@@ -124,22 +124,6 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	// 更新到本地新utxo存储
 	for key, data := range block.NewUtxoDataMap {
 		GlobalNewUtxoDataMap[key] = data
-	}
-
-	// 回收内存
-	for _, data := range block.SpentUtxoDataMap {
-		if !data.Keep {
-			model.TxoDataPool.Put(data)
-		}
-	}
-}
-
-// UpdateUtxoInMapSerial 顺序更新当前区块的utxo信息变化到程序全局缓存
-func ReUseUtxoData() {
-	// 回收内存
-	for _, data := range GlobalSpentUtxoDataMap {
-		data.Keep = false
-		model.TxoDataPool.Put(data)
 	}
 }
 
@@ -303,7 +287,7 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 		addrToRemove[string(data.AddressPkh)] = true
 	}
 
-	// 删除summary 为0的记录
+	// 删除balance 为0的记录
 	for codeKey := range tokenToRemove {
 		if err := pipe.ZRemRangeByScore(ctx, "no"+codeKey, "0", "0").Err(); err != nil {
 			panic(err)
@@ -312,7 +296,7 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 			panic(err)
 		}
 	}
-	// 删除balance 为0的记录
+	// 删除summary 为0的记录
 	for addr := range addrToRemove {
 		if err := pipe.ZRemRangeByScore(ctx, "ns"+addr, "0", "0").Err(); err != nil {
 			panic(err)

@@ -56,7 +56,6 @@ func ParseEnd(isFull bool) {
 	serial.UpdateUtxoInRedis(serial.GlobalNewUtxoDataMap, serial.GlobalSpentUtxoDataMap)
 
 	// 清空本地map内存
-	serial.ReUseUtxoData()
 	serial.CleanUtxoMap()
 
 	// 提交DB
