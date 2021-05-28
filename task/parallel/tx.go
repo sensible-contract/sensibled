@@ -33,7 +33,7 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		}
 
 		// address
-		output.IsNFT, output.CodeHash, output.GenesisId, output.AddressPkh, output.DataValue, output.Decimal = script.ExtractPkScriptForTxo(output.Pkscript, output.LockingScriptType)
+		output.IsNFT, output.CodeHash, output.GenesisId, output.AddressPkh, output.Name, output.Symbol, output.DataValue, output.Decimal = script.ExtractPkScriptForTxo(output.Pkscript, output.LockingScriptType)
 
 		if len(output.CodeHash) < 20 || len(output.GenesisId) < 20 {
 			// not token
@@ -94,6 +94,8 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock
 		d.GenesisId = output.GenesisId
 		d.DataValue = output.DataValue
 		d.Decimal = output.Decimal
+		d.Name = output.Name
+		d.Symbol = output.Symbol
 		d.Satoshi = output.Satoshi
 		d.ScriptType = output.LockingScriptType
 		d.Script = output.Pkscript

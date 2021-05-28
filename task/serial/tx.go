@@ -112,7 +112,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 
 		// 补充数据
 		d.ScriptType = script.GetLockingScriptType(d.Script)
-		d.IsNFT, d.CodeHash, d.GenesisId, d.AddressPkh, d.DataValue, d.Decimal = script.ExtractPkScriptForTxo(d.Script, d.ScriptType)
+		d.IsNFT, d.CodeHash, d.GenesisId, d.AddressPkh, d.Name, d.Symbol, d.DataValue, d.Decimal = script.ExtractPkScriptForTxo(d.Script, d.ScriptType)
 		d.Keep = true
 		block.SpentUtxoDataMap[key] = d
 		GlobalSpentUtxoDataMap[key] = d
@@ -202,7 +202,11 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 			}
 		} else {
 			// ft:info
-			pipe.HSet(ctx, "fi"+string(data.CodeHash)+string(data.GenesisId), "decimal", data.Decimal)
+			pipe.HSet(ctx, "fi"+string(data.CodeHash)+string(data.GenesisId),
+				"decimal", data.Decimal,
+				"name", data.Name,
+				"symbol", data.Symbol,
+			)
 
 			// ft:utxo
 			if err := pipe.ZAdd(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
