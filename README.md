@@ -66,3 +66,5 @@ redis配置，主要包括address、database等。
     $ ./satoblock
 
 程序日志将直接输出到终端，可使用nohup或其他技术将程序放置到后台运行。
+
+satoblock服务在等待新区块到来时可以重启，同步过程中不可随意重启。
