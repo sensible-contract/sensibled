@@ -47,7 +47,8 @@ func GetSpentUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.Txo
 	psql := fmt.Sprintf(`
 SELECT utxid, vout, address, codehash, genesis, data_value, satoshi, script_type, script_pk, height_txo, utxidx FROM txin
    WHERE satoshi > 0 AND
-      height >= %d`, height)
+      height >= %d AND
+      height < %d`, height, model.MEMPOOL_HEIGHT)
 	return getUtxoBySql(psql)
 }
 
@@ -57,7 +58,8 @@ SELECT utxid, vout, address, codehash, genesis, data_value, satoshi, '', '', 0, 
    WHERE satoshi > 0 AND
       NOT startsWith(script_type, char(0x6a)) AND
       NOT startsWith(script_type, char(0x00, 0x6a)) AND
-      height >= %d`, height)
+      height >= %d AND
+      height < %d`, height, model.MEMPOOL_HEIGHT)
 	return getUtxoBySql(psql)
 }
 

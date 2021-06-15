@@ -7,6 +7,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const MEMPOOL_HEIGHT = 4294967295
+
 type Tx struct {
 	Raw          []byte
 	HashHex      string // 32
