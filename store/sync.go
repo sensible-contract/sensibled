@@ -112,12 +112,15 @@ func CommitSyncCk() {
 	defer SyncStmtTx.Close()
 	defer SyncStmtTxOut.Close()
 
+	log.Println("sync-commit-blk...")
 	if err := syncTxBlk.Commit(); err != nil {
 		log.Println("sync-commit-blk", err.Error())
 	}
+	log.Println("sync-commit-tx...")
 	if err := syncTxTx.Commit(); err != nil {
 		log.Println("sync-commit-tx", err.Error())
 	}
+	log.Println("sync-commit-txout...")
 	if err := syncTxTxOut.Commit(); err != nil {
 		log.Println("sync-commit-txout", err.Error())
 	}
@@ -130,9 +133,9 @@ func CommitFullSyncCk(needCommit bool) {
 		syncTxTxIn.Rollback()
 		return
 	}
-
+	log.Println("sync-commit-txin...")
 	if err := syncTxTxIn.Commit(); err != nil {
-		log.Println("sync-commit-txinfull", err.Error())
+		log.Println("sync-commit-txin", err.Error())
 	}
 }
 

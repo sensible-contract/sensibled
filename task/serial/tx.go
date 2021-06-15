@@ -129,6 +129,7 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 
 // UpdateUtxoInRedis 批量更新redis utxo
 func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (err error) {
+	log.Printf("UpdateUtxoInRedis: +%d, -%d", len(utxoToRestore), len(utxoToRemove))
 	pipe := rdb.Pipeline()
 	pipeBlock := rdbBlock.Pipeline()
 	for key, data := range utxoToRestore {
