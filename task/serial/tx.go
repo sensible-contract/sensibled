@@ -147,18 +147,23 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 			continue
 		}
 
-		// balance of address
-		if err := pipe.ZIncrBy(ctx, "balance", float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
-			panic(err)
-		}
-
 		if len(data.GenesisId) < 20 {
 			// 不是合约tx，则记录address utxo
 			// redis有序address utxo数据添加
 			if err := pipe.ZAdd(ctx, "au"+string(data.AddressPkh), &redis.Z{Score: score, Member: key}).Err(); err != nil {
 				panic(err)
 			}
+
+			// balance of address
+			if err := pipe.ZIncrBy(ctx, "balance", float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
+				panic(err)
+			}
 			continue
+		}
+
+		// contract satoshi balance of address
+		if err := pipe.ZIncrBy(ctx, "contract-balance", float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
+			panic(err)
 		}
 
 		// redis有序genesis utxo数据添加
@@ -227,18 +232,23 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 			continue
 		}
 
-		// balance of address
-		if err := pipe.ZIncrBy(ctx, "balance", -float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
-			panic(err)
-		}
-
 		if len(data.GenesisId) < 20 {
 			// 不是合约tx，则记录address utxo
 			// redis有序address utxo数据清除
 			if err := pipe.ZRem(ctx, "au"+string(data.AddressPkh), key).Err(); err != nil {
 				panic(err)
 			}
+
+			// balance of address
+			if err := pipe.ZIncrBy(ctx, "balance", -float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
+				panic(err)
+			}
 			continue
+		}
+
+		// contract satoshi balance of address
+		if err := pipe.ZIncrBy(ctx, "contract-balance", -float64(data.Satoshi), string(data.AddressPkh)).Err(); err != nil {
+			panic(err)
 		}
 
 		// redis有序genesis utxo数据清除
@@ -308,6 +318,11 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 	}
 	// 删除balance 为0的记录
 	if err := pipe.ZRemRangeByScore(ctx, "balance", "0", "0").Err(); err != nil {
+		panic(err)
+	}
+
+	// 删除contract balance 为0的记录
+	if err := pipe.ZRemRangeByScore(ctx, "contract-balance", "0", "0").Err(); err != nil {
 		panic(err)
 	}
 
