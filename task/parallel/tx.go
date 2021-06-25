@@ -4,8 +4,9 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"satoblock/model"
-	"satoblock/script"
 	"strconv"
+
+	script "github.com/sensible-contract/sensible-script-decoder"
 )
 
 // ParseTx 先并行分析交易tx，不同区块并行，同区块内串行

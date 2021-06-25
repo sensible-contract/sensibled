@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"satoblock/model"
-	"satoblock/script"
 
 	redis "github.com/go-redis/redis/v8"
+	script "github.com/sensible-contract/sensible-script-decoder"
 	"github.com/spf13/viper"
 )
 
