@@ -3,7 +3,6 @@ package script
 import (
 	"bytes"
 	"encoding/binary"
-	"satoblock/utils"
 )
 
 var empty = make([]byte, 1)
@@ -81,7 +80,7 @@ func ExtractPkScriptGenesisIdAndAddressPkh(pkscript []byte) (isNFT bool, codeHas
 
 	value = binary.LittleEndian.Uint64(pkscript[valueOffset : valueOffset+8])
 
-	codeHash = utils.GetHash160(pkscript[:scriptLen-genesisIdLen-dataLen])
+	codeHash = GetHash160(pkscript[:scriptLen-genesisIdLen-dataLen])
 
 	return isNFT, codeHash, genesisId, addressPkh, name, symbol, value, decimal
 }
