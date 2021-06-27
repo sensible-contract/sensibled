@@ -29,8 +29,8 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		output.LockingScriptType = script.GetLockingScriptType(output.Pkscript)
 		output.LockingScriptTypeHex = hex.EncodeToString(output.LockingScriptType)
 
-		if !script.IsOpreturn(output.LockingScriptType) {
-			output.LockingScriptMatch = true
+		if script.IsOpreturn(output.LockingScriptType) {
+			output.LockingScriptUnspendable = true
 		}
 
 		// address
@@ -82,7 +82,7 @@ func ParseTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.Proce
 // ParseNewUtxoInTxParallel utxo 信息
 func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock) {
 	for _, output := range tx.TxOuts {
-		if output.Satoshi == 0 || !output.LockingScriptMatch {
+		if output.LockingScriptUnspendable {
 			continue
 		}
 

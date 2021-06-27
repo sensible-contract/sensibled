@@ -50,19 +50,19 @@ type TxOut struct {
 	Pkscript []byte
 
 	// other:
-	AddressPkh           []byte
-	IsNFT                bool
-	CodeHash             []byte
-	GenesisId            []byte
-	DataValue            uint64
-	Decimal              uint64
-	Name                 string
-	Symbol               string
-	Outpoint             []byte // 32 + 4
-	OutpointKey          string // 32 + 4
-	LockingScriptType    []byte
-	LockingScriptTypeHex string
-	LockingScriptMatch   bool
+	AddressPkh               []byte
+	IsNFT                    bool
+	CodeHash                 []byte
+	GenesisId                []byte
+	DataValue                uint64
+	Decimal                  uint64
+	Name                     string
+	Symbol                   string
+	Outpoint                 []byte // 32 + 4
+	OutpointKey              string // 32 + 4
+	LockingScriptType        []byte
+	LockingScriptTypeHex     string
+	LockingScriptUnspendable bool
 }
 
 func (t *TxOut) MarshalLogObject(enc zapcore.ObjectEncoder) error {
