@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS blk_codehash_height (
 	height       UInt32,
 	codehash     String,
 	genesis      String,
-    code_type    UInt8,      -- 0: nft 1: ft
+	code_type    UInt32,      -- 0: none, 1: ft, 2: unique, 3: nft
 	nft_idx      UInt64,
 	in_data_value   UInt64,
 	out_data_value  UInt64,
@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS txout (
 	address      String,
 	codehash     String,
 	genesis      String,
+	code_type    UInt32,      -- 0: none, 1: ft, 2: unique, 3: nft
 	data_value   UInt64,
 	satoshi      UInt64,
 	script_type  String,
@@ -147,6 +148,7 @@ CREATE TABLE IF NOT EXISTS txin (
 	address      String,
 	codehash     String,
 	genesis      String,
+	code_type    UInt32,      -- 0: none, 1: ft, 2: unique, 3: nft
 	data_value   UInt64,
 	satoshi      UInt64,
 	script_type  String,

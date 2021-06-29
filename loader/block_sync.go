@@ -8,6 +8,8 @@ import (
 	"log"
 	"satoblock/loader/clickhouse"
 	"satoblock/model"
+
+	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 )
 
 func blockResultSRF(rows *sql.Rows) (interface{}, error) {
@@ -36,16 +38,23 @@ func GetLatestBlocks() (blksRsp []*model.BlockDO, err error) {
 
 func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 	var ret model.TxoData
-	err := rows.Scan(&ret.UTxid, &ret.Vout, &ret.AddressPkh, &ret.CodeHash, &ret.GenesisId, &ret.DataValue, &ret.Satoshi, &ret.ScriptType, &ret.Script, &ret.BlockHeight, &ret.TxIdx)
+	var dataValue uint64
+	err := rows.Scan(&ret.UTxid, &ret.Vout, &ret.AddressPkh, &ret.CodeHash, &ret.GenesisId, &ret.CodeType, &dataValue, &ret.Satoshi, &ret.ScriptType, &ret.Script, &ret.BlockHeight, &ret.TxIdx)
 	if err != nil {
 		return nil, err
 	}
+	if ret.CodeType == scriptDecoder.CodeType_NFT {
+		ret.TokenIdx = dataValue
+	} else if ret.CodeType == scriptDecoder.CodeType_FT {
+		ret.Amount = dataValue
+	}
+
 	return &ret, nil
 }
 
 func GetSpentUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.TxoData, err error) {
 	psql := fmt.Sprintf(`
-SELECT utxid, vout, address, codehash, genesis, data_value, satoshi, script_type, script_pk, height_txo, utxidx FROM txin
+SELECT utxid, vout, address, codehash, genesis, code_type, data_value, satoshi, script_type, script_pk, height_txo, utxidx FROM txin
    WHERE satoshi > 0 AND
       height >= %d AND
       height < %d`, height, model.MEMPOOL_HEIGHT)
@@ -54,7 +63,7 @@ SELECT utxid, vout, address, codehash, genesis, data_value, satoshi, script_type
 
 func GetNewUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.TxoData, err error) {
 	psql := fmt.Sprintf(`
-SELECT utxid, vout, address, codehash, genesis, data_value, satoshi, '', '', 0, 0 FROM txout
+SELECT utxid, vout, address, codehash, genesis, code_type, data_value, satoshi, '', '', 0, 0 FROM txout
    WHERE satoshi > 0 AND
       NOT startsWith(script_type, char(0x6a)) AND
       NOT startsWith(script_type, char(0x00, 0x6a)) AND

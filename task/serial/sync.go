@@ -7,6 +7,7 @@ import (
 	"satoblock/utils"
 	"strconv"
 
+	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
 )
 
@@ -29,15 +30,11 @@ func SyncBlock(block *model.Block) {
 	}
 
 	for _, tokenSummary := range block.ParseData.TokenSummaryMap {
-		codeType := 0
-		if !tokenSummary.IsNFT {
-			codeType = 1
-		}
 		if _, err := store.SyncStmtBlkCodeHash.Exec(
 			uint32(block.Height),
 			string(tokenSummary.CodeHash),
 			string(tokenSummary.GenesisId),
-			uint8(codeType),
+			uint32(tokenSummary.CodeType),
 			tokenSummary.NFTIdx,
 			tokenSummary.InDataValue,
 			tokenSummary.OutDataValue,
@@ -106,13 +103,20 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 		for vout, output := range tx.TxOuts {
 			tx.OutputsValue += output.Satoshi
 
+			var dataValue uint64
+			if output.CodeType == scriptDecoder.CodeType_NFT {
+				dataValue = output.TokenIdx
+			} else if output.CodeType == scriptDecoder.CodeType_FT {
+				dataValue = output.Amount
+			}
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.Hash),
 				uint32(vout),
 				string(output.AddressPkh), // 20 bytes
 				string(output.CodeHash),   // 20 bytes
 				string(output.GenesisId),  // 20/36/40 bytes
-				output.DataValue,
+				uint32(output.CodeType),
+				dataValue,
 				output.Satoshi,
 				string(output.LockingScriptType),
 				string(output.Pkscript),
@@ -161,20 +165,23 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			}
 			tx.InputsValue += objData.Satoshi
 
+			var dataValue uint64
 			// token summary
 			if len(objData.CodeHash) == 20 && len(objData.GenesisId) >= 20 {
-				NFTIdx := uint64(0)
 				key := string(objData.CodeHash) + string(objData.GenesisId)
-				if objData.IsNFT {
-					key += strconv.Itoa(int(objData.DataValue))
-					NFTIdx = objData.DataValue
+
+				if objData.CodeType == scriptDecoder.CodeType_NFT {
+					key += strconv.Itoa(int(objData.TokenIdx))
+					dataValue = objData.TokenIdx
+				} else if objData.CodeType == scriptDecoder.CodeType_FT {
+					dataValue = objData.Amount
 				}
 
 				tokenSummary, ok := block.ParseData.TokenSummaryMap[key]
 				if !ok {
 					tokenSummary = &model.TokenData{
-						IsNFT:     objData.IsNFT,
-						NFTIdx:    NFTIdx,
+						CodeType:  objData.CodeType,
+						NFTIdx:    objData.TokenIdx,
 						CodeHash:  objData.CodeHash,
 						GenesisId: objData.GenesisId,
 					}
@@ -182,14 +189,11 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				}
 
 				tokenSummary.InSatoshi += objData.Satoshi
-				if objData.IsNFT {
-					tokenSummary.InDataValue += 1
-				} else {
-					tokenSummary.InDataValue += objData.DataValue
-				}
+				tokenSummary.InDataValue += 1
 			}
 
 			SyncTxFullCount++
+
 			if _, err := store.SyncStmtTxIn.Exec(
 				uint32(block.Height),
 				uint64(txIdx),
@@ -205,7 +209,8 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				string(objData.AddressPkh), // 20 byte
 				string(objData.CodeHash),   // 20 byte
 				string(objData.GenesisId),  // 20 byte
-				objData.DataValue,
+				uint32(objData.CodeType),
+				dataValue,
 				objData.Satoshi,
 				string(objData.ScriptType),
 				string(objData.Script),

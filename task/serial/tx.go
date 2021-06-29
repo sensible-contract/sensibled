@@ -7,7 +7,7 @@ import (
 	"satoblock/model"
 
 	redis "github.com/go-redis/redis/v8"
-	script "github.com/sensible-contract/sensible-script-decoder"
+	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"github.com/spf13/viper"
 )
 
@@ -111,9 +111,19 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 		d.Unmarshal([]byte(res))
 
 		// 补充数据
-		d.ScriptType = script.GetLockingScriptType(d.Script)
-		d.IsNFT, d.CodeHash, d.GenesisId, d.AddressPkh, d.Name, d.Symbol, d.DataValue, d.Decimal = script.ExtractPkScriptForTxo(d.Script, d.ScriptType)
-		d.Keep = true
+		d.ScriptType = scriptDecoder.GetLockingScriptType(d.Script)
+		txo := scriptDecoder.ExtractPkScriptForTxo(d.Script, d.ScriptType)
+
+		d.CodeType = txo.CodeType
+		d.CodeHash = txo.CodeHash
+		d.GenesisId = txo.GenesisId
+		d.AddressPkh = txo.AddressPkh
+		d.Name = txo.Name
+		d.Symbol = txo.Symbol
+		d.TokenIdx = txo.TokenIdx
+		d.Amount = txo.Amount
+		d.Decimal = txo.Decimal
+
 		block.SpentUtxoDataMap[key] = d
 		GlobalSpentUtxoDataMap[key] = d
 	}
@@ -167,8 +177,8 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 		}
 
 		// redis有序genesis utxo数据添加
-		if data.IsNFT {
-			nftId := float64(data.DataValue)
+		if data.CodeType == scriptDecoder.CodeType_NFT {
+			nftId := float64(data.TokenIdx)
 			// nft:utxo
 			if err := pipe.ZAdd(ctx, "nu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
 				&redis.Z{Score: nftId, Member: key}).Err(); err != nil {
@@ -205,14 +215,20 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 			}
 			// ft:balance
 			if err := pipe.ZIncrBy(ctx, "fb"+string(data.CodeHash)+string(data.GenesisId),
-				float64(data.DataValue),
+				float64(data.Amount),
 				string(data.AddressPkh)).Err(); err != nil {
 				panic(err)
 			}
 			// ft:summary
 			if err := pipe.ZIncrBy(ctx, "fs"+string(data.AddressPkh),
-				float64(data.DataValue),
+				float64(data.Amount),
 				string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
+				panic(err)
+			}
+		} else if data.CodeType == scriptDecoder.CodeType_UNIQUE {
+			// ft:utxo
+			if err := pipe.ZAdd(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
+				&redis.Z{Score: score, Member: key}).Err(); err != nil {
 				panic(err)
 			}
 		}
@@ -252,7 +268,7 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 		}
 
 		// redis有序genesis utxo数据清除
-		if data.IsNFT {
+		if data.CodeType == scriptDecoder.CodeType_NFT {
 			// nft:utxo
 			if err := pipe.ZRem(ctx, "nu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
 				key).Err(); err != nil {
@@ -274,21 +290,26 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 				-1, string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
 				panic(err)
 			}
-		} else {
+		} else if data.CodeType == scriptDecoder.CodeType_FT {
 			// ft:utxo
 			if err := pipe.ZRem(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh), key).Err(); err != nil {
 				panic(err)
 			}
 			// ft:balance
 			if err := pipe.ZIncrBy(ctx, "fb"+string(data.CodeHash)+string(data.GenesisId),
-				-float64(data.DataValue),
+				-float64(data.Amount),
 				string(data.AddressPkh)).Err(); err != nil {
 				panic(err)
 			}
 			// ft:summary
 			if err := pipe.ZIncrBy(ctx, "fs"+string(data.AddressPkh),
-				-float64(data.DataValue),
+				-float64(data.Amount),
 				string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
+				panic(err)
+			}
+		} else if data.CodeType == scriptDecoder.CodeType_FT {
+			// ft:utxo
+			if err := pipe.ZRem(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh), key).Err(); err != nil {
 				panic(err)
 			}
 		}

@@ -6,7 +6,7 @@ import (
 	"satoblock/model"
 	"strconv"
 
-	script "github.com/sensible-contract/sensible-script-decoder"
+	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 )
 
 // ParseTx 先并行分析交易tx，不同区块并行，同区块内串行
@@ -26,15 +26,23 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		output.OutpointKey = string(key)
 		output.Outpoint = key
 
-		output.LockingScriptType = script.GetLockingScriptType(output.Pkscript)
+		output.LockingScriptType = scriptDecoder.GetLockingScriptType(output.Pkscript)
 		output.LockingScriptTypeHex = hex.EncodeToString(output.LockingScriptType)
 
-		if script.IsOpreturn(output.LockingScriptType) {
+		if scriptDecoder.IsOpreturn(output.LockingScriptType) {
 			output.LockingScriptUnspendable = true
 		}
 
-		// address
-		output.IsNFT, output.CodeHash, output.GenesisId, output.AddressPkh, output.Name, output.Symbol, output.DataValue, output.Decimal = script.ExtractPkScriptForTxo(output.Pkscript, output.LockingScriptType)
+		txo := scriptDecoder.ExtractPkScriptForTxo(output.Pkscript, output.LockingScriptType)
+		output.CodeType = txo.CodeType
+		output.CodeHash = txo.CodeHash
+		output.GenesisId = txo.GenesisId
+		output.AddressPkh = txo.AddressPkh
+		output.Name = txo.Name
+		output.Symbol = txo.Symbol
+		output.TokenIdx = txo.TokenIdx
+		output.Amount = txo.Amount
+		output.Decimal = txo.Decimal
 
 		if len(output.CodeHash) < 20 || len(output.GenesisId) < 20 {
 			// not token
@@ -42,17 +50,15 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		}
 
 		// update token summary
-		NFTIdx := uint64(0)
 		tokenKey := string(output.CodeHash) + string(output.GenesisId)
-		if output.IsNFT {
-			tokenKey += strconv.Itoa(int(output.DataValue))
-			NFTIdx = output.DataValue
+		if output.CodeType == scriptDecoder.CodeType_NFT {
+			tokenKey += strconv.Itoa(int(output.TokenIdx))
 		}
 		tokenSummary, ok := block.TokenSummaryMap[tokenKey]
 		if !ok {
 			tokenSummary = &model.TokenData{
-				IsNFT:     output.IsNFT,
-				NFTIdx:    NFTIdx,
+				CodeType:  output.CodeType,
+				NFTIdx:    output.TokenIdx,
 				Decimal:   output.Decimal,
 				CodeHash:  output.CodeHash,
 				GenesisId: output.GenesisId,
@@ -61,11 +67,7 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		}
 
 		tokenSummary.OutSatoshi += output.Satoshi
-		if output.IsNFT {
-			tokenSummary.OutDataValue += 1
-		} else {
-			tokenSummary.OutDataValue += output.DataValue
-		}
+		tokenSummary.OutDataValue += 1
 	}
 }
 
@@ -90,10 +92,11 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock
 		d.BlockHeight = block.Height
 		d.TxIdx = uint64(txIdx)
 		d.AddressPkh = output.AddressPkh
-		d.IsNFT = output.IsNFT
+		d.CodeType = output.CodeType
 		d.CodeHash = output.CodeHash
 		d.GenesisId = output.GenesisId
-		d.DataValue = output.DataValue
+		d.TokenIdx = output.TokenIdx
+		d.Amount = output.Amount
 		d.Decimal = output.Decimal
 		d.Name = output.Name
 		d.Symbol = output.Symbol
