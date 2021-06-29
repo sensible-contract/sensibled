@@ -138,7 +138,7 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 }
 
 // UpdateUtxoInRedis 批量更新redis utxo
-func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (err error) {
+func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) (err error) {
 	log.Printf("UpdateUtxoInRedis: +%d, -%d", len(utxoToRestore), len(utxoToRemove))
 	pipe := rdb.Pipeline()
 	pipeBlock := rdbBlock.Pipeline()
@@ -200,14 +200,16 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData) (e
 				1, string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
 				panic(err)
 			}
-		} else {
-			// ft:info
-			pipe.HSet(ctx, "fi"+string(data.CodeHash)+string(data.GenesisId),
-				"decimal", data.Decimal,
-				"name", data.Name,
-				"symbol", data.Symbol,
-			)
-
+		} else if data.CodeType == scriptDecoder.CodeType_FT {
+			if !isReorg {
+				// skip if reorg
+				// ft:info
+				pipe.HSet(ctx, "fi"+string(data.CodeHash)+string(data.GenesisId),
+					"decimal", data.Decimal,
+					"name", data.Name,
+					"symbol", data.Symbol,
+				)
+			}
 			// ft:utxo
 			if err := pipe.ZAdd(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
 				&redis.Z{Score: score, Member: key}).Err(); err != nil {

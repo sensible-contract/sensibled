@@ -110,7 +110,7 @@ func main() {
 					return
 				}
 
-				if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove); err != nil {
+				if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove, true); err != nil {
 					log.Printf("restore/remove utxo from redis failed: %v", err)
 					return
 				}

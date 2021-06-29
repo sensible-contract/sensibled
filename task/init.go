@@ -53,7 +53,7 @@ func ParseEnd(isFull bool) {
 	defer logger.SyncLog()
 
 	// 批量更新redis utxo
-	serial.UpdateUtxoInRedis(serial.GlobalNewUtxoDataMap, serial.GlobalSpentUtxoDataMap)
+	serial.UpdateUtxoInRedis(serial.GlobalNewUtxoDataMap, serial.GlobalSpentUtxoDataMap, false)
 
 	// 清空本地map内存
 	serial.CleanUtxoMap()
