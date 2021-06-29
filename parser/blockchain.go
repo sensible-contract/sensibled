@@ -90,7 +90,9 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 		blkId := block.Hash
 		InitBlock(block, rawblock)
 		if !bytes.Equal(blkId, block.Hash) {
-			log.Printf("block id not match")
+			log.Printf("block %d(%s) not match raw(%s), file.%d[%d]",
+				nextBlockHeight, utils.HashString(blkId), block.HashHex,
+				block.FileIdx, block.FileOffset)
 			break
 		}
 

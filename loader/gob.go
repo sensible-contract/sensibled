@@ -31,6 +31,9 @@ func LoadFromGobFile(fname string, data map[string]*model.Block) {
 		)
 	}
 	for _, blk := range cacheData {
+		// if blk.FileIdx > 3030 {
+		// 	continue
+		// }
 		hashHex := utils.HashString(blk.Hash)
 		data[hashHex] = &model.Block{
 			Hash:       blk.Hash,
