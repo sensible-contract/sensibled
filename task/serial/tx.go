@@ -117,6 +117,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 		d.CodeType = txo.CodeType
 		d.CodeHash = txo.CodeHash
 		d.GenesisId = txo.GenesisId
+		d.SensibleId = txo.SensibleId
 		d.AddressPkh = txo.AddressPkh
 		d.Name = txo.Name
 		d.Symbol = txo.Symbol
@@ -208,6 +209,7 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 					"decimal", data.Decimal,
 					"name", data.Name,
 					"symbol", data.Symbol,
+					"sensibleid", data.SensibleId,
 				)
 			}
 			// ft:utxo
