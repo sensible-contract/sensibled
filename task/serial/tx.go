@@ -230,6 +230,17 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 				panic(err)
 			}
 		} else if data.CodeType == scriptDecoder.CodeType_UNIQUE {
+			if !isReorg {
+				// skip if reorg
+				// ft:info
+				pipe.HSet(ctx, "fi"+string(data.CodeHash)+string(data.GenesisId),
+					"decimal", data.Decimal,
+					"name", data.Name,
+					"symbol", data.Symbol,
+					"sensibleid", data.SensibleId,
+				)
+			}
+
 			// ft:utxo
 			if err := pipe.ZAdd(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
 				&redis.Z{Score: score, Member: key}).Err(); err != nil {
@@ -311,7 +322,7 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 				string(data.CodeHash)+string(data.GenesisId)).Err(); err != nil {
 				panic(err)
 			}
-		} else if data.CodeType == scriptDecoder.CodeType_FT {
+		} else if data.CodeType == scriptDecoder.CodeType_UNIQUE {
 			// ft:utxo
 			if err := pipe.ZRem(ctx, "fu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh), key).Err(); err != nil {
 				panic(err)
