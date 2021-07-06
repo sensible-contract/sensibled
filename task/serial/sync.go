@@ -171,7 +171,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				key := string(objData.CodeHash) + string(objData.GenesisId)
 
 				if objData.CodeType == scriptDecoder.CodeType_NFT {
-					key += strconv.Itoa(int(objData.TokenIdx))
+					key += strconv.FormatUint(objData.TokenIdx, 10)
 					dataValue = objData.TokenIdx
 				} else if objData.CodeType == scriptDecoder.CodeType_FT {
 					dataValue = objData.Amount

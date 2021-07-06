@@ -53,7 +53,7 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		// update token summary
 		tokenKey := string(output.CodeHash) + string(output.GenesisId)
 		if output.CodeType == scriptDecoder.CodeType_NFT {
-			tokenKey += strconv.Itoa(int(output.TokenIdx))
+			tokenKey += strconv.FormatUint(output.TokenIdx, 10)
 		}
 		tokenSummary, ok := block.TokenSummaryMap[tokenKey]
 		if !ok {
