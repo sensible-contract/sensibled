@@ -30,10 +30,6 @@ redis配置，主要包括address、database等。
 
 需要占用2个database号，database_block存放UTXO原始script，database存放UTXO集合key。需要和satomempool配置保持一致。
 
-* log.yaml
-
-日志文件路径配置。
-
 ## 运行方式
 
 首次运行前，需要先在clickhouse中创建db，无需创建table。目前table创建代码[store/process_sync.go](store/process_sync.go)写死了表的storage_policy，如不需要可以自行删除。

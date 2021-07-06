@@ -13,21 +13,22 @@ import (
 func LoadFromGobFile(fname string, data map[string]*model.Block) {
 	gobFile, err := os.Open(fname)
 	if err != nil {
-		logger.LogErr.Info("load gob",
+		logger.Log.Info("load gob",
 			zap.String("log", "open gob gob failed"),
+			zap.Error(err),
 		)
 		return
 	}
 	gobDec := gob.NewDecoder(gobFile)
-	logger.LogErr.Info("load gob",
+	logger.Log.Info("load gob",
 		zap.String("log", "loading gob"),
 	)
 
 	cacheData := []model.BlockCache{}
 	if err := gobDec.Decode(&cacheData); err != nil {
-		logger.LogErr.Info("load gob",
+		logger.Log.Info("load gob",
 			zap.String("log", "load gob failed"),
-			zap.String("err", err.Error()),
+			zap.Error(err),
 		)
 	}
 	for _, blk := range cacheData {
@@ -59,8 +60,9 @@ func DumpToGobFile(fname string, data map[string]*model.Block) {
 
 	gobFile, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
 	if err != nil {
-		logger.LogErr.Info("dump gob",
+		logger.Log.Info("dump gob",
 			zap.String("log", "dump gob file failed"),
+			zap.Error(err),
 		)
 		return
 	}
@@ -68,11 +70,12 @@ func DumpToGobFile(fname string, data map[string]*model.Block) {
 
 	enc := gob.NewEncoder(gobFile)
 	if err := enc.Encode(cacheData); err != nil {
-		logger.LogErr.Info("dump gob",
+		logger.Log.Info("dump gob",
 			zap.String("log", "dump gob failed"),
+			zap.Error(err),
 		)
 	}
-	logger.LogErr.Info("dump gob",
+	logger.Log.Info("dump gob",
 		zap.String("log", "dump gob ok"),
 	)
 }

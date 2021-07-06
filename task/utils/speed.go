@@ -32,7 +32,7 @@ func ParseBlockSpeed(nTx, lenGlobalNewUtxoDataMap, lenGlobalSpentUtxoDataMap, ne
 		timeLeft = (maxBlockHeight - nextBlockHeight) / (nextBlockHeight - lastBlockHeight)
 	}
 
-	logger.LogErr.Info("parsing",
+	logger.Log.Info("parsing",
 		zap.Int("height", nextBlockHeight),
 		zap.Int("nblk", nextBlockHeight-lastBlockHeight),
 		zap.Int("ntx", lastBlockTxCount),
