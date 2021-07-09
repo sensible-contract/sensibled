@@ -105,7 +105,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 
 			var dataValue uint64
 			if output.CodeType == scriptDecoder.CodeType_NFT {
-				dataValue = output.TokenIdx
+				dataValue = output.TokenIndex
 			} else if output.CodeType == scriptDecoder.CodeType_FT {
 				dataValue = output.Amount
 			}
@@ -171,8 +171,8 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				key := string(objData.CodeHash) + string(objData.GenesisId)
 
 				if objData.CodeType == scriptDecoder.CodeType_NFT {
-					key += strconv.FormatUint(objData.TokenIdx, 10)
-					dataValue = objData.TokenIdx
+					key += strconv.FormatUint(objData.TokenIndex, 10)
+					dataValue = objData.TokenIndex
 				} else if objData.CodeType == scriptDecoder.CodeType_FT {
 					dataValue = objData.Amount
 				}
@@ -181,7 +181,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				if !ok {
 					tokenSummary = &model.TokenData{
 						CodeType:  objData.CodeType,
-						NFTIdx:    objData.TokenIdx,
+						NFTIdx:    objData.TokenIndex,
 						CodeHash:  objData.CodeHash,
 						GenesisId: objData.GenesisId,
 					}

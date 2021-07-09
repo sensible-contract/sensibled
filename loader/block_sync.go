@@ -44,7 +44,7 @@ func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 		return nil, err
 	}
 	if ret.CodeType == scriptDecoder.CodeType_NFT {
-		ret.TokenIdx = dataValue
+		ret.TokenIndex = dataValue
 	} else if ret.CodeType == scriptDecoder.CodeType_FT {
 		ret.Amount = dataValue
 	}

@@ -56,11 +56,11 @@ type TxOut struct {
 	GenesisId  []byte
 	SensibleId []byte
 
-	TokenIdx uint64 // nft tokenIdx
-	Amount   uint64 // ft amount
-	Decimal  uint64
-	Name     string
-	Symbol   string
+	TokenIndex uint64 // nft tokenIndex
+	Amount     uint64 // ft amount
+	Decimal    uint64
+	Name       string
+	Symbol     string
 
 	Outpoint                 []byte // 32 + 4
 	OutpointKey              string // 32 + 4
@@ -137,17 +137,17 @@ type ProcessBlock struct {
 	SpentUtxoKeysMap map[string]bool
 	SpentUtxoDataMap map[string]*TxoData
 	NewUtxoDataMap   map[string]*TxoData
-	TokenSummaryMap  map[string]*TokenData // key: CodeHash+GenesisId;  nft: CodeHash+GenesisId+tokenIdx
+	TokenSummaryMap  map[string]*TokenData // key: CodeHash+GenesisId;  nft: CodeHash+GenesisId+tokenIndex
 }
 
 type TokenData struct {
 	CodeType     uint32
 	CodeHash     []byte
 	GenesisId    []byte
-	NFTIdx       uint64 // nft tokenIdx
+	NFTIdx       uint64 // nft tokenIndex
 	Decimal      uint64 // ft decimal
-	InDataValue  uint64 // ft amount / nft tokenIdx
-	OutDataValue uint64 // ft amount / nft tokenIdx
+	InDataValue  uint64 // ft / nft count
+	OutDataValue uint64 // ft / nft count
 	InSatoshi    uint64
 	OutSatoshi   uint64
 }
@@ -162,7 +162,7 @@ type TxoData struct {
 	CodeHash    []byte
 	GenesisId   []byte
 	SensibleId  []byte
-	TokenIdx    uint64 // nft tokenIdx
+	TokenIndex  uint64 // nft tokenIndex
 	Amount      uint64 // ft amount
 	Decimal     uint64
 	Name        string // ft name

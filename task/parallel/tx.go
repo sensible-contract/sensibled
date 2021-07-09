@@ -41,7 +41,7 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		output.AddressPkh = txo.AddressPkh
 		output.Name = txo.Name
 		output.Symbol = txo.Symbol
-		output.TokenIdx = txo.TokenIdx
+		output.TokenIndex = txo.TokenIndex
 		output.Amount = txo.Amount
 		output.Decimal = txo.Decimal
 
@@ -53,13 +53,13 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		// update token summary
 		tokenKey := string(output.CodeHash) + string(output.GenesisId)
 		if output.CodeType == scriptDecoder.CodeType_NFT {
-			tokenKey += strconv.FormatUint(output.TokenIdx, 10)
+			tokenKey += strconv.FormatUint(output.TokenIndex, 10)
 		}
 		tokenSummary, ok := block.TokenSummaryMap[tokenKey]
 		if !ok {
 			tokenSummary = &model.TokenData{
 				CodeType:  output.CodeType,
-				NFTIdx:    output.TokenIdx,
+				NFTIdx:    output.TokenIndex,
 				Decimal:   output.Decimal,
 				CodeHash:  output.CodeHash,
 				GenesisId: output.GenesisId,
@@ -97,7 +97,7 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock
 		d.CodeHash = output.CodeHash
 		d.GenesisId = output.GenesisId
 		d.SensibleId = output.SensibleId
-		d.TokenIdx = output.TokenIdx
+		d.TokenIndex = output.TokenIndex
 		d.Amount = output.Amount
 		d.Decimal = output.Decimal
 		d.Name = output.Name
