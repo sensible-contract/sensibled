@@ -130,17 +130,17 @@ func main() {
 				utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight)
 				if err != nil {
 					logger.Log.Error("get utxo to restore failed", zap.Error(err))
-					return
+					break
 				}
 				utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight)
 				if err != nil {
 					logger.Log.Error("get utxo to remove failed", zap.Error(err))
-					return
+					break
 				}
 
 				if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove, true); err != nil {
 					logger.Log.Error("restore/remove utxo from redis failed", zap.Error(err))
-					return
+					break
 				}
 				store.RemoveOrphanPartSyncCk(startBlockHeight)
 			}
@@ -176,5 +176,7 @@ func main() {
 			break
 		}
 	}
+
+	loader.DumpToGobFile("./headers-list.gob", blockchain.Blocks)
 	logger.Log.Info("stoped")
 }

@@ -211,13 +211,8 @@ func (bc *Blockchain) InitLongestChainHeader() {
 		}
 	}
 
-	lastBlockHeadersCount := len(bc.Blocks)
 	if err := bc.BlockData.SkipTo(maxFileIdx, 0); err == nil {
 		bc.LoadAllBlockHeaders()
-	}
-
-	if len(bc.Blocks) > lastBlockHeadersCount {
-		loader.DumpToGobFile("./headers-list.gob", bc.Blocks)
 	}
 
 	bc.SetBlockHeight()
