@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime"
 	"satoblock/loader"
+	"satoblock/logger"
 	"satoblock/parser"
 	"satoblock/store"
 	"satoblock/task/serial"
@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 var (
@@ -74,11 +75,12 @@ func main() {
 		for s := range sigCtrl {
 			switch s {
 			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-				log.Println("program exit...", s)
+				logger.Log.Info("program exit...")
 				needStop = true
 				newBlockNotify <- ""
 			default:
 				fmt.Println("other signal", s)
+				logger.Log.Info("other signal", zap.String("sig", s.String()))
 			}
 		}
 	}()
@@ -86,13 +88,13 @@ func main() {
 	// 初始化区块
 	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic)
 	if err != nil {
-		log.Printf("init chain error: %v", err)
+		logger.Log.Error("init chain error", zap.Error(err))
 		return
 	}
 	// 扫描区块
 	for {
 		// 等待新块出现，再重新追加扫描
-		log.Println("waiting new block...")
+		logger.Log.Info("waiting new block...")
 		<-newBlockNotify
 		if needStop {
 			// 结束
@@ -122,22 +124,22 @@ func main() {
 			}
 
 			if needRemove {
-				log.Println("remove")
+				logger.Log.Info("remove...")
 				// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
 				// 获取需要补回的utxo
 				utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight)
 				if err != nil {
-					log.Printf("get utxo to restore failed: %v", err)
+					logger.Log.Error("get utxo to restore failed", zap.Error(err))
 					return
 				}
 				utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight)
 				if err != nil {
-					log.Printf("get utxo to remove failed: %v", err)
+					logger.Log.Error("get utxo to remove failed", zap.Error(err))
 					return
 				}
 
 				if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove, true); err != nil {
-					log.Printf("restore/remove utxo from redis failed: %v", err)
+					logger.Log.Error("restore/remove utxo from redis failed", zap.Error(err))
 					return
 				}
 				store.RemoveOrphanPartSyncCk(startBlockHeight)
@@ -162,7 +164,7 @@ func main() {
 
 		// 开始扫描区块，包括start，不包括end
 		blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, isFull)
-		log.Println("finished")
+		logger.Log.Info("finished")
 
 		isFull = false
 		startBlockHeight = -1
@@ -174,5 +176,5 @@ func main() {
 			break
 		}
 	}
-	log.Println("stoped")
+	logger.Log.Info("stoped")
 }

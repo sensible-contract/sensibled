@@ -70,14 +70,14 @@ func (bf *BlockData) FetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
 	buf := [4]byte{}
 	_, err = bf.CurrentFile.Read(buf[:])
 	if err != nil {
-		// log.Printf("read failed: %v", err)
+		// logger.Log.Info("read failed", zap.Error(err))
 		return
 	}
 	bf.Offset += 4
 
 	if !bytes.Equal(buf[:], bf.Magic) {
 		err = errors.New("Bad magic")
-		// log.Printf("read blk%d[%d] failed: %v, %v != %v", bf.CurrentId, bf.Offset, err, buf[:], bf.Magic[:])
+		// logger.Log.Info("read blk%d[%d] failed: %v, %v != %v", bf.CurrentId, bf.Offset, err, buf[:], bf.Magic[:])
 		return
 	}
 

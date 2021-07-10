@@ -11,22 +11,17 @@ import (
 )
 
 func LoadFromGobFile(fname string, data map[string]*model.Block) {
+	logger.Log.Info("loading gob...")
 	gobFile, err := os.Open(fname)
 	if err != nil {
-		logger.Log.Info("load gob",
-			zap.String("log", "open gob gob failed"),
-			zap.Error(err),
-		)
+		logger.Log.Error("open gob gob failed", zap.Error(err))
 		return
 	}
 	gobDec := gob.NewDecoder(gobFile)
-	logger.Log.Info("loading gob")
 
 	cacheData := []model.BlockCache{}
 	if err := gobDec.Decode(&cacheData); err != nil {
-		logger.Log.Info("load gob failed",
-			zap.Error(err),
-		)
+		logger.Log.Info("load gob failed", zap.Error(err))
 	}
 	for _, blk := range cacheData {
 		// if blk.FileIdx > 3030 {

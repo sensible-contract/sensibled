@@ -3,8 +3,10 @@ package store
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"satoblock/loader/clickhouse"
+	"satoblock/logger"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -43,56 +45,56 @@ func prepareSyncCk(isFull bool) bool {
 	var err error
 	syncTxBlk, err = clickhouse.CK.Begin()
 	if err != nil {
-		log.Println("sync-begin-blk", err.Error())
+		logger.Log.Error("sync-begin-blk", zap.Error(err))
 		return false
 	}
 	SyncStmtBlk, err = syncTxBlk.Prepare(sqlBlk)
 	if err != nil {
-		log.Println("sync-prepare-blk", err.Error())
+		logger.Log.Error("sync-prepare-blk", zap.Error(err))
 		return false
 	}
 
 	syncTxBlkCodeHash, err = clickhouse.CK.Begin()
 	if err != nil {
-		log.Println("sync-begin-blk-code", err.Error())
+		logger.Log.Error("sync-begin-blk-code", zap.Error(err))
 		return false
 	}
 	SyncStmtBlkCodeHash, err = syncTxBlkCodeHash.Prepare(sqlBlkCodeHash)
 	if err != nil {
-		log.Println("sync-prepare-blk-code", err.Error())
+		logger.Log.Error("sync-prepare-blk-code", zap.Error(err))
 		return false
 	}
 
 	syncTxTx, err = clickhouse.CK.Begin()
 	if err != nil {
-		log.Println("sync-begin-tx", err.Error())
+		logger.Log.Error("sync-begin-tx", zap.Error(err))
 		return false
 	}
 	SyncStmtTx, err = syncTxTx.Prepare(sqlTx)
 	if err != nil {
-		log.Println("sync-prepare-tx", err.Error())
+		logger.Log.Error("sync-prepare-tx", zap.Error(err))
 		return false
 	}
 
 	syncTxTxOut, err = clickhouse.CK.Begin()
 	if err != nil {
-		log.Println("sync-begin-txout", err.Error())
+		logger.Log.Error("sync-begin-txout", zap.Error(err))
 		return false
 	}
 	SyncStmtTxOut, err = syncTxTxOut.Prepare(sqlTxOut)
 	if err != nil {
-		log.Println("sync-prepare-txout", err.Error())
+		logger.Log.Error("sync-prepare-txout", zap.Error(err))
 		return false
 	}
 
 	syncTxTxIn, err = clickhouse.CK.Begin()
 	if err != nil {
-		log.Println("sync-begin-txinfull", err.Error())
+		logger.Log.Error("sync-begin-txinfull", zap.Error(err))
 		return false
 	}
 	SyncStmtTxIn, err = syncTxTxIn.Prepare(sqlTxIn)
 	if err != nil {
-		log.Println("sync-prepare-txinfull", err.Error())
+		logger.Log.Error("sync-prepare-txinfull", zap.Error(err))
 		return false
 	}
 
@@ -112,17 +114,17 @@ func CommitSyncCk() {
 	defer SyncStmtTx.Close()
 	defer SyncStmtTxOut.Close()
 
-	log.Println("sync-commit-blk...")
+	logger.Log.Info("sync-commit-blk...")
 	if err := syncTxBlk.Commit(); err != nil {
-		log.Println("sync-commit-blk", err.Error())
+		logger.Log.Error("sync-commit-blk", zap.Error(err))
 	}
-	log.Println("sync-commit-tx...")
+	logger.Log.Info("sync-commit-tx...")
 	if err := syncTxTx.Commit(); err != nil {
-		log.Println("sync-commit-tx", err.Error())
+		logger.Log.Error("sync-commit-tx", zap.Error(err))
 	}
-	log.Println("sync-commit-txout...")
+	logger.Log.Info("sync-commit-txout...")
 	if err := syncTxTxOut.Commit(); err != nil {
-		log.Println("sync-commit-txout", err.Error())
+		logger.Log.Error("sync-commit-txout", zap.Error(err))
 	}
 }
 
@@ -133,9 +135,9 @@ func CommitFullSyncCk(needCommit bool) {
 		syncTxTxIn.Rollback()
 		return
 	}
-	log.Println("sync-commit-txin...")
+	logger.Log.Info("sync-commit-txin...")
 	if err := syncTxTxIn.Commit(); err != nil {
-		log.Println("sync-commit-txin", err.Error())
+		logger.Log.Error("sync-commit-txin", zap.Error(err))
 	}
 }
 
@@ -148,6 +150,6 @@ func CommitCodeHashSyncCk(needCommit bool) {
 	}
 
 	if err := syncTxBlkCodeHash.Commit(); err != nil {
-		log.Println("sync-commit-blk-code", err.Error())
+		logger.Log.Error("sync-commit-blk-code", zap.Error(err))
 	}
 }

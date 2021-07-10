@@ -3,12 +3,13 @@ package serial
 import (
 	"context"
 	"fmt"
-	"log"
+	"satoblock/logger"
 	"satoblock/model"
 
 	redis "github.com/go-redis/redis/v8"
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 var (
@@ -61,10 +62,10 @@ func PublishBlockSyncFinished() {
 }
 
 func FlushdbInRedis() {
-	log.Println("FlushdbInRedis start")
+	logger.Log.Info("FlushdbInRedis start")
 	rdb.FlushDB(ctx)
 	rdbBlock.FlushDB(ctx)
-	log.Println("FlushdbInRedis finish")
+	logger.Log.Info("FlushdbInRedis finish")
 }
 
 // ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用
@@ -140,7 +141,9 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 
 // UpdateUtxoInRedis 批量更新redis utxo
 func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) (err error) {
-	log.Printf("UpdateUtxoInRedis: +%d, -%d", len(utxoToRestore), len(utxoToRemove))
+	logger.Log.Info("UpdateUtxoInRedis",
+		zap.Int("add", len(utxoToRestore)),
+		zap.Int("del", len(utxoToRemove)))
 	pipe := rdb.Pipeline()
 	pipeBlock := rdbBlock.Pipeline()
 	for key, data := range utxoToRestore {

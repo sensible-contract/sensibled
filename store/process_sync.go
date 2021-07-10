@@ -1,9 +1,11 @@
 package store
 
 import (
-	"log"
 	"satoblock/loader/clickhouse"
+	"satoblock/logger"
 	"strconv"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -355,17 +357,17 @@ SETTINGS storage_policy = 'prefer_nvme_policy'`,
 )
 
 func CreateAllSyncCk() bool {
-	log.Println("create sql: all")
+	logger.Log.Info("create sql: all")
 	return ProcessSyncCk(createAllSQLs)
 }
 
 func ProcessAllSyncCk() bool {
-	log.Println("sync sql: all")
+	logger.Log.Info("sync sql: all")
 	return ProcessSyncCk(processAllSQLs)
 }
 
 func RemoveOrphanPartSyncCk(startBlockHeight int) bool {
-	log.Println("remove sql: part")
+	logger.Log.Info("remove sql: part")
 	removeOrphanPartSQLsWithHeight := []string{}
 	for _, psql := range removeOrphanPartSQLs {
 		removeOrphanPartSQLsWithHeight = append(removeOrphanPartSQLsWithHeight,
@@ -376,12 +378,12 @@ func RemoveOrphanPartSyncCk(startBlockHeight int) bool {
 }
 
 func CreatePartSyncCk() bool {
-	log.Println("create sql: part")
+	logger.Log.Info("create sql: part")
 	return ProcessSyncCk(createPartSQLs)
 }
 
 func ProcessPartSyncCk() bool {
-	log.Println("sync sql: part")
+	logger.Log.Info("sync sql: part")
 	if !ProcessSyncCk(processPartSQLs) {
 		return false
 	}
@@ -397,9 +399,10 @@ func ProcessSyncCk(processSQLs []string) bool {
 		if partLen > 128 {
 			partLen = 128
 		}
-		// log.Println("sync exec:", psql[:partLen])
+		// logger.Log.Info("sync exec:", psql[:partLen])
 		if _, err := clickhouse.CK.Exec(psql); err != nil {
-			log.Println("sync exec err", psql[:partLen], err.Error())
+			logger.Log.Info("sync exec err",
+				zap.String("sql", psql[:partLen]), zap.Error(err))
 			return false
 		}
 	}

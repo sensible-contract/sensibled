@@ -2,30 +2,31 @@ package loader
 
 import (
 	"encoding/hex"
-	"log"
+	"satoblock/logger"
 	"satoblock/utils"
 
 	"github.com/zeromq/goczmq"
+	"go.uber.org/zap"
 )
 
 func ZmqNotify(endpoint string, block chan string) {
+	logger.Log.Info("ZeroMQ started to listen for blocks")
 	subscriber, err := goczmq.NewSub(endpoint, "hashblock")
-	defer subscriber.Destroy()
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Fatal("ZMQ connect failed", zap.Error(err))
+		return
 	}
-
-	log.Printf("ZeroMQ started to listen for blocks")
+	defer subscriber.Destroy()
 
 	for {
 		msg, _, err := subscriber.RecvFrame()
 		if err != nil {
-			log.Printf("Error ZMQ RecFrame: %s", err)
+			logger.Log.Info("Error ZMQ RecFrame", zap.Error(err))
 		}
 
 		if len(msg) == 32 {
 			block <- utils.HashString(msg)
 		}
-		log.Printf("received '%s'", hex.EncodeToString(msg))
+		logger.Log.Info("received", zap.String("blkid", hex.EncodeToString(msg)))
 	}
 }

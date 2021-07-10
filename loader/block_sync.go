@@ -5,11 +5,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"satoblock/loader/clickhouse"
+	"satoblock/logger"
 	"satoblock/model"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
+	"go.uber.org/zap"
 )
 
 func blockResultSRF(rows *sql.Rows) (interface{}, error) {
@@ -26,7 +27,7 @@ func GetLatestBlocks() (blksRsp []*model.BlockDO, err error) {
 
 	blksRet, err := clickhouse.ScanAll(psql, blockResultSRF)
 	if err != nil {
-		log.Printf("query blk failed: %v", err)
+		logger.Log.Info("query blk failed", zap.Error(err))
 		return nil, err
 	}
 	if blksRet == nil {
@@ -75,7 +76,7 @@ SELECT utxid, vout, address, codehash, genesis, code_type, data_value, satoshi, 
 func getUtxoBySql(psql string) (utxosMapRsp map[string]*model.TxoData, err error) {
 	utxosRet, err := clickhouse.ScanAll(psql, utxoResultSRF)
 	if err != nil {
-		log.Printf("query blk failed: %v", err)
+		logger.Log.Info("query blk failed", zap.Error(err))
 		return nil, err
 	}
 	if utxosRet == nil {

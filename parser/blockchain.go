@@ -3,14 +3,16 @@ package parser
 import (
 	"bytes"
 	"encoding/hex"
-	"log"
 	"satoblock/loader"
+	"satoblock/logger"
 	"satoblock/model"
 	"satoblock/task"
 	serialTask "satoblock/task/serial"
 	utilsTask "satoblock/task/utils"
 	"satoblock/utils"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 type Blockchain struct {
@@ -80,7 +82,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 		// 获取所有Block字节
 		rawblock, err := bc.BlockData.GetRawBlock()
 		if err != nil {
-			log.Printf("get block error: %v", err)
+			logger.Log.Error("get block error", zap.Error(err))
 			break
 		}
 		if len(rawblock) < 80 {
@@ -90,9 +92,12 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 		blkId := block.Hash
 		InitBlock(block, rawblock)
 		if !bytes.Equal(blkId, block.Hash) {
-			log.Printf("block %d(%s) not match raw(%s), file.%d[%d]",
-				nextBlockHeight, utils.HashString(blkId), block.HashHex,
-				block.FileIdx, block.FileOffset)
+			logger.Log.Info("blkId not match hash(rawblk)",
+				zap.Int("height", nextBlockHeight),
+				zap.String("blkId", utils.HashString(blkId)),
+				zap.String("blkHash", block.HashHex),
+				zap.Int("fileIdx", block.FileIdx),
+				zap.Int("fileOffset", block.FileOffset))
 			break
 		}
 
@@ -126,7 +131,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 	wg.Wait()
 
 	close(blocksReady)
-	log.Printf("produce ok")
+	logger.Log.Info("produce ok")
 }
 
 // ParseLongestChainBlock 按顺序消费解码后的区块
@@ -188,7 +193,7 @@ func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) {
 		}(block)
 	}
 	wg.Wait()
-	log.Printf("consume ok")
+	logger.Log.Info("consume ok")
 }
 
 // InitLongestChainHeader 初始化block header
@@ -230,7 +235,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 		rawblock, err = bc.BlockData.GetRawBlockHeader()
 
 		if err != nil {
-			// log.Printf("no more block header: %v", err)
+			// logger.Log.Info("no more block header", zap.Error(err))
 			break
 		}
 		if len(rawblock) < 80 {
@@ -262,7 +267,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 
 // SetBlockHeight 设置所有区块的高度，包括分支链的高度
 func (bc *Blockchain) SetBlockHeight() {
-	// log.Printf("plain blocks count: %d", len(bc.Blocks))
+	// logger.Log.Info("plain blocks count: %d", len(bc.Blocks))
 	// 初始化
 	for _, block := range bc.Blocks {
 		block.Height = 0
@@ -327,8 +332,8 @@ func (bc *Blockchain) SelectLongestChain() {
 			break
 		}
 	}
-	// log.Printf("genesis block: %s", bc.GenesisBlock.HashHex)
-	// log.Printf("chain blocks count: %d", len(bc.BlocksOfChainById))
+	// logger.Log.Info("genesis block: %s", bc.GenesisBlock.HashHex)
+	// logger.Log.Info("chain blocks count: %d", len(bc.BlocksOfChainById))
 }
 
 // GetBlockSyncCommonBlockHeight 获取区块同步起始的共同区块高度
@@ -347,8 +352,10 @@ func (bc *Blockchain) GetBlockSyncCommonBlockHeight(endBlockHeight int) (heigth,
 		blockIdHex := utils.HashString(block.BlockId)
 		if _, ok := bc.BlocksOfChainById[blockIdHex]; ok {
 			newblock = endBlockHeight - int(block.Height) - 1
-			log.Printf("shoud sync block after height: %d, orphan: %d, new: %d",
-				block.Height, orphanCount, newblock)
+			logger.Log.Info("shoud sync block",
+				zap.Uint32("lastHeight", block.Height),
+				zap.Int("nOrphan", orphanCount),
+				zap.Int("nBlkNew", newblock))
 			return int(block.Height), orphanCount, newblock
 		}
 		orphanCount++
