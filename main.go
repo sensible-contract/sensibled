@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"log"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
 	"runtime"
 	"satoblock/loader"
 	"satoblock/parser"
 	"satoblock/store"
 	"satoblock/task/serial"
+	"syscall"
 	"time"
 
 	"github.com/spf13/viper"
@@ -46,20 +49,15 @@ func init() {
 }
 
 func main() {
-	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic)
-	if err != nil {
-		log.Printf("init chain error: %v", err)
-		return
-	}
-
-	newBlockNotify := make(chan string)
 	// 监听新块确认
+	newBlockNotify := make(chan string)
 	go func() {
 		// 启动
 		newBlockNotify <- ""
 		loader.ZmqNotify(zmqEndpoint, newBlockNotify)
 	}()
 
+	// GC
 	go func() {
 		for {
 			runtime.GC()
@@ -67,11 +65,39 @@ func main() {
 		}
 	}()
 
+	//创建监听退出
+	var needStop bool
+	sigCtrl := make(chan os.Signal)
+	//监听指定信号 ctrl+c kill
+	signal.Notify(sigCtrl, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		for s := range sigCtrl {
+			switch s {
+			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
+				log.Println("program exit...", s)
+				needStop = true
+				newBlockNotify <- ""
+			default:
+				fmt.Println("other signal", s)
+			}
+		}
+	}()
+
+	// 初始化区块
+	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic)
+	if err != nil {
+		log.Printf("init chain error: %v", err)
+		return
+	}
 	// 扫描区块
 	for {
 		// 等待新块出现，再重新追加扫描
 		log.Println("waiting new block...")
 		<-newBlockNotify
+		if needStop {
+			// 结束
+			break
+		}
 
 		// 初始化载入block header
 		blockchain.InitLongestChainHeader()
@@ -143,9 +169,10 @@ func main() {
 		serial.PublishBlockSyncFinished()
 
 		// 扫描完毕
-		if endBlockHeight > 0 {
+		if endBlockHeight > 0 || needStop {
 			// 结束
-			return
+			break
 		}
 	}
+	log.Println("stoped")
 }

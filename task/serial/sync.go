@@ -43,7 +43,6 @@ func SyncBlock(block *model.Block) {
 			string(block.Hash),
 		); err != nil {
 			logger.Log.Info("sync-block-codehash-err",
-				zap.String("sync", "block codehash err"),
 				zap.String("blkid", block.HashHex),
 				zap.String("err", err.Error()),
 			)
@@ -65,7 +64,6 @@ func SyncBlock(block *model.Block) {
 		block.Size,
 	); err != nil {
 		logger.Log.Info("sync-block-err",
-			zap.String("sync", "block err"),
 			zap.String("blkid", block.HashHex),
 			zap.String("err", err.Error()),
 		)
@@ -89,7 +87,6 @@ func SyncBlockTx(block *model.Block) {
 			uint64(txIdx),
 		); err != nil {
 			logger.Log.Info("sync-tx-err",
-				zap.String("sync", "tx err"),
 				zap.String("txid", tx.HashHex),
 				zap.String("err", err.Error()),
 			)
