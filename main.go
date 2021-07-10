@@ -110,8 +110,6 @@ func main() {
 			if startBlockHeight < 0 {
 				// 从clickhouse读取现有同步区块，判断同步位置
 				commonHeigth, orphanCount, newblock := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
-				// 从公有块高度（COMMON_HEIGHT）下一个开始扫描
-				startBlockHeight = commonHeigth + 1
 				if orphanCount > 0 {
 					needRemove = true
 				}
@@ -119,6 +117,8 @@ func main() {
 					// 无新区块，开始等待
 					continue
 				}
+				// 从公有块高度（COMMON_HEIGHT）下一个开始扫描
+				startBlockHeight = commonHeigth + 1
 			} else {
 				needRemove = true
 			}

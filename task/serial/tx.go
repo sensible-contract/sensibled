@@ -144,6 +144,9 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 	logger.Log.Info("UpdateUtxoInRedis",
 		zap.Int("add", len(utxoToRestore)),
 		zap.Int("del", len(utxoToRemove)))
+	if len(utxoToRestore) == 0 && len(utxoToRemove) == 0 {
+		return
+	}
 	pipe := rdb.Pipeline()
 	pipeBlock := rdbBlock.Pipeline()
 	for key, data := range utxoToRestore {
