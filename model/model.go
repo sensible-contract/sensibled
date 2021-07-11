@@ -125,6 +125,7 @@ type Block struct {
 }
 
 type BlockCache struct {
+	Height     int
 	Hash       []byte // 32 bytes
 	FileIdx    int
 	FileOffset int

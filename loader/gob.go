@@ -43,6 +43,7 @@ func DumpToGobFile(fname string, data map[string]*model.Block) {
 	cacheData := []model.BlockCache{}
 	for _, blk := range data {
 		cacheData = append(cacheData, model.BlockCache{
+			Height:     blk.Height,
 			Hash:       blk.Hash,
 			FileIdx:    blk.FileIdx,
 			FileOffset: blk.FileOffset,

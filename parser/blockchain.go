@@ -307,6 +307,9 @@ func (bc *Blockchain) SetBlockHeight() {
 			bc.MaxBlock = currBlock
 		}
 	}
+	for _, block := range bc.Blocks {
+		block.Height -= 1
+	}
 }
 
 // SelectLongestChain 提取最长主链
@@ -316,7 +319,6 @@ func (bc *Blockchain) SelectLongestChain() {
 	block := bc.MaxBlock
 	for {
 		// 由于之前的高度是从1开始，现在统一减一
-		block.Height -= 1
 		bc.BlocksOfChainById[block.HashHex] = block
 		bc.BlocksOfChainByHeight[block.Height] = block
 		// 设置genesis
@@ -327,8 +329,11 @@ func (bc *Blockchain) SelectLongestChain() {
 			break
 		}
 	}
-	// logger.Log.Info("genesis block: %s", bc.GenesisBlock.HashHex)
-	// logger.Log.Info("chain blocks count: %d", len(bc.BlocksOfChainById))
+	logger.Log.Info("chain",
+		zap.String("genesis", bc.GenesisBlock.HashHex),
+		zap.Int("length", len(bc.BlocksOfChainById)),
+		zap.Int("allBlks", len(bc.Blocks)),
+	)
 }
 
 // GetBlockSyncCommonBlockHeight 获取区块同步起始的共同区块高度

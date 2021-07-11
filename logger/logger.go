@@ -11,7 +11,7 @@ var (
 
 func init() {
 	enc := zap.NewProductionEncoderConfig()
-	enc.EncodeTime = zapcore.RFC3339NanoTimeEncoder
+	enc.EncodeTime = zapcore.RFC3339TimeEncoder
 
 	Log, _ = zap.Config{
 		Encoding:          "json",
