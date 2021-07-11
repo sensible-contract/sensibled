@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS blk_height (
 ) engine=MergeTree()
 ORDER BY height
 PARTITION BY intDiv(height, 2100)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		"DROP TABLE IF EXISTS blk",
 		`
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS blk (
 ) engine=MergeTree()
 ORDER BY blkid
 PARTITION BY intDiv(height, 2100)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		"DROP TABLE IF EXISTS blk_codehash_height",
 		`
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS blk_codehash_height (
 ) engine=MergeTree()
 ORDER BY (height, codehash, genesis)
 PARTITION BY intDiv(height, 2100)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		// tx list
 		// ================================================================
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS blktx_height (
 ) engine=MergeTree()
 ORDER BY (height, txid)
 PARTITION BY intDiv(height, 2100)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		// txout
 		// ================================================================
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS txout (
 ) engine=MergeTree()
 ORDER BY (utxid, vout)
 PARTITION BY intDiv(height, 2100)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		// txin
 		// ================================================================
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS txin_spent (
 ) engine=MergeTree()
 ORDER BY (utxid, vout)
 PARTITION BY intDiv(height, 2100)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		// 交易输入列表，分区内按交易txid+idx排序、索引，单条记录包括输入的各种细节。仅按txid查询时将遍历所有分区（慢）
 		// 查询需附带height。可配合tx_height表查询
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS txin (
 ) engine=MergeTree()
 ORDER BY (txid, idx)
 PARTITION BY intDiv(height, 2100)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		// ================================================================
 		// tx在哪个高度被打包，按txid首字节分区，分区内按交易txid排序、索引。按txid查询时可确定分区（快）
@@ -172,7 +172,7 @@ CREATE TABLE IF NOT EXISTS tx_height (
 ) engine=MergeTree()
 ORDER BY txid
 PARTITION BY substring(txid, 1, 1)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		// txout在哪个高度被花费，按txid首字节分区，分区内按交易txid+idx排序、索引。按txid+idx查询时可确定分区 (快)
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
@@ -186,7 +186,7 @@ CREATE TABLE IF NOT EXISTS txout_spent_height (
 ) engine=MergeTree()
 ORDER BY (utxid, vout)
 PARTITION BY substring(utxid, 1, 1)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		// address在哪些高度的tx中出现，按address首字节分区，分区内按address+genesis+height排序，按address索引。按address查询时可确定分区 (快)
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS txin_address_height (
 PRIMARY KEY address
 ORDER BY (address, codehash, genesis, height)
 PARTITION BY substring(address, 1, 1)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		// genesis在哪些高度的tx中出现，按genesis首字节分区，分区内按genesis+address+height排序，按genesis索引。按genesis查询时可确定分区 (快)
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
@@ -222,7 +222,7 @@ CREATE TABLE IF NOT EXISTS txin_genesis_height (
 PRIMARY KEY (codehash, genesis)
 ORDER BY (codehash, genesis, address, height)
 PARTITION BY substring(codehash, 1, 1)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		// address在哪些高度的tx中出现，按address首字节分区，分区内按address+genesis+height排序，按address索引。按address查询时可确定分区 (快)
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
@@ -240,7 +240,7 @@ CREATE TABLE IF NOT EXISTS txout_address_height (
 PRIMARY KEY address
 ORDER BY (address, codehash, genesis, height)
 PARTITION BY substring(address, 1, 1)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 
 		// genesis在哪些高度的tx中出现，按genesis首字节分区，分区内按genesis+address+height排序，按genesis索引。按genesis查询时可确定分区 (快)
 		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
@@ -258,7 +258,7 @@ CREATE TABLE IF NOT EXISTS txout_genesis_height (
 PRIMARY KEY codehash
 ORDER BY (codehash, genesis, address, height)
 PARTITION BY substring(codehash, 1, 1)
-SETTINGS storage_policy = 'prefer_nvme_policy'`,
+`,
 	}
 
 	processAllSQLs = []string{
