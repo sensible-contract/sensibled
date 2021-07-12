@@ -22,8 +22,8 @@ func blockResultSRF(rows *sql.Rows) (interface{}, error) {
 	return &ret, nil
 }
 
-func GetLatestBlocks() (blksRsp []*model.BlockDO, err error) {
-	psql := "SELECT height, blkid FROM blk_height ORDER BY height DESC LIMIT 1000"
+func GetLatestBlocksFromDB(count int) (blksRsp []*model.BlockDO, err error) {
+	psql := fmt.Sprintf("SELECT height, blkid FROM blk_height ORDER BY height DESC LIMIT %d", count)
 
 	blksRet, err := clickhouse.ScanAll(psql, blockResultSRF)
 	if err != nil {

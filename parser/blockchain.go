@@ -338,9 +338,9 @@ func (bc *Blockchain) SelectLongestChain() {
 
 // GetBlockSyncCommonBlockHeight 获取区块同步起始的共同区块高度
 func (bc *Blockchain) GetBlockSyncCommonBlockHeight(endBlockHeight int) (heigth, orphanCount, newblock int) {
-	blocks, err := loader.GetLatestBlocks()
+	blocks, err := loader.GetLatestBlocksFromDB(1000)
 	if err != nil {
-		panic("sync check, but failed.")
+		panic("sync check by GetLatestBlocksFromDB, but failed.")
 	}
 
 	if endBlockHeight < 0 || endBlockHeight > len(bc.BlocksOfChainById) {
