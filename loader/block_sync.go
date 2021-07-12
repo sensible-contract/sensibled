@@ -22,19 +22,19 @@ func blockResultSRF(rows *sql.Rows) (interface{}, error) {
 	return &ret, nil
 }
 
-func GetLatestBlocksFromDB(count int) (blksRsp []*model.BlockDO, err error) {
-	psql := fmt.Sprintf("SELECT height, blkid FROM blk_height ORDER BY height DESC LIMIT %d", count)
+func GetLatestBlockFromDB() (blkRsp *model.BlockDO, err error) {
+	psql := "SELECT height, blkid FROM blk_height ORDER BY height DESC LIMIT 1"
 
-	blksRet, err := clickhouse.ScanAll(psql, blockResultSRF)
+	blkRet, err := clickhouse.ScanOne(psql, blockResultSRF)
 	if err != nil {
 		logger.Log.Info("query blk failed", zap.Error(err))
 		return nil, err
 	}
-	if blksRet == nil {
+	if blkRet == nil {
 		return nil, errors.New("not exist")
 	}
-	blksRsp = blksRet.([]*model.BlockDO)
-	return blksRsp, nil
+	blkRsp = blkRet.(*model.BlockDO)
+	return blkRsp, nil
 }
 
 func utxoResultSRF(rows *sql.Rows) (interface{}, error) {

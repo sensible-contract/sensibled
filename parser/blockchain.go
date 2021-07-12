@@ -338,27 +338,39 @@ func (bc *Blockchain) SelectLongestChain() {
 
 // GetBlockSyncCommonBlockHeight 获取区块同步起始的共同区块高度
 func (bc *Blockchain) GetBlockSyncCommonBlockHeight(endBlockHeight int) (heigth, orphanCount, newblock int) {
-	blocks, err := loader.GetLatestBlocksFromDB(1000)
+	lastBlock, err := loader.GetLatestBlockFromDB()
 	if err != nil {
 		panic("sync check by GetLatestBlocksFromDB, but failed.")
 	}
+	blockIdHex := utils.HashString(lastBlock.BlockId)
 
 	if endBlockHeight < 0 || endBlockHeight > len(bc.BlocksOfChainById) {
 		endBlockHeight = len(bc.BlocksOfChainById)
 	}
 
 	orphanCount = 0
-	for _, block := range blocks {
-		blockIdHex := utils.HashString(block.BlockId)
+	for {
+		block, ok := bc.Blocks[blockIdHex]
+		if !ok {
+			logger.Log.Error("blockId not found", zap.String("blkId", blockIdHex))
+			break
+		}
+
 		if _, ok := bc.BlocksOfChainById[blockIdHex]; ok {
 			newblock = endBlockHeight - int(block.Height) - 1
 			logger.Log.Info("shoud sync block",
-				zap.Uint32("lastHeight", block.Height),
+				zap.Int("lastHeight", block.Height),
 				zap.Int("nOrphan", orphanCount),
 				zap.Int("nBlkNew", newblock))
-			return int(block.Height), orphanCount, newblock
+			return block.Height, orphanCount, newblock
 		}
+
 		orphanCount++
+		logger.Log.Info("orphan block happen",
+			zap.String("blkId", blockIdHex),
+			zap.Int("orphan", orphanCount),
+		)
+		blockIdHex = block.ParentHex
 	}
 	panic("sync check, but found more then 1000 orphan blocks.")
 }
