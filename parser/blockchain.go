@@ -16,6 +16,7 @@ import (
 )
 
 type Blockchain struct {
+	NeedStop              bool
 	Blocks                map[string]*model.Block // 所有区块
 	BlocksOfChainById     map[string]*model.Block // 按blkid主链区块
 	BlocksOfChainByHeight map[int]*model.Block    // 按height主链区块
@@ -36,7 +37,7 @@ func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
 	bc.Blocks = make(map[string]*model.Block, 0)
 	bc.ParsedBlocks = make(map[string]bool, 0)
 
-	loader.LoadFromGobFile("./headers-list.gob", bc.Blocks)
+	loader.LoadFromGobFile("./cmd/headers-list.gob", bc.Blocks)
 
 	bc.BlockData, err = loader.NewBlockData(path, magic)
 	if err != nil {
@@ -224,11 +225,13 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 	parsers := make(chan struct{}, 30)
 	var wg sync.WaitGroup
 	for idx := 0; ; idx++ {
+		if bc.NeedStop {
+			break
+		}
 		// 获取所有Block Header字节，不要求有序返回或属于主链
 		var rawblock []byte
 		var err error
 		rawblock, err = bc.BlockData.GetRawBlockHeader()
-
 		if err != nil {
 			// logger.Log.Info("no more block header", zap.Error(err))
 			break

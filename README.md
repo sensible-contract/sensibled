@@ -30,11 +30,20 @@ redis配置，主要包括address、database等。
 
 需要占用2个database号，database_block存放UTXO原始script，database存放UTXO集合key。需要和satomempool配置保持一致。
 
-## 运行方式
+## Docker
 
-首次运行前，需要先在clickhouse中创建db，无需创建table。目前table创建代码[store/process_sync.go](store/process_sync.go)写死了表的storage_policy，如不需要可以自行删除。
+使用docker-compose可以比较方便运行satoblock。首先设置好db/redis/node配置，然后运行初始化：
 
-    SETTINGS storage_policy = 'prefer_nvme_policy'
+	$ docker-compose -f docker-compose-init.yaml up -d
+
+当运行完毕之后(>6h)，可运行正常同步：
+
+	$ docker-compose up -d
+
+
+## 运行逻辑
+
+首次运行前，需要先在clickhouse中创建db，无需创建table。
 
 由于一次性全量同步将占用大量内存(>100GB)，以至于无法在普通机器成功执行。我们可采用分批执行、分段同步所有区块。
 
@@ -46,7 +55,7 @@ redis配置，主要包括address、database等。
 
     $ ./satoblock -end 200000
 
-如此一直执行到最近的区块（650000）：
+如此一直执行到最近的区块（650000），如果内存较小，可适当减少每次同步的区块数量：
 
     $ ./satoblock -end 300000
     $ ./satoblock -end 350000

@@ -66,8 +66,14 @@ func main() {
 		}
 	}()
 
+	// 初始化区块
+	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic)
+	if err != nil {
+		logger.Log.Error("init chain error", zap.Error(err))
+		return
+	}
+
 	//创建监听退出
-	var needStop bool
 	sigCtrl := make(chan os.Signal)
 	//监听指定信号 ctrl+c kill
 	signal.Notify(sigCtrl, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -76,7 +82,7 @@ func main() {
 			switch s {
 			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
 				logger.Log.Info("program exit...")
-				needStop = true
+				blockchain.NeedStop = true
 				newBlockNotify <- ""
 			default:
 				fmt.Println("other signal", s)
@@ -85,24 +91,19 @@ func main() {
 		}
 	}()
 
-	// 初始化区块
-	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic)
-	if err != nil {
-		logger.Log.Error("init chain error", zap.Error(err))
-		return
-	}
 	// 扫描区块
 	for {
 		// 等待新块出现，再重新追加扫描
 		logger.Log.Info("waiting new block...")
 		<-newBlockNotify
-		if needStop {
-			// 结束
-			break
-		}
 
 		// 初始化载入block header
 		blockchain.InitLongestChainHeader()
+
+		if blockchain.NeedStop {
+			// 结束
+			break
+		}
 
 		if !isFull {
 			// 现有追加扫描
@@ -171,12 +172,16 @@ func main() {
 		serial.PublishBlockSyncFinished()
 
 		// 扫描完毕
-		if endBlockHeight > 0 || needStop {
+		if endBlockHeight > 0 || blockchain.NeedStop {
 			// 结束
 			break
 		}
 	}
 
-	loader.DumpToGobFile("./headers-list.gob", blockchain.Blocks)
+	loader.DumpToGobFile("./cmd/headers-list.gob", blockchain.Blocks)
 	logger.Log.Info("stoped")
+
+	if blockchain.NeedStop {
+		os.Exit(1)
+	}
 }
