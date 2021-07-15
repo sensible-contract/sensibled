@@ -74,6 +74,9 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 		endBlockHeight = len(bc.BlocksOfChainByHeight)
 	}
 	for nextBlockHeight := startBlockHeight; nextBlockHeight < endBlockHeight; nextBlockHeight++ {
+		if bc.NeedStop {
+			break
+		}
 		block, ok := bc.BlocksOfChainByHeight[nextBlockHeight]
 		if !ok {
 			// 若不是主链区块则退出

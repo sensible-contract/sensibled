@@ -40,6 +40,10 @@ redis配置，主要包括address、database等。
 
 	$ docker-compose up -d
 
+注意不要用docker-compose stop，因为停止超时会强制杀进程。要优雅停止请执行：
+
+	$ docker-compose kill -s SIGINT
+
 
 ## 运行逻辑
 
@@ -72,4 +76,4 @@ redis配置，主要包括address、database等。
 
 程序日志将直接输出到终端，可使用nohup或其他技术将程序放置到后台运行。
 
-satoblock服务在等待新区块到来时可以重启，同步过程中不可随意重启。
+satoblock服务在等待新区块到来时可以重启，同步过程中不可随意重启(停止需要发送`SIGINT`触发)。
