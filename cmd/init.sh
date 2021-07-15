@@ -19,8 +19,9 @@ set -v on
 child=$!
 wait "$child"
 
-# sync by small step
-for BLOCK_HEIGHT in "200000 300000 350000 400000 450000 500000 550000 600000 650000 690679"; do
+BLOCK_HEIGHT_STEPS="200000 300000 350000 400000 450000 500000 550000 600000 650000 690679"
+for BLOCK_HEIGHT in $BLOCK_HEIGHT_STEPS; do
+    echo $BLOCK_HEIGHT
     ./satoblock -end $BLOCK_HEIGHT &
     child=$!
     wait "$child"
