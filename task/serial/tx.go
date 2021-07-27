@@ -120,9 +120,16 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 		d.GenesisId = txo.GenesisId
 		d.SensibleId = txo.SensibleId
 		d.AddressPkh = txo.AddressPkh
+
+		// nft
+		d.MetaTxId = txo.MetaTxId
+		d.MetaOutputIndex = txo.MetaOutputIndex
+		d.TokenIndex = txo.TokenIndex
+		d.TokenSupply = txo.TokenSupply
+
+		// ft
 		d.Name = txo.Name
 		d.Symbol = txo.Symbol
-		d.TokenIndex = txo.TokenIndex
 		d.Amount = txo.Amount
 		d.Decimal = txo.Decimal
 
@@ -185,6 +192,17 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 
 		// redis有序genesis utxo数据添加
 		if data.CodeType == scriptDecoder.CodeType_NFT {
+			if !isReorg {
+				// skip if reorg
+				// nft:info
+				pipe.HSet(ctx, "ni"+string(data.CodeHash)+string(data.GenesisId),
+					"metatxid", data.MetaTxId,
+					"metavout", data.MetaOutputIndex,
+					"supply", data.TokenSupply,
+					"sensibleid", data.SensibleId,
+				)
+			}
+
 			nftId := float64(data.TokenIndex)
 			// nft:utxo
 			if err := pipe.ZAdd(ctx, "nu"+string(data.CodeHash)+string(data.GenesisId)+string(data.AddressPkh),
