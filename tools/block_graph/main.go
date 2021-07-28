@@ -1,4 +1,4 @@
-// go build -v tools/block_graph.go
+// go build -v tools/block_graph/main.go -o block_graph
 // ./block_graph -end 695441  > tools/branch.dot
 // dot branch.dot -T svg -o branch.svg
 
