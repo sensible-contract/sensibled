@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
+	"runtime/trace"
 	"satoblock/loader"
 	"satoblock/logger"
 	"satoblock/parser"
@@ -26,11 +27,18 @@ var (
 	blocksPath       string
 	blockMagic       string
 	isFull           bool
+
+	cpuProfile   string
+	memProfile   string
+	traceProfile string
 )
 
 func init() {
-	flag.BoolVar(&isFull, "full", false, "start from genesis")
+	flag.StringVar(&cpuProfile, "cpu", "", "write cpu profile to file")
+	flag.StringVar(&memProfile, "mem", "", "write mem profile to file")
+	flag.StringVar(&traceProfile, "trace", "", "write trace profile to file")
 
+	flag.BoolVar(&isFull, "full", false, "start from genesis")
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
 	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
 	flag.Parse()
@@ -50,6 +58,26 @@ func init() {
 }
 
 func main() {
+	//采样cpu运行状态
+	if cpuProfile != "" {
+		cpuf, err := os.Create(cpuProfile)
+		if err != nil {
+			panic(err)
+		}
+		pprof.StartCPUProfile(cpuf)
+		defer pprof.StopCPUProfile()
+	}
+	// 采样goroutine
+	if traceProfile != "" {
+		tracef, err := os.Create(traceProfile)
+		if err != nil {
+			panic(err)
+		}
+		trace.Start(tracef)
+		defer tracef.Close()
+		defer trace.Stop()
+	}
+
 	// 监听新块确认
 	newBlockNotify := make(chan string)
 	go func() {
@@ -180,6 +208,17 @@ func main() {
 
 	loader.DumpToGobFile("./cmd/headers-list.gob", blockchain.Blocks)
 	logger.Log.Info("stoped")
+
+	////////////////
+	//采样memory状态
+	if memProfile != "" {
+		memf, err := os.Create(memProfile)
+		if err != nil {
+			panic(err)
+		}
+		pprof.WriteHeapProfile(memf)
+		memf.Close()
+	}
 
 	if blockchain.NeedStop {
 		os.Exit(1)
