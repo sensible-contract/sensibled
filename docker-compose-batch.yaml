@@ -1,0 +1,14 @@
+version: '3'
+services:
+   satoblock:
+     build: .
+     image: satoblock:latest
+     entrypoint: ./satoblock -end 698000 -batch 1000
+     volumes:
+       - /data/bitcoin-sv-blocks/blocks:/data/bitcoin-sv-blocks/blocks:ro
+       - ./conf:/data/conf:ro
+       - ./cmd:/data/cmd
+     logging:
+       driver: "local"
+       options:
+         max-size: "5g"
