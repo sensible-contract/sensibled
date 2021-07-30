@@ -40,7 +40,7 @@ redis配置，主要包括address、database等。
 
 	$ docker-compose up -d
 
-注意不要用docker-compose stop，因为停止超时会强制杀进程。要优雅停止请执行：
+注意不要用docker-compose stop，因为停止超时(10s)会强制杀进程。要优雅停止请执行：
 
 	$ docker-compose kill -s SIGINT
 
@@ -55,20 +55,9 @@ redis配置，主要包括address、database等。
 
     $ ./satoblock -full -end 100000
 
-当执行完毕后，可以进行下一批同步，在区块高度为200000时停止：
+当执行完毕后，可以进行批次同步，每批1000个块，如果内存较小，可适当减少每次同步的区块数量。在区块高度为690000时停止：
 
-    $ ./satoblock -end 200000
-
-如此一直执行到最近的区块（650000），如果内存较小，可适当减少每次同步的区块数量：
-
-    $ ./satoblock -end 300000
-    $ ./satoblock -end 350000
-    $ ./satoblock -end 400000
-    $ ./satoblock -end 450000
-    $ ./satoblock -end 500000
-    $ ./satoblock -end 550000
-    $ ./satoblock -end 600000
-    $ ./satoblock -end 650000
+    $ ./satoblock -end 690000 -batch=1000
 
 最后，可以启动连续同步模式，即同步完最近区块后不退出，将继续监听并同步新区块：
 

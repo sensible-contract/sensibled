@@ -3,7 +3,7 @@ services:
    satoblock:
      build: .
      image: satoblock:latest
-     entrypoint: /data/cmd/init.sh
+     entrypoint: ./satoblock -full -end 100000
      volumes:
        - /data/bitcoin-sv-blocks/blocks:/data/bitcoin-sv-blocks/blocks:ro
        - ./conf:/data/conf:ro
