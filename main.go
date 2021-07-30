@@ -23,6 +23,7 @@ import (
 var (
 	startBlockHeight int
 	endBlockHeight   int
+	batchBlockCount  int
 	zmqEndpoint      string
 	blocksPath       string
 	blockMagic       string
@@ -41,6 +42,8 @@ func init() {
 	flag.BoolVar(&isFull, "full", false, "start from genesis")
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
 	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
+	flag.IntVar(&batchBlockCount, "batch", 0, "batch block count")
+
 	flag.Parse()
 
 	viper.SetConfigFile("conf/chain.yaml")
@@ -81,8 +84,6 @@ func main() {
 	// 监听新块确认
 	newBlockNotify := make(chan string)
 	go func() {
-		// 启动
-		newBlockNotify <- ""
 		loader.ZmqNotify(zmqEndpoint, newBlockNotify)
 	}()
 
@@ -118,12 +119,15 @@ func main() {
 			}
 		}
 	}()
-
+	needOneMoreSync := true
 	// 扫描区块
 	for {
 		// 等待新块出现，再重新追加扫描
 		logger.Log.Info("waiting new block...")
-		<-newBlockNotify
+		if !needOneMoreSync {
+			<-newBlockNotify
+		}
+		needOneMoreSync = false
 
 		// 初始化载入block header
 		blockchain.InitLongestChainHeader()
@@ -191,8 +195,17 @@ func main() {
 			store.PreparePartSyncCk()
 		}
 
+		// 按批次处理区块
+		stageBlockHeight := endBlockHeight
+		if batchBlockCount > 0 {
+			needOneMoreSync = true
+			if endBlockHeight < 0 || (endBlockHeight-startBlockHeight > batchBlockCount) {
+				stageBlockHeight = startBlockHeight + batchBlockCount
+			}
+		}
+		logger.Log.Info("range", zap.Int("start", startBlockHeight), zap.Int("end", stageBlockHeight))
 		// 开始扫描区块，包括start，不包括end
-		blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, isFull)
+		blockchain.ParseLongestChain(startBlockHeight, stageBlockHeight, isFull)
 		logger.Log.Info("finished")
 
 		isFull = false
@@ -200,7 +213,7 @@ func main() {
 		serial.PublishBlockSyncFinished()
 
 		// 扫描完毕
-		if endBlockHeight > 0 || blockchain.NeedStop {
+		if (stageBlockHeight == endBlockHeight && endBlockHeight > 0) || blockchain.NeedStop {
 			// 结束
 			break
 		}
