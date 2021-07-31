@@ -395,5 +395,7 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 		panic(err)
 	}
 
+	logger.Log.Info("UpdateUtxoInRedis finished")
+
 	return nil
 }
