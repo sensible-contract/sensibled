@@ -40,7 +40,11 @@ redis配置，主要包括address、database等。
 
 	$ docker-compose up -d
 
-注意不要用docker-compose stop，因为停止超时(10s)会强制杀进程。要优雅停止请执行：
+空闲时或同步少量区块中可以执行stop来停止。
+
+	$ docker-compose stop -t 300
+
+注意如果正在执行大量同步，不要用docker-compose stop，因为停止超时(默认10s)会强制杀进程。要优雅停止请执行：
 
 	$ docker-compose kill -s SIGINT
 

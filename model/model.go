@@ -57,13 +57,13 @@ type TxOut struct {
 	SensibleId []byte
 
 	// nft
-	MetaTxId        []byte // nft metatxid
+	MetaTxId        []byte
 	MetaOutputIndex uint32
-	TokenIndex      uint64 // nft tokenIndex
-	TokenSupply     uint64 // nft tokenSupply
+	TokenIndex      uint64
+	TokenSupply     uint64
 
 	// ft
-	Amount  uint64 // ft amount
+	Amount  uint64
 	Decimal uint64
 	Name    string
 	Symbol  string
