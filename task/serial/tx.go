@@ -14,8 +14,9 @@ import (
 )
 
 var (
-	rdb *redis.Client
-	ctx = context.Background()
+	useCluster bool
+	rdb        redis.UniversalClient
+	ctx        = context.Background()
 )
 
 func init() {
@@ -28,15 +29,15 @@ func init() {
 		}
 	}
 
-	address := viper.GetString("address")
+	addrs := viper.GetStringSlice("addrs")
 	password := viper.GetString("password")
 	database := viper.GetInt("database")
 	dialTimeout := viper.GetDuration("dialTimeout")
 	readTimeout := viper.GetDuration("readTimeout")
 	writeTimeout := viper.GetDuration("writeTimeout")
 	poolSize := viper.GetInt("poolSize")
-	rdb = redis.NewClient(&redis.Options{
-		Addr:         address,
+	rdb = redis.NewUniversalClient(&redis.UniversalOptions{
+		Addrs:        addrs,
 		Password:     password,
 		DB:           database,
 		DialTimeout:  dialTimeout,
@@ -44,6 +45,10 @@ func init() {
 		WriteTimeout: writeTimeout,
 		PoolSize:     poolSize,
 	})
+
+	if len(addrs) > 1 {
+		useCluster = true
+	}
 }
 
 func PublishBlockSyncFinished() {
@@ -52,8 +57,22 @@ func PublishBlockSyncFinished() {
 
 func FlushdbInRedis() {
 	logger.Log.Info("FlushdbInRedis start")
-	rdb.FlushDB(ctx)
-	logger.Log.Info("FlushdbInRedis finish")
+
+	var err error
+	if useCluster {
+		rdbc := rdb.(*redis.ClusterClient)
+		err = rdbc.ForEachMaster(ctx, func(ctx context.Context, master *redis.Client) error {
+			return master.FlushDB(ctx).Err()
+		})
+	} else {
+		err = rdb.FlushDB(ctx).Err()
+	}
+
+	if err != nil {
+		logger.Log.Info("FlushdbInRedis err", zap.Error(err))
+	} else {
+		logger.Log.Info("FlushdbInRedis finish")
+	}
 }
 
 // ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用
