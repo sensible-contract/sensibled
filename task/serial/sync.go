@@ -1,6 +1,7 @@
 package serial
 
 import (
+	"fmt"
 	"satoblock/logger"
 	"satoblock/model"
 	"satoblock/store"
@@ -8,13 +9,38 @@ import (
 	"strconv"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
 var (
 	SyncTxFullCount     int
 	SyncTxCodeHashCount int
+	isTxrawPrune        bool
+	isPkScriptPrune     bool
+	isScriptSigPrune    bool
 )
+
+func init() {
+	viper.SetConfigFile("conf/prune.yaml")
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		} else {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		}
+	}
+
+	// 清理非sensible的txraw
+	isTxrawPrune = viper.GetBool("txraw")
+
+	// 清理非sensible的锁定脚本
+	// 清理无地址的锁定脚本，若要保留，可以设置为20位空地址
+	isPkScriptPrune = viper.GetBool("pkscript")
+
+	// 清理所有的解锁脚本
+	isScriptSigPrune = viper.GetBool("scriptsig")
+}
 
 // SyncBlock block id
 func SyncBlock(block *model.Block) {
@@ -73,6 +99,12 @@ func SyncBlock(block *model.Block) {
 // SyncBlockTx all tx in block height
 func SyncBlockTx(block *model.Block) {
 	for txIdx, tx := range block.Txs {
+		// keep sensible rawtx only
+		// prune txraw
+		txraw := ""
+		if !isTxrawPrune || tx.IsSensible {
+			txraw = string(tx.Raw)
+		}
 		if _, err := store.SyncStmtTx.Exec(
 			string(tx.Hash),
 			tx.TxInCnt,
@@ -81,7 +113,7 @@ func SyncBlockTx(block *model.Block) {
 			tx.LockTime,
 			tx.InputsValue,
 			tx.OutputsValue,
-			string(tx.Raw),
+			txraw, // string(tx.Raw)
 			uint32(block.Height),
 			string(block.Hash),
 			uint64(txIdx),
@@ -100,6 +132,17 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 		for vout, output := range tx.TxOuts {
 			tx.OutputsValue += output.Satoshi
 
+			// set sensible flag
+			if output.CodeType != scriptDecoder.CodeType_NONE {
+				tx.IsSensible = true
+			}
+
+			// prune string(output.Pkscript),
+			pkscript := ""
+			if !isPkScriptPrune || tx.IsSensible || len(output.AddressPkh) == 20 {
+				pkscript = string(output.Pkscript)
+			}
+
 			var dataValue uint64
 			if output.CodeType == scriptDecoder.CodeType_NFT {
 				dataValue = output.TokenIndex
@@ -116,7 +159,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				dataValue,
 				output.Satoshi,
 				string(output.LockingScriptType),
-				string(output.Pkscript),
+				pkscript,
 				uint32(block.Height),
 				uint64(txIdx),
 			); err != nil {
@@ -162,6 +205,23 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			}
 			tx.InputsValue += objData.Satoshi
 
+			// set sensible flag
+			if objData.CodeType != scriptDecoder.CodeType_NONE {
+				tx.IsSensible = true
+			}
+
+			// 解锁脚本一般可安全清理
+			scriptsig := ""
+			if !isScriptSigPrune {
+				scriptsig = string(input.ScriptSig)
+			}
+
+			// 清理非sensible且无地址的锁定脚本
+			pkscript := ""
+			if !isPkScriptPrune || tx.IsSensible || len(objData.AddressPkh) == 20 {
+				pkscript = string(objData.Script)
+			}
+
 			var dataValue uint64
 			// token summary
 			if len(objData.CodeHash) == 20 && len(objData.GenesisId) >= 20 {
@@ -196,7 +256,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				uint64(txIdx),
 				string(tx.Hash),
 				uint32(vin),
-				string(input.ScriptSig),
+				scriptsig, // prune string(input.ScriptSig),
 				uint32(input.Sequence),
 
 				uint32(objData.BlockHeight),
@@ -210,7 +270,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				dataValue,
 				objData.Satoshi,
 				string(objData.ScriptType),
-				string(objData.Script),
+				pkscript,
 			); err != nil {
 				logger.Log.Info("sync-txin-full-err",
 					zap.String("sync", "txin full err"),

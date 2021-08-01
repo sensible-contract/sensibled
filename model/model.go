@@ -24,6 +24,7 @@ type Tx struct {
 	TxIns        TxIns
 	TxOuts       TxOuts
 	TxWits       []*TxWit
+	IsSensible   bool
 }
 
 type TxIn struct {
