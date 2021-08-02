@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"satoblock/model"
-	"strconv"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 )
@@ -58,10 +57,13 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		}
 
 		// update token summary
-		tokenKey := string(output.CodeHash) + string(output.GenesisId)
-		if output.CodeType == scriptDecoder.CodeType_NFT {
-			tokenKey += strconv.FormatUint(output.TokenIndex, 10)
+		buf := make([]byte, 12)
+		binary.LittleEndian.PutUint32(buf, output.CodeType)
+		if output.CodeType == scriptDecoder.CodeType_NFT || output.CodeType == scriptDecoder.CodeType_NFT_SELL {
+			binary.LittleEndian.PutUint64(buf[4:], output.TokenIndex)
 		}
+
+		tokenKey := string(buf) + string(output.CodeHash) + string(output.GenesisId)
 		tokenSummary, ok := block.TokenSummaryMap[tokenKey]
 		if !ok {
 			tokenSummary = &model.TokenData{

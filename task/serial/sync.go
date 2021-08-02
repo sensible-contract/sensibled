@@ -1,12 +1,12 @@
 package serial
 
 import (
+	"encoding/binary"
 	"fmt"
 	"satoblock/logger"
 	"satoblock/model"
 	"satoblock/store"
 	"satoblock/utils"
-	"strconv"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"github.com/spf13/viper"
@@ -144,7 +144,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 			}
 
 			var dataValue uint64
-			if output.CodeType == scriptDecoder.CodeType_NFT {
+			if output.CodeType == scriptDecoder.CodeType_NFT || output.CodeType == scriptDecoder.CodeType_NFT_SELL {
 				dataValue = output.TokenIndex
 			} else if output.CodeType == scriptDecoder.CodeType_FT {
 				dataValue = output.Amount
@@ -225,14 +225,18 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			var dataValue uint64
 			// token summary
 			if len(objData.CodeHash) == 20 && len(objData.GenesisId) >= 20 {
-				key := string(objData.CodeHash) + string(objData.GenesisId)
+				buf := make([]byte, 12)
+				binary.LittleEndian.PutUint32(buf, objData.CodeType)
 
-				if objData.CodeType == scriptDecoder.CodeType_NFT {
-					key += strconv.FormatUint(objData.TokenIndex, 10)
+				if objData.CodeType == scriptDecoder.CodeType_NFT || objData.CodeType == scriptDecoder.CodeType_NFT_SELL {
+					binary.LittleEndian.PutUint64(buf[4:], objData.TokenIndex)
+
 					dataValue = objData.TokenIndex
 				} else if objData.CodeType == scriptDecoder.CodeType_FT {
 					dataValue = objData.Amount
 				}
+
+				key := string(buf) + string(objData.CodeHash) + string(objData.GenesisId)
 
 				tokenSummary, ok := block.ParseData.TokenSummaryMap[key]
 				if !ok {
