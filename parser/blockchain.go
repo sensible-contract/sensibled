@@ -215,6 +215,7 @@ func (bc *Blockchain) InitLongestChainHeader() {
 		}
 	}
 
+	logger.Log.Info("load block header", zap.Int("file", maxFileIdx))
 	if err := bc.BlockData.SkipTo(maxFileIdx, 0); err == nil {
 		bc.LoadAllBlockHeaders()
 	}
