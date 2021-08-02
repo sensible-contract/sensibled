@@ -2,7 +2,7 @@ version: '3'
 services:
    satoblock:
      build: .
-     image: satoblock:latest
+     image: satoblock:v2.1
      entrypoint: ./satoblock
      volumes:
        - /data/bitcoin-sv-blocks/blocks:/data/bitcoin-sv-blocks/blocks:ro
