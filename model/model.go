@@ -65,7 +65,7 @@ type TxOut struct {
 
 	// ft
 	Amount  uint64
-	Decimal uint64
+	Decimal uint8
 	Name    string
 	Symbol  string
 
@@ -153,7 +153,7 @@ type TokenData struct {
 	CodeHash     []byte
 	GenesisId    []byte
 	NFTIdx       uint64 // nft tokenIndex
-	Decimal      uint64 // ft decimal
+	Decimal      uint8  // ft decimal
 	InDataValue  uint64 // ft / nft count
 	OutDataValue uint64 // ft / nft count
 	InSatoshi    uint64
@@ -180,7 +180,7 @@ type TxoData struct {
 	Name    string // ft name
 	Symbol  string // ft symbol
 	Amount  uint64 // ft amount
-	Decimal uint64 // ft decimal
+	Decimal uint8  // ft decimal
 
 	Satoshi    uint64
 	ScriptType []byte
