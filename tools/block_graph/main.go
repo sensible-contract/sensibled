@@ -55,6 +55,14 @@ func main() {
 	// 初始化载入block header
 	blockchain.InitLongestChainHeader()
 
+	logger.Log.Info("count", zap.Int("BlocksOfChainById", len(blockchain.BlocksOfChainById)),
+		zap.Int("Blocks", len(blockchain.Blocks)),
+	)
+
+	if endBlockHeight < 0 || endBlockHeight > len(blockchain.BlocksOfChainById) {
+		endBlockHeight = len(blockchain.BlocksOfChainById) - 1
+	}
+
 	heightBlocks := make([][]*model.Block, len(blockchain.BlocksOfChainById))
 
 	for _, blk := range blockchain.Blocks {
@@ -75,9 +83,11 @@ digraph demo {
 	var prevBlkHash string
 	for height, blks := range heightBlocks {
 		if height > endBlockHeight {
+			logger.Log.Info("the end", zap.Int("height", height))
 			break
 		}
 		if len(blks) == 0 {
+			logger.Log.Info("empty height", zap.Int("height", height))
 			break
 		}
 
