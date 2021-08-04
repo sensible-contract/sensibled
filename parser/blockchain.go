@@ -314,6 +314,8 @@ func (bc *Blockchain) SetBlockHeight() {
 			bc.MaxBlock = currBlock
 		}
 	}
+
+	// 由于之前的高度是从1开始，现在统一减一
 	for _, block := range bc.Blocks {
 		block.Height -= 1
 	}
@@ -324,8 +326,8 @@ func (bc *Blockchain) SelectLongestChain() {
 	bc.BlocksOfChainById = make(map[string]*model.Block, 0)
 	bc.BlocksOfChainByHeight = make(map[int]*model.Block, 0)
 	block := bc.MaxBlock
+	logger.Log.Info("chain", zap.Int("maxheight", block.Height))
 	for {
-		// 由于之前的高度是从1开始，现在统一减一
 		bc.BlocksOfChainById[block.HashHex] = block
 		bc.BlocksOfChainByHeight[block.Height] = block
 		// 设置genesis
