@@ -1,4 +1,4 @@
-// go build -v tools/block_graph.go
+// go build -v -o block_graph tools/block_graph/main.go
 // ./block_graph -end 695441  > tools/branch.dot
 // dot branch.dot -T svg -o branch.svg
 
@@ -7,7 +7,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	_ "net/http/pprof"
+	"log"
+	"os"
+	"runtime/pprof"
+	"runtime/trace"
 	"satoblock/logger"
 	"satoblock/model"
 	"satoblock/parser"
@@ -26,10 +29,19 @@ var (
 	endBlockHeight int
 	blocksPath     string
 	blockMagic     string
+
+	cpuProfile   string
+	memProfile   string
+	traceProfile string
 )
 
 func init() {
 	flag.IntVar(&endBlockHeight, "end", 100, "end block height")
+
+	flag.StringVar(&cpuProfile, "cpu", "", "write cpu profile to file")
+	flag.StringVar(&memProfile, "mem", "", "write mem profile to file")
+	flag.StringVar(&traceProfile, "trace", "", "write trace profile to file")
+
 	flag.Parse()
 
 	viper.SetConfigFile("conf/chain.yaml")
@@ -46,6 +58,26 @@ func init() {
 }
 
 func main() {
+	//采样cpu运行状态
+	if cpuProfile != "" {
+		f, err := os.Create(cpuProfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
+	if traceProfile != "" {
+		f, err := os.Create(traceProfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		trace.Start(f)
+		defer f.Close()
+		defer trace.Stop()
+	}
+
 	// 初始化区块
 	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic)
 	if err != nil {
@@ -125,5 +157,14 @@ digraph demo {
 
 #@enddot`)
 
+	//采样memory状态
+	if memProfile != "" {
+		f, err := os.Create(memProfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.WriteHeapProfile(f)
+		f.Close()
+	}
 	logger.Log.Info("stoped")
 }
