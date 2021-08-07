@@ -239,7 +239,7 @@ func getBlockTxs(bc *parser.Blockchain, block *model.Block) bool {
 		logger.Log.Error("get block error", zap.Error(err))
 		return false
 	}
-	if len(rawblock) < 80 {
+	if len(rawblock) < 80+9 {
 		return false
 	}
 
@@ -255,10 +255,7 @@ func getBlockTxs(bc *parser.Blockchain, block *model.Block) bool {
 		return false
 	}
 
-	txs := parser.NewTxs(block.Raw[80:])
-
-	block.TxCnt = len(txs)
-	block.Txs = txs
+	block.Txs = parser.NewTxs(block.Raw[80:])
 
 	return true
 }
