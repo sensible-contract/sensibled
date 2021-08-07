@@ -7,7 +7,6 @@ import (
 	"satoblock/logger"
 	"satoblock/model"
 	"satoblock/task"
-	serialTask "satoblock/task/serial"
 	utilsTask "satoblock/task/utils"
 	"satoblock/utils"
 	"sync"
@@ -15,8 +14,9 @@ import (
 	"go.uber.org/zap"
 )
 
+var NeedStop bool
+
 type Blockchain struct {
-	NeedStop              bool
 	Blocks                map[string]*model.Block // 所有区块
 	BlocksOfChainById     map[string]*model.Block // 按blkid主链区块
 	BlocksOfChainByHeight map[int]*model.Block    // 按height主链区块
@@ -47,41 +47,48 @@ func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
 }
 
 // ParseLongestChain 两遍遍历区块。先获取header，再遍历区块
-func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight int, isFull bool) {
+func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount int) int {
 	blocksReady := make(chan *model.Block, 64)
 	blocksDone := make(chan struct{}, 64)
 
 	blocksStage := make(chan *model.Block, 64)
 
 	// 并行解码区块，生产者
-	go bc.InitLongestChainBlockByHeader(blocksDone, blocksReady, startBlockHeight, endBlockHeight)
+	go bc.InitLongestChainBlockByHeader(blocksDone, blocksReady, startBlockHeight, endBlockHeight, batchTxCount)
 
 	// 按顺序消费解码后的区块
 	go bc.ParseLongestChainBlockStart(blocksDone, blocksReady, blocksStage, startBlockHeight, endBlockHeight)
 
 	// 并行消费处理后的区块
-	bc.ParseLongestChainBlockEnd(blocksStage)
-
-	// 最后分析执行
-	task.ParseEnd(isFull)
+	lastHeight := bc.ParseLongestChainBlockEnd(blocksStage)
+	return lastHeight
 }
 
 // InitLongestChainBlock 解码区块，生产者
-func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, blocksReady chan *model.Block, startBlockHeight, endBlockHeight int) {
+func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, blocksReady chan *model.Block, startBlockHeight, endBlockHeight, batchTxCount int) {
 	var wg sync.WaitGroup
 
 	if endBlockHeight < 0 {
 		endBlockHeight = len(bc.BlocksOfChainByHeight)
 	}
+
+	var txCount int
 	for nextBlockHeight := startBlockHeight; nextBlockHeight < endBlockHeight; nextBlockHeight++ {
-		if bc.NeedStop {
+		if NeedStop {
 			break
 		}
+
 		block, ok := bc.BlocksOfChainByHeight[nextBlockHeight]
 		if !ok {
 			// 若不是主链区块则退出
 			break
 		}
+
+		if batchTxCount > 0 && txCount > batchTxCount {
+			break
+		}
+		txCount += int(block.TxCnt)
+
 		bc.BlockData.SkipTo(block.FileIdx, block.FileOffset)
 		// 获取所有Block字节
 		rawblock, err := bc.BlockData.GetRawBlock()
@@ -89,7 +96,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 			logger.Log.Error("get block error", zap.Error(err))
 			break
 		}
-		if len(rawblock) < 80 {
+		if len(rawblock) < 80+9 { // block header + txn
 			continue
 		}
 
@@ -111,19 +118,15 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 		go func(block *model.Block) {
 			defer wg.Done()
 
-			txs := NewTxs(block.Raw[80:])
-
-			block.TxCnt = len(txs)
-			block.Txs = txs
-
 			processBlock := &model.ProcessBlock{
 				Height:           uint32(block.Height),
-				NewUtxoDataMap:   make(map[string]*model.TxoData, 1),
-				SpentUtxoDataMap: make(map[string]*model.TxoData, 1),
-				SpentUtxoKeysMap: make(map[string]bool, 1),
+				NewUtxoDataMap:   make(map[string]*model.TxoData, block.TxCnt),
+				SpentUtxoDataMap: make(map[string]*model.TxoData, block.TxCnt),
+				SpentUtxoKeysMap: make(map[string]bool, block.TxCnt),
 				TokenSummaryMap:  make(map[string]*model.TokenData, 1), // key: CodeHash+GenesisId  nft: CodeHash+GenesisId+tokenIdx
 			}
 			block.ParseData = processBlock
+			block.Txs = NewTxs(block.Raw[80:])
 
 			// 先并行分析区块。可执行一些区块内的独立预处理任务，不同区块会并行乱序执行
 			task.ParseBlockParallel(block)
@@ -169,7 +172,7 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 			// 当串行执行到某个区块时，一定运行完毕了之前区块的所有任务和本区块的预处理任务
 			task.ParseBlockSerialStart(block)
 			// block speed
-			utilsTask.ParseBlockSpeed(len(block.Txs), len(serialTask.GlobalNewUtxoDataMap), len(serialTask.GlobalSpentUtxoDataMap),
+			utilsTask.ParseBlockSpeed(len(block.Txs), len(model.GlobalNewUtxoDataMap), len(model.GlobalSpentUtxoDataMap),
 				block.Height, maxBlockHeight)
 
 			blocksStage <- block
@@ -184,10 +187,12 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 }
 
 // ParseLongestChainBlock 再并行分析区块。接下来是无关顺序的收尾工作
-func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) {
+func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) int {
 	var wg sync.WaitGroup
+	lastHeight := 0
 	blocksLimit := make(chan struct{}, 64)
 	for block := range blocksStage {
+		lastHeight = block.Height
 		blocksLimit <- struct{}{}
 		wg.Add(1)
 		go func(block *model.Block) {
@@ -198,6 +203,7 @@ func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) {
 	}
 	wg.Wait()
 	logger.Log.Info("consume ok")
+	return lastHeight
 }
 
 // InitLongestChainHeader 初始化block header
@@ -229,7 +235,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 	parsers := make(chan struct{}, 30)
 	var wg sync.WaitGroup
 	for idx := 0; ; idx++ {
-		if bc.NeedStop {
+		if NeedStop {
 			break
 		}
 		// 获取所有Block Header字节，不要求有序返回或属于主链
@@ -240,7 +246,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 			// logger.Log.Info("no more block header", zap.Error(err))
 			break
 		}
-		if len(rawblock) < 80 {
+		if len(rawblock) < 80+9 { // block header + txn
 			continue
 		}
 
@@ -262,7 +268,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 		}(rawblock, bc.BlockData.CurrentId, bc.BlockData.LastOffset)
 
 		// header speed
-		utilsTask.ParseBlockSpeed(0, len(serialTask.GlobalNewUtxoDataMap), len(serialTask.GlobalSpentUtxoDataMap), idx, 0)
+		utilsTask.ParseBlockSpeed(0, len(model.GlobalNewUtxoDataMap), len(model.GlobalSpentUtxoDataMap), idx, 0)
 	}
 	wg.Wait()
 }

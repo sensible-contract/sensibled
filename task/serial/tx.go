@@ -3,83 +3,25 @@ package serial
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
+	"errors"
 	"satoblock/logger"
 	"satoblock/model"
+	"satoblock/rdb"
 
 	redis "github.com/go-redis/redis/v8"
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
 var (
-	useCluster bool
-	rdb        redis.UniversalClient
-	ctx        = context.Background()
+	ctx = context.Background()
 )
-
-func init() {
-	viper.SetConfigFile("conf/redis.yaml")
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			panic(fmt.Errorf("Fatal error config file: %s \n", err))
-		} else {
-			panic(fmt.Errorf("Fatal error config file: %s \n", err))
-		}
-	}
-
-	addrs := viper.GetStringSlice("addrs")
-	password := viper.GetString("password")
-	database := viper.GetInt("database")
-	dialTimeout := viper.GetDuration("dialTimeout")
-	readTimeout := viper.GetDuration("readTimeout")
-	writeTimeout := viper.GetDuration("writeTimeout")
-	poolSize := viper.GetInt("poolSize")
-	rdb = redis.NewUniversalClient(&redis.UniversalOptions{
-		Addrs:        addrs,
-		Password:     password,
-		DB:           database,
-		DialTimeout:  dialTimeout,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		PoolSize:     poolSize,
-	})
-
-	if len(addrs) > 1 {
-		useCluster = true
-	}
-}
-
-func PublishBlockSyncFinished() {
-	rdb.Publish(ctx, "channel_block_sync", "finished")
-}
-
-func FlushdbInRedis() {
-	logger.Log.Info("FlushdbInRedis start")
-
-	var err error
-	if useCluster {
-		rdbc := rdb.(*redis.ClusterClient)
-		err = rdbc.ForEachMaster(ctx, func(ctx context.Context, master *redis.Client) error {
-			return master.FlushDB(ctx).Err()
-		})
-	} else {
-		err = rdb.FlushDB(ctx).Err()
-	}
-
-	if err != nil {
-		logger.Log.Info("FlushdbInRedis err", zap.Error(err))
-	} else {
-		logger.Log.Info("FlushdbInRedis finish")
-	}
-}
 
 // ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用
 // 部分utxo信息在程序内存，missing的utxo将从redis查询
 // 区块同步结束时会批量更新缓存的utxo到redis
 func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
-	pipe := rdb.Pipeline()
+	pipe := rdb.Client.Pipeline()
 	m := map[string]*redis.StringCmd{}
 	needExec := false
 	for outpointKey := range block.SpentUtxoKeysMap {
@@ -90,9 +32,9 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 			continue
 		}
 		// 检查是否在本地全局缓存
-		if data, ok := GlobalNewUtxoDataMap[outpointKey]; ok {
+		if data, ok := model.GlobalNewUtxoDataMap[outpointKey]; ok {
 			block.SpentUtxoDataMap[outpointKey] = data
-			delete(GlobalNewUtxoDataMap, outpointKey)
+			delete(model.GlobalNewUtxoDataMap, outpointKey)
 			continue
 		}
 		// 剩余utxo需要查询redis
@@ -141,7 +83,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 		d.Decimal = txo.Decimal
 
 		block.SpentUtxoDataMap[outpointKey] = d
-		GlobalSpentUtxoDataMap[outpointKey] = d
+		model.GlobalSpentUtxoDataMap[outpointKey] = d
 	}
 }
 
@@ -149,19 +91,19 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	// 更新到本地新utxo存储
 	for outpointKey, data := range block.NewUtxoDataMap {
-		GlobalNewUtxoDataMap[outpointKey] = data
+		model.GlobalNewUtxoDataMap[outpointKey] = data
 	}
 }
 
 // UpdateUtxoInRedis 批量更新redis utxo
-func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) (err error) {
+func UpdateUtxoInRedis(pipe redis.Pipeliner, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) (err error) {
 	logger.Log.Info("UpdateUtxoInRedis",
 		zap.Int("add", len(utxoToRestore)),
 		zap.Int("del", len(utxoToRemove)))
 	if len(utxoToRestore) == 0 && len(utxoToRemove) == 0 {
-		return
+		return errors.New("empty utxo")
 	}
-	pipe := rdb.Pipeline()
+
 	for outpointKey, data := range utxoToRestore {
 		buf := make([]byte, 20+len(data.Script))
 		data.Marshal(buf)
@@ -233,7 +175,6 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 		}
 	}
 
-	addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 	addrToRemove := make(map[string]bool, 1)
 	tokenToRemove := make(map[string]bool, 1)
 	for outpointKey, data := range utxoToRemove {
@@ -295,12 +236,15 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 		pipe.ZRemRangeByScore(ctx, "{fs"+addr+"}", "0", "0")
 	}
 
-	_, err = pipe.Exec(ctx)
-	if err != nil {
-		panic(err)
-	}
+	logger.Log.Info("UpdateUtxoInRedis finished")
+	return nil
+}
 
-	pipe = rdb.Pipeline()
+func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.IntCmd) {
+	if len(addressBalanceCmds) == 0 {
+		return
+	}
+	pipe := rdb.Client.Pipeline()
 	// 删除balance为0的记录
 	// 要求整个函数单线程处理，否则可能删除非0数据
 	for keyString, cmd := range addressBalanceCmds {
@@ -317,11 +261,7 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 		}
 	}
 
-	_, err = pipe.Exec(ctx)
-	if err != nil {
+	if _, err := pipe.Exec(ctx); err != nil {
 		panic(err)
 	}
-
-	logger.Log.Info("UpdateUtxoInRedis finished")
-	return nil
 }

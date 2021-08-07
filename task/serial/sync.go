@@ -81,7 +81,7 @@ func SyncBlock(block *model.Block) {
 		string(block.Hash),
 		string(block.Parent),
 		string(block.MerkleRoot),
-		uint64(block.TxCnt),
+		block.TxCnt,
 		txInputsValue,
 		txOutputsValue,
 		coinbaseOut,

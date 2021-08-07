@@ -31,6 +31,7 @@ func LoadFromGobFile(fname string, data map[string]*model.Block) {
 		data[hashHex] = &model.Block{
 			Hash:       blk.Hash,
 			HashHex:    hashHex,
+			TxCnt:      blk.TxCnt,
 			FileIdx:    blk.FileIdx,
 			FileOffset: blk.FileOffset,
 			Parent:     blk.Parent,
@@ -45,6 +46,7 @@ func DumpToGobFile(fname string, data map[string]*model.Block) {
 		cacheData = append(cacheData, model.BlockCache{
 			Height:     blk.Height,
 			Hash:       blk.Hash,
+			TxCnt:      blk.TxCnt,
 			FileIdx:    blk.FileIdx,
 			FileOffset: blk.FileOffset,
 			Parent:     blk.Parent,

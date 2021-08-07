@@ -90,7 +90,7 @@ func (bf *BlockData) FetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
 	blocksize := binary.LittleEndian.Uint32(buf[:])
 
 	if skipTxs {
-		rawblock = make([]byte, 80)
+		rawblock = make([]byte, 80+9) // block header + txn
 	} else {
 		rawblock = make([]byte, blocksize)
 	}
@@ -100,7 +100,7 @@ func (bf *BlockData) FetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
 	}
 
 	if skipTxs {
-		_, err = bf.CurrentFile.Seek(int64(blocksize-80), os.SEEK_CUR)
+		_, err = bf.CurrentFile.Seek(int64(blocksize-80-9), os.SEEK_CUR)
 		if err != nil {
 			return
 		}

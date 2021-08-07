@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/binary"
+	"sync"
 
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
@@ -14,7 +15,6 @@ type Tx struct {
 	HashHex      string // 32
 	Hash         []byte // 32
 	Size         uint32
-	WitOffset    uint
 	LockTime     uint32
 	Version      uint32
 	TxInCnt      uint32
@@ -23,7 +23,6 @@ type Tx struct {
 	OutputsValue uint64
 	TxIns        TxIns
 	TxOuts       TxOuts
-	TxWits       []*TxWit
 	IsSensible   bool
 }
 
@@ -101,14 +100,6 @@ func (tt TxOuts) MarshalLogArray(arr zapcore.ArrayEncoder) error {
 	return err
 }
 
-type TxWit struct {
-	Value    uint64
-	Pkscript []byte
-
-	// other:
-	Addr string
-}
-
 ////////////////
 type Block struct {
 	Raw        []byte
@@ -124,7 +115,7 @@ type Block struct {
 	Bits       uint32
 	Nonce      uint32
 	Size       uint32
-	TxCnt      int
+	TxCnt      uint64
 	Parent     []byte // 32 bytes
 	ParentHex  string // 32 bytes
 	NextHex    string // 32 bytes
@@ -134,6 +125,7 @@ type Block struct {
 type BlockCache struct {
 	Height     int
 	Hash       []byte // 32 bytes
+	TxCnt      uint64
 	FileIdx    int
 	FileOffset int
 	Parent     []byte // 32 bytes
@@ -172,15 +164,17 @@ type TxoData struct {
 	SensibleId []byte // GenesisTx outpoint
 	AddressPkh []byte
 
-	MetaTxId        []byte // nft metatxid
+	// nft
+	MetaTxId        []byte
 	MetaOutputIndex uint32
-	TokenIndex      uint64 // nft tokenIndex
-	TokenSupply     uint64 // nft tokenSupply
+	TokenIndex      uint64
+	TokenSupply     uint64
 
-	Name    string // ft name
-	Symbol  string // ft symbol
-	Amount  uint64 // ft amount
-	Decimal uint8  // ft decimal
+	// ft
+	Name    string
+	Symbol  string
+	Amount  uint64
+	Decimal uint8
 
 	Satoshi    uint64
 	ScriptType []byte
@@ -202,4 +196,10 @@ func (d *TxoData) Unmarshal(buf []byte) {
 	d.Script = buf[20:]
 	// d.Script = make([]byte, len(buf)-20)
 	// copy(d.Script, buf[20:]) // n
+}
+
+var TxoDataPool = sync.Pool{
+	New: func() interface{} {
+		return &TxoData{}
+	},
 }
