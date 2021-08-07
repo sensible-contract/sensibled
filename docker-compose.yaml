@@ -2,13 +2,17 @@ version: '3'
 services:
    satoblock:
      build: .
-     image: satoblock:v2.1
+     image: sensibled:v1.2
      entrypoint: ./satoblock
      volumes:
        - /data/bitcoin-sv-blocks/blocks:/data/bitcoin-sv-blocks/blocks:ro
        - ./conf:/data/conf:ro
        - ./cmd:/data/cmd
+     labels:
+       - "name=sensibled"
      logging:
-       driver: "local"
+       driver: "json-file"
        options:
-         max-size: "5g"
+         labels: "name"
+         max-size: "1g"
+         max-file: "3"

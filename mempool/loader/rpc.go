@@ -3,6 +3,7 @@ package loader
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"satoblock/logger"
 
@@ -91,12 +92,20 @@ func GetBlockCountRPC() int {
 		return 0
 	}
 
-	blockCount, ok := response.Result.(int)
+	blockCountString, ok := response.Result.(json.Number)
 	if !ok {
-		logger.Log.Info("block count not int")
+		logger.Log.Info("block count not string",
+			zap.Any("result", response.Result),
+		)
 		return 0
 	}
 
-	logger.Log.Info("get block count", zap.Int("count", blockCount))
-	return blockCount
+	blockCount, err := blockCountString.Int64()
+	if err != nil {
+		logger.Log.Info("block count not int", zap.Any("count", blockCountString))
+		return 0
+	}
+
+	logger.Log.Info("get block count", zap.Int64("count", blockCount))
+	return int(blockCount)
 }

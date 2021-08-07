@@ -89,7 +89,8 @@ func syncBlock() {
 			break
 		}
 
-		stageBlockHeight := len(blockchain.BlocksOfChainById)
+		needSaveBlock := false
+		stageBlockHeight := 0
 		if !isFull {
 			// 现有追加扫描
 			needRemove := false
@@ -100,6 +101,7 @@ func syncBlock() {
 					needRemove = true
 				}
 				if newblock == 0 {
+					stageBlockHeight = commonHeigth
 					goto WAIT_BLOCK // 无新区块，开始等待
 				}
 				startBlockHeight = commonHeigth + 1 // 从公有块高度（COMMON_HEIGHT）下一个开始扫描
@@ -145,14 +147,16 @@ func syncBlock() {
 			store.CreateAllSyncCk() // 初始化同步数据库表
 			store.PrepareFullSyncCk()
 		}
+
+		needSaveBlock = true
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
 		stageBlockHeight = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
-
 		// 按批次处理区块
 		logger.Log.Info("range", zap.Int("start", startBlockHeight), zap.Int("end", stageBlockHeight))
 
-		if stageBlockHeight < len(blockchain.BlocksOfChainById) ||
-			(endBlockHeight > 0 && stageBlockHeight == endBlockHeight) || parser.NeedStop {
+		if stageBlockHeight < len(blockchain.BlocksOfChainById)-1 ||
+			(endBlockHeight > 0 && stageBlockHeight == endBlockHeight-1) || parser.NeedStop {
+			needSaveBlock = false
 			var wg sync.WaitGroup
 			wg.Add(1)
 			go func() {
@@ -178,15 +182,20 @@ func syncBlock() {
 			}()
 			wg.Wait()
 
+			isFull = false // 准备继续同步
+			startBlockHeight = -1
 			logger.Log.Info("block finished")
-			// 扫描完毕，结束
-			if (endBlockHeight > 0 && stageBlockHeight == endBlockHeight) || parser.NeedStop {
-				break
-			}
+		}
+		if stageBlockHeight < len(blockchain.BlocksOfChainById)-1 {
 			continue
 		}
 
 	WAIT_BLOCK:
+		// 扫描完毕，结束
+		if (endBlockHeight > 0 && stageBlockHeight == endBlockHeight-1) || parser.NeedStop {
+			break
+		}
+
 		// 等待新块出现，再重新追加扫描
 		logger.Log.Info("waiting new block...")
 
@@ -205,7 +214,7 @@ func syncBlock() {
 				}
 
 				latestBlockHeight := memLoader.GetBlockCountRPC()
-				if stageBlockHeight < latestBlockHeight {
+				if stageBlockHeight < latestBlockHeight-1 {
 					// 有新区块，不同步内存池
 					goto UPDATE_UTXO
 				}
@@ -234,7 +243,7 @@ func syncBlock() {
 
 				pipe := rdb.Client.TxPipeline()
 				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
-				if initSyncMempool {
+				if needSaveBlock {
 					// 批量更新redis utxo
 					serial.UpdateUtxoInRedis(pipe, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
 					// 清空本地map内存
@@ -257,7 +266,7 @@ func syncBlock() {
 			go func() {
 				defer wg.Done()
 				// ParseEnd 最后分析执行
-				if initSyncMempool {
+				if needSaveBlock {
 					task.ParseEnd(isFull)
 				}
 				// 7 dep 5
@@ -265,6 +274,7 @@ func syncBlock() {
 			}()
 			wg.Wait()
 
+			needSaveBlock = false
 			initSyncMempool = false
 			startIdx += len(mempool.BatchTxs) // 同步完毕
 			logger.Log.Info("mempool finished", zap.Int("idx", startIdx), zap.Int("nNewTx", len(mempool.BatchTxs)))
