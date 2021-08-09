@@ -133,7 +133,7 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				dataValue,
 				objData.Satoshi,
 				string(objData.ScriptType),
-				string(objData.Script),
+				string(objData.PkScript),
 			); err != nil {
 				logger.Log.Info("sync-txin-full-err",
 					zap.String("sync", "txin full err"),

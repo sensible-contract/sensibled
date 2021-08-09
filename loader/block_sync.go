@@ -40,7 +40,7 @@ func GetLatestBlockFromDB() (blkRsp *model.BlockDO, err error) {
 func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 	var ret model.TxoData
 	var dataValue uint64
-	err := rows.Scan(&ret.UTxid, &ret.Vout, &ret.AddressPkh, &ret.CodeHash, &ret.GenesisId, &ret.CodeType, &dataValue, &ret.Satoshi, &ret.ScriptType, &ret.Script, &ret.BlockHeight, &ret.TxIdx)
+	err := rows.Scan(&ret.UTxid, &ret.Vout, &ret.AddressPkh, &ret.CodeHash, &ret.GenesisId, &ret.CodeType, &dataValue, &ret.Satoshi, &ret.ScriptType, &ret.PkScript, &ret.BlockHeight, &ret.TxIdx)
 	if err != nil {
 		return nil, err
 	}

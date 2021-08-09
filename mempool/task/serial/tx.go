@@ -59,8 +59,8 @@ func ParseGetSpentUtxoDataFromRedisSerial(
 		d.Unmarshal([]byte(res))
 
 		// 补充数据
-		d.ScriptType = scriptDecoder.GetLockingScriptType(d.Script)
-		txo := scriptDecoder.ExtractPkScriptForTxo(d.Script, d.ScriptType)
+		d.ScriptType = scriptDecoder.GetLockingScriptType(d.PkScript)
+		txo := scriptDecoder.ExtractPkScriptForTxo(d.PkScript, d.ScriptType)
 
 		d.CodeType = txo.CodeType
 		d.CodeHash = txo.CodeHash
@@ -143,7 +143,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	// 更新内存池数据
 	mpkeys := make([]string, 5*(len(utxoToRestore)+len(utxoToRemove)+len(utxoToSpend)))
 	for outpointKey, data := range utxoToRestore {
-		buf := make([]byte, 20+len(data.Script))
+		buf := make([]byte, 20+len(data.PkScript))
 		data.Marshal(buf)
 		// redis全局utxo数据添加
 		// fixme: 会覆盖satoblock？

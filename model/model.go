@@ -177,15 +177,15 @@ type TxoData struct {
 	Decimal uint8
 
 	Satoshi    uint64
+	PkScript   []byte
 	ScriptType []byte
-	Script     []byte
 }
 
 func (d *TxoData) Marshal(buf []byte) {
 	binary.LittleEndian.PutUint32(buf, d.BlockHeight)  // 4
 	binary.LittleEndian.PutUint64(buf[4:], d.TxIdx)    // 8
 	binary.LittleEndian.PutUint64(buf[12:], d.Satoshi) // 8
-	copy(buf[20:], d.Script)                           // n
+	copy(buf[20:], d.PkScript)                         // n
 }
 
 // no need marshal: ScriptType, CodeType, CodeHash, GenesisId, AddressPkh, DataValue
@@ -193,7 +193,7 @@ func (d *TxoData) Unmarshal(buf []byte) {
 	d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
 	d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
 	d.Satoshi = binary.LittleEndian.Uint64(buf[12:20])  // 8
-	d.Script = buf[20:]
+	d.PkScript = buf[20:]
 	// d.Script = make([]byte, len(buf)-20)
 	// copy(d.Script, buf[20:]) // n
 }

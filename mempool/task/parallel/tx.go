@@ -90,7 +90,7 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, mpNewUtxo map[string]*mod
 
 		d.Satoshi = output.Satoshi
 		d.ScriptType = output.ScriptType
-		d.Script = output.PkScript
+		d.PkScript = output.PkScript
 
 		mpNewUtxo[output.OutpointKey] = d
 	}

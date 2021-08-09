@@ -219,7 +219,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			// 清理非sensible且无地址的锁定脚本
 			pkscript := ""
 			if !isPkScriptPrune || tx.IsSensible || len(objData.AddressPkh) == 20 {
-				pkscript = string(objData.Script)
+				pkscript = string(objData.PkScript)
 			}
 
 			var dataValue uint64
