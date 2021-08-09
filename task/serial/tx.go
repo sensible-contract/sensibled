@@ -60,7 +60,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 		d := &model.TxoData{}
 		d.Unmarshal([]byte(res))
 
-		// 补充数据
+		// 从redis获取utxo的script，解码以备程序使用
 		d.ScriptType = scriptDecoder.GetLockingScriptType(d.Script)
 		txo := scriptDecoder.ExtractPkScriptForTxo(d.Script, d.ScriptType)
 
@@ -143,13 +143,28 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, addressBalanceCmds map[string]*redi
 			pipe.ZIncrBy(ctx, "{no"+strGenesisId+strCodeHash+"}", 1, strAddressPkh)  // nft:owners
 			pipe.ZIncrBy(ctx, "{ns"+strAddressPkh+"}", 1, strCodeHash+strGenesisId)  // nft:summary
 
+		} else if data.CodeType == scriptDecoder.CodeType_NFT_SELL {
+			pipe.ZAdd(ctx, "{sut}", member)                              // nft:sell:all:utxo, sort by time
+			pipe.ZAdd(ctx, "{suta"+strAddressPkh+"}", member)            // nft:sell:seller-address:utxo
+			pipe.ZAdd(ctx, "{sutc"+strGenesisId+strCodeHash+"}", member) // nft:sell
+
+			member.Score = float64(data.Amount)
+			pipe.ZAdd(ctx, "{sup}", member)                              // nft:sell:all:utxo, sort by price
+			pipe.ZAdd(ctx, "{supa"+strAddressPkh+"}", member)            // nft:sell:seller-address:utxo
+			pipe.ZAdd(ctx, "{supc"+strGenesisId+strCodeHash+"}", member) // nft:sell
+
+			member.Score = float64(data.TokenIndex)
+			pipe.ZAdd(ctx, "{sui}", member)                              // nft:sell:all:utxo, sort by token index
+			pipe.ZAdd(ctx, "{suia"+strAddressPkh+"}", member)            // nft:sell:seller-address:utxo
+			pipe.ZAdd(ctx, "{suic"+strGenesisId+strCodeHash+"}", member) // nft:sell
+
 		} else if data.CodeType == scriptDecoder.CodeType_FT {
 			pipe.ZAdd(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, member)                   // ft:utxo
 			pipe.ZIncrBy(ctx, "{fb"+strGenesisId+strCodeHash+"}", float64(data.Amount), strAddressPkh) // ft:balance
 			pipe.ZIncrBy(ctx, "{fs"+strAddressPkh+"}", float64(data.Amount), strCodeHash+strGenesisId) // ft:summary
 
 		} else if data.CodeType == scriptDecoder.CodeType_UNIQUE {
-			pipe.ZAdd(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, member) // ft:utxo
+			pipe.ZAdd(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, member) // uniq:utxo
 		}
 
 		// skip if reorg
@@ -210,13 +225,26 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, addressBalanceCmds map[string]*redi
 			pipe.ZIncrBy(ctx, "{no"+strGenesisId+strCodeHash+"}", -1, strAddressPkh)      // nft:owners
 			pipe.ZIncrBy(ctx, "{ns"+strAddressPkh+"}", -1, strCodeHash+strGenesisId)      // nft:summary
 
+		} else if data.CodeType == scriptDecoder.CodeType_NFT_SELL {
+			pipe.ZRem(ctx, "{sut}", outpointKey)                              // nft:sell:all:utxo, sort by time
+			pipe.ZRem(ctx, "{suta"+strAddressPkh+"}", outpointKey)            // nft:sell:seller-address:utxo
+			pipe.ZRem(ctx, "{sutc"+strGenesisId+strCodeHash+"}", outpointKey) // nft:sell
+
+			pipe.ZRem(ctx, "{sup}", outpointKey)                              // nft:sell:all:utxo, sort by price
+			pipe.ZRem(ctx, "{supa"+strAddressPkh+"}", outpointKey)            // nft:sell:seller-address:utxo
+			pipe.ZRem(ctx, "{supc"+strGenesisId+strCodeHash+"}", outpointKey) // nft:sell
+
+			pipe.ZRem(ctx, "{sui}", outpointKey)                              // nft:sell:all:utxo, sort by token index
+			pipe.ZRem(ctx, "{suia"+strAddressPkh+"}", outpointKey)            // nft:sell:seller-address:utxo
+			pipe.ZRem(ctx, "{suic"+strGenesisId+strCodeHash+"}", outpointKey) // nft:sell
+
 		} else if data.CodeType == scriptDecoder.CodeType_FT {
 			pipe.ZRem(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, outpointKey)               // ft:utxo
 			pipe.ZIncrBy(ctx, "{fb"+strGenesisId+strCodeHash+"}", -float64(data.Amount), strAddressPkh) // ft:balance
 			pipe.ZIncrBy(ctx, "{fs"+strAddressPkh+"}", -float64(data.Amount), strCodeHash+strGenesisId) // ft:summary
 
 		} else if data.CodeType == scriptDecoder.CodeType_UNIQUE {
-			pipe.ZRem(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, outpointKey) // ft:utxo
+			pipe.ZRem(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, outpointKey) // uniq:utxo
 		}
 
 		// 记录key以备删除

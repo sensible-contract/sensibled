@@ -98,6 +98,7 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock
 			continue
 		}
 
+		// 从tx output提取utxo，以备程序使用
 		d := &model.TxoData{}
 		d.BlockHeight = block.Height
 		d.TxIdx = uint64(txIdx)
