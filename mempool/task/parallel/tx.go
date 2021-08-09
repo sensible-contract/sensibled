@@ -25,14 +25,14 @@ func ParseTxFirst(tx *model.Tx) {
 		output.OutpointKey = string(key)
 		output.Outpoint = key
 
-		output.LockingScriptType = scriptDecoder.GetLockingScriptType(output.Pkscript)
-		output.LockingScriptTypeHex = hex.EncodeToString(output.LockingScriptType)
+		output.ScriptType = scriptDecoder.GetLockingScriptType(output.PkScript)
+		output.ScriptTypeHex = hex.EncodeToString(output.ScriptType)
 
-		if scriptDecoder.IsOpreturn(output.LockingScriptType) {
+		if scriptDecoder.IsOpreturn(output.ScriptType) {
 			output.LockingScriptUnspendable = true
 		}
 
-		txo := scriptDecoder.ExtractPkScriptForTxo(output.Pkscript, output.LockingScriptType)
+		txo := scriptDecoder.ExtractPkScriptForTxo(output.PkScript, output.ScriptType)
 		output.CodeType = txo.CodeType
 		output.CodeHash = txo.CodeHash
 		output.GenesisId = txo.GenesisId
@@ -89,8 +89,8 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, mpNewUtxo map[string]*mod
 		d.Symbol = output.Symbol
 
 		d.Satoshi = output.Satoshi
-		d.ScriptType = output.LockingScriptType
-		d.Script = output.Pkscript
+		d.ScriptType = output.ScriptType
+		d.Script = output.PkScript
 
 		mpNewUtxo[output.OutpointKey] = d
 	}

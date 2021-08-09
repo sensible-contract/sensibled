@@ -2,8 +2,8 @@ package serial
 
 import (
 	"satoblock/logger"
-	"satoblock/model"
 	"satoblock/mempool/store"
+	"satoblock/model"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
@@ -61,8 +61,8 @@ func SyncBlockTxOutputInfo(startIdx int, txs []*model.Tx) {
 				uint32(output.CodeType),
 				dataValue,
 				output.Satoshi,
-				string(output.LockingScriptType),
-				string(output.Pkscript),
+				string(output.ScriptType),
+				string(output.PkScript),
 				model.MEMPOOL_HEIGHT, // uint32(block.Height),
 				uint64(startIdx+txIdx),
 			); err != nil {

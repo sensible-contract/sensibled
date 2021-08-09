@@ -167,8 +167,8 @@ func main() {
 		orphanSpendOutpointCount += int(tx.TxInCnt)
 		for vout, output := range tx.TxOuts {
 			// address
-			scriptType := scriptDecoder.GetLockingScriptType(output.Pkscript)
-			txo := scriptDecoder.ExtractPkScriptForTxo(output.Pkscript, scriptType)
+			scriptType := scriptDecoder.GetLockingScriptType(output.PkScript)
+			txo := scriptDecoder.ExtractPkScriptForTxo(output.PkScript, scriptType)
 			addr := utils.EncodeAddress(txo.AddressPkh, utils.PubKeyHashAddrIDMainNet)
 			orphanAddressSatoshiMap[addr] += output.Satoshi
 			orphanSpendOutAmount += output.Satoshi
@@ -189,8 +189,8 @@ func main() {
 		mainSpendOutpointCount += int(tx.TxInCnt)
 		for vout, output := range tx.TxOuts {
 			// address
-			scriptType := scriptDecoder.GetLockingScriptType(output.Pkscript)
-			txo := scriptDecoder.ExtractPkScriptForTxo(output.Pkscript, scriptType)
+			scriptType := scriptDecoder.GetLockingScriptType(output.PkScript)
+			txo := scriptDecoder.ExtractPkScriptForTxo(output.PkScript, scriptType)
 			addr := utils.EncodeAddress(txo.AddressPkh, utils.PubKeyHashAddrIDMainNet)
 			mainAddressSatoshiMap[addr] += output.Satoshi
 			mainSpendOutAmount += output.Satoshi

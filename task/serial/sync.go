@@ -140,7 +140,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 			// prune string(output.Pkscript),
 			pkscript := ""
 			if !isPkScriptPrune || tx.IsSensible || len(output.AddressPkh) == 20 {
-				pkscript = string(output.Pkscript)
+				pkscript = string(output.PkScript)
 			}
 
 			var dataValue uint64
@@ -158,7 +158,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				uint32(output.CodeType),
 				dataValue,
 				output.Satoshi,
-				string(output.LockingScriptType),
+				string(output.ScriptType),
 				pkscript,
 				uint32(block.Height),
 				uint64(txIdx),

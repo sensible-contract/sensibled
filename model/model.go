@@ -47,14 +47,14 @@ func (t *TxIn) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 
 type TxOut struct {
 	Satoshi  uint64
-	Pkscript []byte
+	PkScript []byte
 
 	// other:
-	AddressPkh []byte
 	CodeType   uint32
 	CodeHash   []byte
 	GenesisId  []byte
 	SensibleId []byte
+	AddressPkh []byte
 
 	// nft
 	MetaTxId        []byte
@@ -70,8 +70,8 @@ type TxOut struct {
 
 	Outpoint                 []byte // 32 + 4
 	OutpointKey              string // 32 + 4
-	LockingScriptType        []byte
-	LockingScriptTypeHex     string
+	ScriptType               []byte
+	ScriptTypeHex            string
 	LockingScriptUnspendable bool
 }
 

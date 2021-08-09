@@ -320,6 +320,10 @@ func main() {
 			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
 				logger.Log.Info("program exit...")
 				parser.NeedStop = true
+				select {
+				case memLoader.NewBlockNotify <- "":
+				default:
+				}
 			default:
 				fmt.Println("other signal", s)
 				logger.Log.Info("other signal", zap.String("sig", s.String()))
