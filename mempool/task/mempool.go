@@ -16,11 +16,11 @@ import (
 )
 
 type Mempool struct {
-	BatchTxs []*model.Tx     // 所有Tx
-	Txs      map[string]bool // 所有Tx
-	SkipTxs  map[string]bool // 需要跳过的Tx
+	BatchTxs []*model.Tx         // 所有Tx
+	Txs      map[string]struct{} // 所有Tx
+	SkipTxs  map[string]struct{} // 需要跳过的Tx
 
-	SpentUtxoKeysMap  map[string]bool
+	SpentUtxoKeysMap  map[string]struct{}
 	SpentUtxoDataMap  map[string]*model.TxoData
 	NewUtxoDataMap    map[string]*model.TxoData
 	RemoveUtxoDataMap map[string]*model.TxoData
@@ -35,7 +35,7 @@ func NewMempool() (mp *Mempool, err error) {
 
 func (mp *Mempool) Init() {
 	mp.BatchTxs = make([]*model.Tx, 0)
-	mp.SpentUtxoKeysMap = make(map[string]bool, 1)
+	mp.SpentUtxoKeysMap = make(map[string]struct{}, 1)
 	mp.SpentUtxoDataMap = make(map[string]*model.TxoData, 1)
 	mp.NewUtxoDataMap = make(map[string]*model.TxoData, 1)
 	mp.RemoveUtxoDataMap = make(map[string]*model.TxoData, 1)
@@ -43,8 +43,8 @@ func (mp *Mempool) Init() {
 
 func (mp *Mempool) LoadFromMempool() bool {
 	// 清空
-	mp.Txs = make(map[string]bool, 0)
-	mp.SkipTxs = make(map[string]bool, 0)
+	mp.Txs = make(map[string]struct{}, 0)
+	mp.SkipTxs = make(map[string]struct{}, 0)
 
 	for i := 0; i < 1000; i++ {
 		select {
@@ -78,15 +78,15 @@ func (mp *Mempool) LoadFromMempool() bool {
 			logger.Log.Info("skip non final tx",
 				zap.String("txid", tx.HashHex),
 			)
-			mp.SkipTxs[tx.HashHex] = true
+			mp.SkipTxs[tx.HashHex] = struct{}{}
 			continue
 		}
 
-		if ok := mp.Txs[tx.HashHex]; ok {
+		if _, ok := mp.Txs[tx.HashHex]; ok {
 			logger.Log.Info("skip dup")
 			continue
 		}
-		mp.Txs[tx.HashHex] = true
+		mp.Txs[tx.HashHex] = struct{}{}
 		mp.BatchTxs = append(mp.BatchTxs, tx)
 	}
 	return true
@@ -138,15 +138,15 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 			logger.Log.Info("skip non final tx",
 				zap.String("txid", tx.HashHex),
 			)
-			mp.SkipTxs[tx.HashHex] = true
+			mp.SkipTxs[tx.HashHex] = struct{}{}
 			continue
 		}
 
-		if ok := mp.Txs[tx.HashHex]; ok {
+		if _, ok := mp.Txs[tx.HashHex]; ok {
 			logger.Log.Info("skip dup")
 			continue
 		}
-		mp.Txs[tx.HashHex] = true
+		mp.Txs[tx.HashHex] = struct{}{}
 		mp.BatchTxs = append(mp.BatchTxs, tx)
 
 		if time.Since(start) > 200*time.Millisecond {

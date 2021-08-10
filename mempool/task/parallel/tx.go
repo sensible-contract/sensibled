@@ -54,9 +54,9 @@ func ParseTxFirst(tx *model.Tx) {
 }
 
 // ParseTxoSpendByTxParallel utxo被使用
-func ParseTxoSpendByTxParallel(tx *model.Tx, spentUtxoKeysMap map[string]bool) {
+func ParseTxoSpendByTxParallel(tx *model.Tx, spentUtxoKeysMap map[string]struct{}) {
 	for _, input := range tx.TxIns {
-		spentUtxoKeysMap[input.InputOutpointKey] = true
+		spentUtxoKeysMap[input.InputOutpointKey] = struct{}{}
 	}
 }
 

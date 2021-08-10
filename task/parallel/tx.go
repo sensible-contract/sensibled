@@ -87,7 +87,7 @@ func ParseTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.Proce
 		return
 	}
 	for _, input := range tx.TxIns {
-		block.SpentUtxoKeysMap[input.InputOutpointKey] = true
+		block.SpentUtxoKeysMap[input.InputOutpointKey] = struct{}{}
 	}
 }
 

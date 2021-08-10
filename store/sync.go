@@ -21,7 +21,9 @@ var (
 	syncTxTx          *sql.Tx
 	syncTxTxOut       *sql.Tx
 	syncTxTxIn        *sql.Tx
+)
 
+const (
 	sqlBlkPattern         string = "INSERT INTO %s (height, blkid, previd, merkle, ntx, invalue, outvalue, coinbase_out, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlBlkCodeHashPattern string = "INSERT INTO %s (height, codehash, genesis, code_type, nft_idx, in_data_value, out_data_value, invalue, outvalue, blkid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxPattern          string = "INSERT INTO %s (txid, nin, nout, txsize, locktime, invalue, outvalue, rawtx, height, blkid, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"

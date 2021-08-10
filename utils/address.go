@@ -15,13 +15,16 @@ func ReverseBytes(data []byte) (result []byte) {
 	return result
 }
 
-var (
-	is_testnet              = os.Getenv("TESTNET")
+const (
 	PubKeyHashAddrIDMainNet = byte(0x00) // starts with 1
 	PubKeyHashAddrIDTestNet = byte(0x6f) // starts with m or n
-	PubKeyHashAddrID        = byte(0x00)
-	ErrChecksumMismatch     = errors.New("checksum mismatch")
-	empty                   = make([]byte, ripemd160.Size)
+)
+
+var (
+	is_testnet          = os.Getenv("TESTNET")
+	ErrChecksumMismatch = errors.New("checksum mismatch")
+	empty               = make([]byte, ripemd160.Size)
+	PubKeyHashAddrID    = byte(0x00)
 )
 
 func init() {

@@ -19,7 +19,7 @@ func isTxFinal(tx *model.Tx) bool {
 	return isFinal
 }
 
-func IsTxNonFinal(tx *model.Tx, nonFinalTxs map[string]bool) bool {
+func IsTxNonFinal(tx *model.Tx, nonFinalTxs map[string]struct{}) bool {
 	if !isTxFinal(tx) {
 		return true
 	}

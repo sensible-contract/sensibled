@@ -134,7 +134,7 @@ type BlockCache struct {
 ////////////////
 type ProcessBlock struct {
 	Height           uint32
-	SpentUtxoKeysMap map[string]bool
+	SpentUtxoKeysMap map[string]struct{}
 	SpentUtxoDataMap map[string]*TxoData
 	NewUtxoDataMap   map[string]*TxoData
 	TokenSummaryMap  map[string]*TokenData // key: CodeHash+GenesisId;  nft: CodeHash+GenesisId+tokenIndex

@@ -20,7 +20,7 @@ var (
 // 如果withMap=true，部分utxo信息在程序内存，missing的utxo将从redis查询。区块同步结束时会批量更新缓存的utxo到redis。
 // 稍快但占用内存较多
 func ParseGetSpentUtxoDataFromRedisSerial(
-	spentUtxoKeysMap map[string]bool,
+	spentUtxoKeysMap map[string]struct{},
 	newUtxoDataMap, removeUtxoDataMap, spentUtxoDataMap map[string]*model.TxoData) {
 
 	pipe := rdb.Client.Pipeline()
@@ -86,7 +86,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(
 
 // UpdateUtxoInRedisSerial 顺序更新当前区块的utxo信息变化到redis
 func UpdateUtxoInRedisSerial(pipe redis.Pipeliner, needReset bool,
-	spentUtxoKeysMap map[string]bool,
+	spentUtxoKeysMap map[string]struct{},
 	newUtxoDataMap, removeUtxoDataMap, spentUtxoDataMap map[string]*model.TxoData) {
 
 	insideTxo := make([]string, len(spentUtxoKeysMap))
@@ -269,8 +269,8 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 	}
 
-	addrToRemove := make(map[string]bool, 1)
-	tokenToRemove := make(map[string]bool, 1)
+	addrToRemove := make(map[string]struct{}, 1)
+	tokenToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
 		// redis全局utxo数据清除
 		// 暂时不清除
@@ -353,8 +353,8 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		}
 
 		// 记录key以备删除
-		tokenToRemove[strGenesisId+strCodeHash] = true
-		addrToRemove[strAddressPkh] = true
+		tokenToRemove[strGenesisId+strCodeHash] = struct{}{}
+		addrToRemove[strAddressPkh] = struct{}{}
 	}
 
 	for outpointKey, data := range utxoToSpend {
@@ -454,8 +454,8 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		}
 
 		// 记录key以备删除
-		tokenToRemove[strGenesisId+strCodeHash] = true
-		addrToRemove[strAddressPkh] = true
+		tokenToRemove[strGenesisId+strCodeHash] = struct{}{}
+		addrToRemove[strAddressPkh] = struct{}{}
 	}
 
 	// 删除summary 为0的记录

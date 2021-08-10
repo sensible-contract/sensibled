@@ -20,7 +20,6 @@ type Blockchain struct {
 	Blocks                map[string]*model.Block // 所有区块
 	BlocksOfChainById     map[string]*model.Block // 按blkid主链区块
 	BlocksOfChainByHeight map[int]*model.Block    // 按height主链区块
-	ParsedBlocks          map[string]bool         // 主链已分析区块
 	MaxBlock              *model.Block
 	GenesisBlock          *model.Block
 	BlockData             *loader.BlockData
@@ -35,7 +34,6 @@ func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
 
 	bc = new(Blockchain)
 	bc.Blocks = make(map[string]*model.Block, 0)
-	bc.ParsedBlocks = make(map[string]bool, 0)
 
 	loader.LoadFromGobFile("./cmd/headers-list.gob", bc.Blocks)
 
@@ -122,7 +120,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 				Height:           uint32(block.Height),
 				NewUtxoDataMap:   make(map[string]*model.TxoData, block.TxCnt),
 				SpentUtxoDataMap: make(map[string]*model.TxoData, block.TxCnt),
-				SpentUtxoKeysMap: make(map[string]bool, block.TxCnt),
+				SpentUtxoKeysMap: make(map[string]struct{}, block.TxCnt),
 				TokenSummaryMap:  make(map[string]*model.TokenData, 1), // key: CodeHash+GenesisId  nft: CodeHash+GenesisId+tokenIdx
 			}
 			block.ParseData = processBlock

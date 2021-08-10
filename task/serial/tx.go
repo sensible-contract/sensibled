@@ -190,8 +190,8 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, addressBalanceCmds map[string]*redi
 		}
 	}
 
-	addrToRemove := make(map[string]bool, 1)
-	tokenToRemove := make(map[string]bool, 1)
+	addrToRemove := make(map[string]struct{}, 1)
+	tokenToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
 		// redis全局utxo数据清除
 		pipe.Del(ctx, "u"+outpointKey)
@@ -248,8 +248,8 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, addressBalanceCmds map[string]*redi
 		}
 
 		// 记录key以备删除
-		tokenToRemove[strGenesisId+strCodeHash] = true
-		addrToRemove[strAddressPkh] = true
+		tokenToRemove[strGenesisId+strCodeHash] = struct{}{}
+		addrToRemove[strAddressPkh] = struct{}{}
 	}
 
 	// 删除balance 为0的记录
