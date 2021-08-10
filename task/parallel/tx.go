@@ -32,46 +32,46 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 			output.LockingScriptUnspendable = true
 		}
 
-		txo := scriptDecoder.ExtractPkScriptForTxo(output.PkScript, output.ScriptType)
-		output.CodeType = txo.CodeType
-		output.CodeHash = txo.CodeHash
-		output.GenesisId = txo.GenesisId
-		output.SensibleId = txo.SensibleId
-		output.AddressPkh = txo.AddressPkh
+		output.Data = scriptDecoder.ExtractPkScriptForTxo(output.PkScript, output.ScriptType)
 
-		// nft
-		output.MetaTxId = txo.MetaTxId
-		output.MetaOutputIndex = txo.MetaOutputIndex
-		output.TokenIndex = txo.TokenIndex
-		output.TokenSupply = txo.TokenSupply
-
-		// ft
-		output.Name = txo.Name
-		output.Symbol = txo.Symbol
-		output.Amount = txo.Amount
-		output.Decimal = txo.Decimal
-
-		if len(output.CodeHash) < 20 || len(output.GenesisId) < 20 {
+		if output.Data.CodeType == scriptDecoder.CodeType_NONE || output.Data.CodeType == scriptDecoder.CodeType_SENSIBLE {
 			// not token
 			continue
 		}
 
 		// update token summary
-		buf := make([]byte, 12)
-		binary.LittleEndian.PutUint32(buf, output.CodeType)
-		if output.CodeType == scriptDecoder.CodeType_NFT || output.CodeType == scriptDecoder.CodeType_NFT_SELL {
-			binary.LittleEndian.PutUint64(buf[4:], output.TokenIndex)
+		buf := make([]byte, 12, 12+20+40)
+		binary.LittleEndian.PutUint32(buf, output.Data.CodeType)
+		if output.Data.CodeType == scriptDecoder.CodeType_NFT {
+			binary.LittleEndian.PutUint64(buf[4:], output.Data.NFT.TokenIndex)
+		} else if output.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
+			binary.LittleEndian.PutUint64(buf[4:], output.Data.NFTSell.TokenIndex)
 		}
 
-		tokenKey := string(buf) + string(output.CodeHash) + string(output.GenesisId)
+		buf = append(buf, output.Data.CodeHash[:]...)
+		buf = append(buf, output.Data.GenesisId[:output.Data.GenesisIdLen]...)
+
+		var tokenIndex uint64
+		var decimal uint8
+		switch output.Data.CodeType {
+		case scriptDecoder.CodeType_NFT:
+			tokenIndex = output.Data.NFT.TokenIndex
+		case scriptDecoder.CodeType_NFT_SELL:
+			tokenIndex = output.Data.NFTSell.TokenIndex
+		case scriptDecoder.CodeType_FT:
+			decimal = output.Data.FT.Decimal
+		}
+
+		tokenKey := string(buf)
+
 		tokenSummary, ok := block.TokenSummaryMap[tokenKey]
 		if !ok {
 			tokenSummary = &model.TokenData{
-				CodeType:  output.CodeType,
-				NFTIdx:    output.TokenIndex,
-				Decimal:   output.Decimal,
-				CodeHash:  output.CodeHash,
-				GenesisId: output.GenesisId,
+				CodeType:  output.Data.CodeType,
+				NFTIdx:    tokenIndex,
+				Decimal:   decimal,
+				CodeHash:  output.Data.CodeHash[:],
+				GenesisId: output.Data.GenesisId[:output.Data.GenesisIdLen],
 			}
 			block.TokenSummaryMap[tokenKey] = tokenSummary
 		}
@@ -102,27 +102,11 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock
 		d := &model.TxoData{}
 		d.BlockHeight = block.Height
 		d.TxIdx = uint64(txIdx)
-		d.AddressPkh = output.AddressPkh
-		d.CodeType = output.CodeType
-		d.CodeHash = output.CodeHash
-		d.GenesisId = output.GenesisId
-		d.SensibleId = output.SensibleId
-
-		// nft
-		d.MetaTxId = output.MetaTxId
-		d.MetaOutputIndex = output.MetaOutputIndex
-		d.TokenIndex = output.TokenIndex
-		d.TokenSupply = output.TokenSupply
-
-		// ft
-		d.Amount = output.Amount
-		d.Decimal = output.Decimal
-		d.Name = output.Name
-		d.Symbol = output.Symbol
-
 		d.Satoshi = output.Satoshi
 		d.ScriptType = output.ScriptType
 		d.PkScript = output.PkScript
+
+		d.Data = output.Data
 
 		block.NewUtxoDataMap[output.OutpointKey] = d
 	}

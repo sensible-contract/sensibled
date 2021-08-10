@@ -133,29 +133,42 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 			tx.OutputsValue += output.Satoshi
 
 			// set sensible flag
-			if output.CodeType != scriptDecoder.CodeType_NONE {
+			if output.Data.CodeType != scriptDecoder.CodeType_NONE {
 				tx.IsSensible = true
 			}
 
 			// prune string(output.Pkscript),
 			pkscript := ""
-			if !isPkScriptPrune || tx.IsSensible || len(output.AddressPkh) == 20 {
+			if !isPkScriptPrune || tx.IsSensible || output.Data.HasAddress {
 				pkscript = string(output.PkScript)
 			}
 
+			address := ""
+			codehash := ""
+			genesis := ""
+			if output.Data.HasAddress {
+				address = string(output.Data.AddressPkh[:]) // 20 bytes
+			}
+			if output.Data.CodeType != scriptDecoder.CodeType_NONE && output.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
+				codehash = string(output.Data.CodeHash[:])                         // 20 bytes
+				genesis = string(output.Data.GenesisId[:output.Data.GenesisIdLen]) // 20/36/40 bytes
+			}
+
 			var dataValue uint64
-			if output.CodeType == scriptDecoder.CodeType_NFT || output.CodeType == scriptDecoder.CodeType_NFT_SELL {
-				dataValue = output.TokenIndex
-			} else if output.CodeType == scriptDecoder.CodeType_FT {
-				dataValue = output.Amount
+			if output.Data.CodeType == scriptDecoder.CodeType_NFT {
+				dataValue = output.Data.NFT.TokenIndex
+			} else if output.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
+				dataValue = output.Data.NFTSell.TokenIndex
+			} else if output.Data.CodeType == scriptDecoder.CodeType_FT {
+				dataValue = output.Data.FT.Amount
 			}
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.Hash),
 				uint32(vout),
-				string(output.AddressPkh), // 20 bytes
-				string(output.CodeHash),   // 20 bytes
-				string(output.GenesisId),  // 20/36/40 bytes
-				uint32(output.CodeType),
+				address,
+				codehash,
+				genesis,
+				uint32(output.Data.CodeType),
 				dataValue,
 				output.Satoshi,
 				string(output.ScriptType),
@@ -177,10 +190,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 // SyncBlockTxInputDetail all tx input info
 func SyncBlockTxInputDetail(block *model.Block) {
 	var commonObjData *model.TxoData = &model.TxoData{
-		CodeHash:   make([]byte, 1),
-		GenesisId:  make([]byte, 1),
-		AddressPkh: make([]byte, 1),
-		Satoshi:    utils.CalcBlockSubsidy(block.Height),
+		Satoshi: utils.CalcBlockSubsidy(block.Height),
 	}
 
 	for txIdx, tx := range block.Txs {
@@ -206,7 +216,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			tx.InputsValue += objData.Satoshi
 
 			// set sensible flag
-			if objData.CodeType != scriptDecoder.CodeType_NONE {
+			if objData.Data.CodeType != scriptDecoder.CodeType_NONE {
 				tx.IsSensible = true
 			}
 
@@ -218,35 +228,57 @@ func SyncBlockTxInputDetail(block *model.Block) {
 
 			// 清理非sensible且无地址的锁定脚本
 			pkscript := ""
-			if !isPkScriptPrune || tx.IsSensible || len(objData.AddressPkh) == 20 {
+			if !isPkScriptPrune || tx.IsSensible || objData.Data.HasAddress {
 				pkscript = string(objData.PkScript)
 			}
 
+			address := ""
+			codehash := ""
+			genesis := ""
+			if objData.Data.HasAddress {
+				address = string(objData.Data.AddressPkh[:]) // 20 bytes
+			}
+			if objData.Data.CodeType != scriptDecoder.CodeType_NONE && objData.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
+				codehash = string(objData.Data.CodeHash[:])                          // 20 bytes
+				genesis = string(objData.Data.GenesisId[:objData.Data.GenesisIdLen]) // 20/36/40 bytes
+			}
+
 			var dataValue uint64
+			var tokenIndex uint64
+			var decimal uint8
 			// token summary
-			if len(objData.CodeHash) == 20 && len(objData.GenesisId) >= 20 {
-				buf := make([]byte, 12)
-				binary.LittleEndian.PutUint32(buf, objData.CodeType)
+			if objData.Data.CodeType != scriptDecoder.CodeType_NONE && objData.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
+				buf := make([]byte, 12, 12+20+40)
+				binary.LittleEndian.PutUint32(buf, objData.Data.CodeType)
 
-				if objData.CodeType == scriptDecoder.CodeType_NFT || objData.CodeType == scriptDecoder.CodeType_NFT_SELL {
-					binary.LittleEndian.PutUint64(buf[4:], objData.TokenIndex)
-
-					dataValue = objData.TokenIndex
-				} else if objData.CodeType == scriptDecoder.CodeType_FT {
-					dataValue = objData.Amount
+				if objData.Data.CodeType == scriptDecoder.CodeType_NFT {
+					binary.LittleEndian.PutUint64(buf[4:], objData.Data.NFT.TokenIndex)
+					tokenIndex = objData.Data.NFT.TokenIndex
+					dataValue = tokenIndex
+				} else if objData.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
+					binary.LittleEndian.PutUint64(buf[4:], objData.Data.NFTSell.TokenIndex)
+					tokenIndex = objData.Data.NFTSell.TokenIndex
+					dataValue = tokenIndex
+				} else if objData.Data.CodeType == scriptDecoder.CodeType_FT {
+					decimal = objData.Data.FT.Decimal
+					dataValue = objData.Data.FT.Amount
 				}
 
-				key := string(buf) + string(objData.CodeHash) + string(objData.GenesisId)
+				buf = append(buf, objData.Data.CodeHash[:]...)
+				buf = append(buf, objData.Data.GenesisId[:objData.Data.GenesisIdLen]...)
 
-				tokenSummary, ok := block.ParseData.TokenSummaryMap[key]
+				tokenKey := string(buf)
+
+				tokenSummary, ok := block.ParseData.TokenSummaryMap[tokenKey]
 				if !ok {
 					tokenSummary = &model.TokenData{
-						CodeType:  objData.CodeType,
-						NFTIdx:    objData.TokenIndex,
-						CodeHash:  objData.CodeHash,
-						GenesisId: objData.GenesisId,
+						CodeType:  objData.Data.CodeType,
+						NFTIdx:    tokenIndex,
+						Decimal:   decimal,
+						CodeHash:  objData.Data.CodeHash[:],
+						GenesisId: objData.Data.GenesisId[:objData.Data.GenesisIdLen],
 					}
-					block.ParseData.TokenSummaryMap[key] = tokenSummary
+					block.ParseData.TokenSummaryMap[tokenKey] = tokenSummary
 				}
 
 				tokenSummary.InSatoshi += objData.Satoshi
@@ -267,10 +299,10 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				uint64(objData.TxIdx),
 				string(input.InputHash),
 				input.InputVout,
-				string(objData.AddressPkh), // 20 byte
-				string(objData.CodeHash),   // 20 byte
-				string(objData.GenesisId),  // 20 byte
-				uint32(objData.CodeType),
+				address,
+				codehash,
+				genesis,
+				uint32(objData.Data.CodeType),
 				dataValue,
 				objData.Satoshi,
 				string(objData.ScriptType),

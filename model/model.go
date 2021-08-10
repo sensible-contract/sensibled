@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"sync"
 
+	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 )
@@ -49,29 +50,13 @@ type TxOut struct {
 	Satoshi  uint64
 	PkScript []byte
 
-	// other:
-	CodeType   uint32
-	CodeHash   []byte
-	GenesisId  []byte
-	SensibleId []byte
-	AddressPkh []byte
+	Outpoint      []byte // 32 + 4
+	OutpointKey   string // 32 + 4
+	ScriptType    []byte
+	ScriptTypeHex string
 
-	// nft
-	MetaTxId        []byte
-	MetaOutputIndex uint32
-	TokenIndex      uint64
-	TokenSupply     uint64
+	Data *scriptDecoder.TxoData
 
-	// ft
-	Amount  uint64
-	Decimal uint8
-	Name    string
-	Symbol  string
-
-	Outpoint                 []byte // 32 + 4
-	OutpointKey              string // 32 + 4
-	ScriptType               []byte
-	ScriptTypeHex            string
 	LockingScriptUnspendable bool
 }
 
@@ -157,28 +142,11 @@ type TxoData struct {
 	Vout        uint32
 	BlockHeight uint32
 	TxIdx       uint64
+	Satoshi     uint64
+	PkScript    []byte
+	ScriptType  []byte
 
-	CodeType   uint32
-	CodeHash   []byte
-	GenesisId  []byte // for search: codehash + genesis
-	SensibleId []byte // GenesisTx outpoint
-	AddressPkh []byte
-
-	// nft
-	MetaTxId        []byte
-	MetaOutputIndex uint32
-	TokenIndex      uint64
-	TokenSupply     uint64
-
-	// ft
-	Name    string
-	Symbol  string
-	Amount  uint64
-	Decimal uint8
-
-	Satoshi    uint64
-	PkScript   []byte
-	ScriptType []byte
+	Data *scriptDecoder.TxoData
 }
 
 func (d *TxoData) Marshal(buf []byte) {

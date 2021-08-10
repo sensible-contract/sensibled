@@ -45,20 +45,33 @@ func SyncBlockTxOutputInfo(startIdx int, txs []*model.Tx) {
 		for vout, output := range tx.TxOuts {
 			tx.OutputsValue += output.Satoshi
 
+			address := ""
+			codehash := ""
+			genesis := ""
+			if output.Data.HasAddress {
+				address = string(output.Data.AddressPkh[:]) // 20 bytes
+			}
+			if output.Data.CodeType != scriptDecoder.CodeType_NONE && output.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
+				codehash = string(output.Data.CodeHash[:])                         // 20 bytes
+				genesis = string(output.Data.GenesisId[:output.Data.GenesisIdLen]) // 20/36/40 bytes
+			}
+
 			var dataValue uint64
-			if output.CodeType == scriptDecoder.CodeType_NFT {
-				dataValue = output.TokenIndex
-			} else if output.CodeType == scriptDecoder.CodeType_FT {
-				dataValue = output.Amount
+			if output.Data.CodeType == scriptDecoder.CodeType_NFT {
+				dataValue = output.Data.NFT.TokenIndex
+			} else if output.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
+				dataValue = output.Data.NFTSell.TokenIndex
+			} else if output.Data.CodeType == scriptDecoder.CodeType_FT {
+				dataValue = output.Data.FT.Amount
 			}
 
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.Hash),
 				uint32(vout),
-				string(output.AddressPkh), // 20 bytes
-				string(output.CodeHash),   // 20 bytes
-				string(output.GenesisId),  // 20/36/40 bytes
-				uint32(output.CodeType),
+				address,
+				codehash,
+				genesis,
+				uint32(output.Data.CodeType),
 				dataValue,
 				output.Satoshi,
 				string(output.ScriptType),
@@ -79,12 +92,7 @@ func SyncBlockTxOutputInfo(startIdx int, txs []*model.Tx) {
 
 // SyncBlockTxInputDetail all tx input info
 func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) {
-	var commonObjData *model.TxoData = &model.TxoData{
-		CodeHash:   make([]byte, 1),
-		GenesisId:  make([]byte, 1),
-		AddressPkh: make([]byte, 1),
-		Satoshi:    0,
-	}
+	var commonObjData *model.TxoData = &model.TxoData{}
 
 	for txIdx, tx := range txs {
 		for vin, input := range tx.TxIns {
@@ -106,11 +114,25 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				)
 			}
 			tx.InputsValue += objData.Satoshi
+
+			address := ""
+			codehash := ""
+			genesis := ""
+			if objData.Data.HasAddress {
+				address = string(objData.Data.AddressPkh[:]) // 20 bytes
+			}
+			if objData.Data.CodeType != scriptDecoder.CodeType_NONE && objData.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
+				codehash = string(objData.Data.CodeHash[:])                          // 20 bytes
+				genesis = string(objData.Data.GenesisId[:objData.Data.GenesisIdLen]) // 20/36/40 bytes
+			}
+
 			var dataValue uint64
-			if objData.CodeType == scriptDecoder.CodeType_NFT {
-				dataValue = objData.TokenIndex
-			} else if objData.CodeType == scriptDecoder.CodeType_FT {
-				dataValue = objData.Amount
+			if objData.Data.CodeType == scriptDecoder.CodeType_NFT {
+				dataValue = objData.Data.NFT.TokenIndex
+			} else if objData.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
+				dataValue = objData.Data.NFTSell.TokenIndex
+			} else if objData.Data.CodeType == scriptDecoder.CodeType_FT {
+				dataValue = objData.Data.FT.Amount
 			}
 
 			SyncTxFullCount++
@@ -126,10 +148,10 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				uint64(objData.TxIdx),
 				string(input.InputHash),
 				input.InputVout,
-				string(objData.AddressPkh), // 20 byte
-				string(objData.CodeHash),   // 20 byte
-				string(objData.GenesisId),  // 20 byte
-				uint32(objData.CodeType),
+				address,
+				codehash,
+				genesis,
+				uint32(objData.Data.CodeType),
 				dataValue,
 				objData.Satoshi,
 				string(objData.ScriptType),

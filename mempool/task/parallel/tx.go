@@ -32,24 +32,7 @@ func ParseTxFirst(tx *model.Tx) {
 			output.LockingScriptUnspendable = true
 		}
 
-		txo := scriptDecoder.ExtractPkScriptForTxo(output.PkScript, output.ScriptType)
-		output.CodeType = txo.CodeType
-		output.CodeHash = txo.CodeHash
-		output.GenesisId = txo.GenesisId
-		output.SensibleId = txo.SensibleId
-		output.AddressPkh = txo.AddressPkh
-
-		// nft
-		output.MetaTxId = txo.MetaTxId
-		output.MetaOutputIndex = txo.MetaOutputIndex
-		output.TokenIndex = txo.TokenIndex
-		output.TokenSupply = txo.TokenSupply
-
-		// ft
-		output.Name = txo.Name
-		output.Symbol = txo.Symbol
-		output.Amount = txo.Amount
-		output.Decimal = txo.Decimal
+		output.Data = scriptDecoder.ExtractPkScriptForTxo(output.PkScript, output.ScriptType)
 	}
 }
 
@@ -70,27 +53,10 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, mpNewUtxo map[string]*mod
 		d := model.TxoDataPool.Get().(*model.TxoData)
 		d.BlockHeight = model.MEMPOOL_HEIGHT
 		d.TxIdx = uint64(txIdx)
-		d.AddressPkh = output.AddressPkh
-		d.CodeType = output.CodeType
-		d.CodeHash = output.CodeHash
-		d.GenesisId = output.GenesisId
-		d.SensibleId = output.SensibleId
-
-		// nft
-		d.MetaTxId = output.MetaTxId
-		d.MetaOutputIndex = output.MetaOutputIndex
-		d.TokenIndex = output.TokenIndex
-		d.TokenSupply = output.TokenSupply
-
-		// ft
-		d.Amount = output.Amount
-		d.Decimal = output.Decimal
-		d.Name = output.Name
-		d.Symbol = output.Symbol
-
 		d.Satoshi = output.Satoshi
-		d.ScriptType = output.ScriptType
 		d.PkScript = output.PkScript
+		d.ScriptType = output.ScriptType
+		d.Data = output.Data
 
 		mpNewUtxo[output.OutpointKey] = d
 	}
