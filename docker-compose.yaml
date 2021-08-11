@@ -2,7 +2,7 @@ version: '3'
 services:
    satoblock:
      build: .
-     image: sensibled:v1.4
+     image: sensibled:v1.5
      entrypoint: ./satoblock
      volumes:
        - /data/bitcoin-sv-blocks/blocks:/data/bitcoin-sv-blocks/blocks:ro

@@ -92,7 +92,9 @@ func SyncBlockTxOutputInfo(startIdx int, txs []*model.Tx) {
 
 // SyncBlockTxInputDetail all tx input info
 func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) {
-	var commonObjData *model.TxoData = &model.TxoData{}
+	var commonObjData *model.TxoData = &model.TxoData{
+		Data: &scriptDecoder.TxoData{},
+	}
 
 	for txIdx, tx := range txs {
 		for vin, input := range tx.TxIns {

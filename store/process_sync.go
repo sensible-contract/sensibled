@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS blktx_contract_height (
 	out_value1   UInt64,
 	out_value2   UInt64,
 	out_value3   UInt64,
-	blkid        FixedString(32)
+	blkid        FixedString(32),
 	txidx        UInt64
 ) engine=MergeTree()
 ORDER BY (height, code_type, codehash, genesis)
