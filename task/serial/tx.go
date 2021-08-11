@@ -157,7 +157,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, addressBalanceCmds map[string]*redi
 		// update token info
 		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
 			pipe.HSet(ctx, "ni"+strCodeHash+strGenesisId,
-				"metatxid", data.Data.NFT.MetaTxId,
+				"metatxid", data.Data.NFT.MetaTxId[:],
 				"metavout", data.Data.NFT.MetaOutputIndex,
 				"supply", data.Data.NFT.TokenSupply,
 				"sensibleid", data.Data.NFT.SensibleId,
