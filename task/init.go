@@ -43,6 +43,8 @@ func ParseBlockParallelEnd(block *model.Block) {
 	// DB更新tx, 需要依赖txout、txin执行完毕，以统计Tx Fee
 	serial.SyncBlockTx(block)
 
+	serial.SyncBlockTxContract(block)
+
 	block.ParseData = nil
 	block.Txs = nil
 }
@@ -51,8 +53,6 @@ func ParseBlockParallelEnd(block *model.Block) {
 func ParseEnd(isFull bool) {
 	// 提交DB
 	store.CommitSyncCk()
-	store.CommitFullSyncCk(serial.SyncTxFullCount > 0)
-	store.CommitCodeHashSyncCk(serial.SyncTxCodeHashCount > 0)
 
 	// 执行DB数据额外更新
 	if isFull {

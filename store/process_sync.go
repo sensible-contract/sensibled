@@ -68,6 +68,30 @@ ORDER BY (height, codehash, genesis)
 PARTITION BY intDiv(height, 2100)
 `,
 
+		// tx contract
+		// ================================================================
+		// 区块包含的交易中的contract记录，分区内按区块高度height排序、索引。按blk height查询时可确定分区 (快)
+		"DROP TABLE IF EXISTS blktx_contract_height",
+		`
+CREATE TABLE IF NOT EXISTS blktx_contract_height (
+	height       UInt32,
+	codehash     String,
+	genesis      String,
+	code_type    UInt32,      -- 0: none, 1: ft, 2: unique, 3: nft
+	operation    UInt32,      -- 0: sell, 1: buy, 2: add, 3: remove
+	in_value1    UInt64,      -- token1 amount
+	in_value2    UInt64,
+	in_value3    UInt64,      -- lp value
+	out_value1   UInt64,
+	out_value2   UInt64,
+	out_value3   UInt64,
+	blkid        FixedString(32)
+	txidx        UInt64
+) engine=MergeTree()
+ORDER BY (height, code_type, codehash, genesis)
+PARTITION BY intDiv(height, 2100)
+`,
+
 		// tx list
 		// ================================================================
 		// 区块包含的交易列表，分区内按区块高度height排序、索引。按blk height查询时可确定分区 (快)
@@ -290,6 +314,7 @@ PARTITION BY substring(codehash, 1, 1)
 		"ALTER TABLE blk DELETE WHERE height >= ",
 		"ALTER TABLE blk_codehash_height DELETE WHERE height >= ",
 
+		"ALTER TABLE blktx_contract_height DELETE WHERE height >= ",
 		"ALTER TABLE blktx_height DELETE WHERE height >= ",
 
 		"ALTER TABLE txin_spent DELETE WHERE height >= ",
@@ -301,12 +326,14 @@ PARTITION BY substring(codehash, 1, 1)
 	createPartSQLs = []string{
 		"DROP TABLE IF EXISTS blk_height_new",
 		"DROP TABLE IF EXISTS blk_codehash_height_new",
+		"DROP TABLE IF EXISTS blktx_contract_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",
 		"DROP TABLE IF EXISTS txout_new",
 		"DROP TABLE IF EXISTS txin_new",
 
 		"CREATE TABLE IF NOT EXISTS blk_height_new AS blk_height",
 		"CREATE TABLE IF NOT EXISTS blk_codehash_height_new AS blk_codehash_height",
+		"CREATE TABLE IF NOT EXISTS blktx_contract_height_new AS blktx_contract_height",
 		"CREATE TABLE IF NOT EXISTS blktx_height_new AS blktx_height",
 		"CREATE TABLE IF NOT EXISTS txout_new AS txout",
 		"CREATE TABLE IF NOT EXISTS txin_new AS txin",
@@ -339,6 +366,7 @@ PARTITION BY substring(codehash, 1, 1)
 	processPartSQLs = []string{
 		"INSERT INTO blk_height SELECT * FROM blk_height_new;",
 		"INSERT INTO blk_codehash_height SELECT * FROM blk_codehash_height_new;",
+		"INSERT INTO blktx_contract_height SELECT * FROM blktx_contract_height_new;",
 		"INSERT INTO blktx_height SELECT * FROM blktx_height_new;",
 
 		// 优化blk表，以便统一按height排序查询
@@ -352,6 +380,7 @@ PARTITION BY substring(codehash, 1, 1)
 
 		"DROP TABLE IF EXISTS blk_height_new",
 		"DROP TABLE IF EXISTS blk_codehash_height_new",
+		"DROP TABLE IF EXISTS blktx_contract_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",
 	}
 )
