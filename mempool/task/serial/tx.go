@@ -137,14 +137,16 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
-		if !data.Data.HasAddress {
-			// 无法识别地址，暂不记录utxo
-			logger.Log.Info("ignore mp:utxo", zap.String("key", hex.EncodeToString([]byte(outpointKey))), zap.Float64("score", member.Score))
-			// pipe.ZAdd(ctx, "mp:utxo", member)
-			continue
-		}
 
 		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
+			if !data.Data.HasAddress {
+				// 无法识别地址，暂不记录utxo
+				logger.Log.Info("ignore mp:utxo", zap.String("key", hex.EncodeToString([]byte(outpointKey))),
+					zap.Float64("score", member.Score))
+				// pipe.ZAdd(ctx, "mp:utxo", member)
+				continue
+			}
+
 			// 不是合约tx，则记录address utxo
 			// redis有序address utxo数据添加
 			logger.Log.Info("ZAdd mp:au",
@@ -267,14 +269,14 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		strCodeHash := string(data.Data.CodeHash[:])
 		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
 
-		// redis有序utxo数据清除
-		if !data.Data.HasAddress {
-			// 无法识别地址，暂不记录utxo
-			// pipe.ZRem(ctx, "mp:utxo", outpointKey)
-			continue
-		}
-
 		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
+			// redis有序utxo数据清除
+			if !data.Data.HasAddress {
+				// 无法识别地址，暂不记录utxo
+				// pipe.ZRem(ctx, "mp:utxo", outpointKey)
+				continue
+			}
+
 			// 不是合约tx，则记录address utxo
 			// redis有序address utxo数据清除
 			mpkeyAU := "mp:{au" + strAddressPkh + "}"
@@ -354,13 +356,14 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
-		if !data.Data.HasAddress {
-			// 无法识别地址，暂不记录utxo
-			// pipe.ZAdd(ctx, "mp:s:utxo", member)
-			continue
-		}
 
 		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
+			if !data.Data.HasAddress {
+				// 无法识别地址，暂不记录utxo
+				// pipe.ZAdd(ctx, "mp:s:utxo", member)
+				continue
+			}
+
 			// 不是合约tx，则记录address utxo
 			// redis有序address utxo数据添加
 			mpkeyAU := "mp:s:{au" + strAddressPkh + "}"
