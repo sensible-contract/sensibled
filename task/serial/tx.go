@@ -87,9 +87,14 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, addressBalanceCmds map[string]*redi
 	}
 
 	for outpointKey, data := range utxoToRestore {
+		// if data.Data.CodeType == scriptDecoder.CodeType_SENSIBLE {
+		// 	// 正常情况, utxo不会有opreturn的数据
+		// 	continue
+		// }
+
 		buf := make([]byte, 20+len(data.PkScript))
 		data.Marshal(buf)
-		// redis全局utxo数据添加
+		// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
 		pipe.Set(ctx, "u"+outpointKey, buf, 0)
 
 		strAddressPkh := string(data.Data.AddressPkh[:])
@@ -99,14 +104,14 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, addressBalanceCmds map[string]*redi
 		// redis有序utxo数据成员
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
-		// 无法识别地址，暂不记录utxo
-		if !data.Data.HasAddress {
-			// pipe.ZAdd(ctx, "utxo", member)
-			continue
-		}
-
 		// 非合约信息记录
 		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
+			// 无法识别地址，暂不记录utxo
+			if !data.Data.HasAddress {
+				// pipe.ZAdd(ctx, "utxo", member)
+				continue
+			}
+			// 识别地址，只记录utxo和balance
 			pipe.ZAdd(ctx, "{au"+strAddressPkh+"}", member)           // 有序address utxo数据添加
 			pipe.IncrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
 			continue
@@ -187,15 +192,15 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, addressBalanceCmds map[string]*redi
 		strCodeHash := string(data.Data.CodeHash[:])
 		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
 
-		// redis有序utxo数据清除
-		if !data.Data.HasAddress {
-			// 无法识别地址，暂不记录utxo
-			// pipe.ZRem(ctx, "utxo", outpointKey)
-			continue
-		}
-
 		// 非合约信息清理
 		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
+			// redis有序utxo数据清除
+			if !data.Data.HasAddress {
+				// 无法识别地址，暂不记录utxo
+				// pipe.ZRem(ctx, "utxo", outpointKey)
+				continue
+			}
+
 			pipe.ZRem(ctx, "{au"+strAddressPkh+"}", outpointKey)                                               // 有序address utxo数据清除
 			addressBalanceCmds["bl"+strAddressPkh] = pipe.DecrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
 			continue

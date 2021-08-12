@@ -185,6 +185,5 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 func ParseEnd() {
 	// 7 dep 5
 	store.CommitSyncCk()
-	store.CommitFullSyncCk(serial.SyncTxFullCount > 0)
 	store.ProcessPartSyncCk()
 }

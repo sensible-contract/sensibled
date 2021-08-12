@@ -75,6 +75,7 @@ func PreparePartSyncCk() bool {
 func CommitSyncCk() {
 	defer SyncStmtTx.Close()
 	defer SyncStmtTxOut.Close()
+	defer SyncStmtTxIn.Close()
 
 	logger.Log.Info("sync-commit-tx...")
 	if err := syncTxTx.Commit(); err != nil {
@@ -83,15 +84,6 @@ func CommitSyncCk() {
 	logger.Log.Info("sync-commit-txout...")
 	if err := syncTxTxOut.Commit(); err != nil {
 		logger.Log.Error("sync-commit-txout", zap.Error(err))
-	}
-}
-
-func CommitFullSyncCk(needCommit bool) {
-	defer SyncStmtTxIn.Close()
-
-	if !needCommit {
-		syncTxTxIn.Rollback()
-		return
 	}
 
 	logger.Log.Info("sync-commit-txin...")
