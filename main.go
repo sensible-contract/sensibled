@@ -203,6 +203,7 @@ func syncBlock() {
 		startIdx := 0
 		initSyncMempool := true
 		for {
+			needSaveMempool := false
 			mempool.Init()
 			if initSyncMempool {
 				logger.Log.Info("init sync mempool...")
@@ -233,6 +234,7 @@ func syncBlock() {
 			memStore.CreatePartSyncCk()    // 初始化同步数据库表
 			memStore.PreparePartSyncCk()   // 同步db
 			mempool.ParseMempool(startIdx) // 开始同步mempool
+			needSaveMempool = true
 
 		UPDATE_UTXO:
 
@@ -251,11 +253,13 @@ func syncBlock() {
 				}
 				// for txin dump
 				// 6 dep 2 4
-				memSerial.UpdateUtxoInRedisSerial(pipe, initSyncMempool,
-					mempool.SpentUtxoKeysMap,
-					mempool.NewUtxoDataMap,
-					mempool.RemoveUtxoDataMap,
-					mempool.SpentUtxoDataMap)
+				if needSaveMempool {
+					memSerial.UpdateUtxoInRedisSerial(pipe, initSyncMempool,
+						mempool.SpentUtxoKeysMap,
+						mempool.NewUtxoDataMap,
+						mempool.RemoveUtxoDataMap,
+						mempool.SpentUtxoDataMap)
+				}
 				_, err = pipe.Exec(ctx)
 				if err != nil {
 					panic(err)
@@ -270,7 +274,9 @@ func syncBlock() {
 					task.ParseEnd(isFull)
 				}
 				// 7 dep 5
-				memTask.ParseEnd()
+				if needSaveMempool {
+					memTask.ParseEnd()
+				}
 			}()
 			wg.Wait()
 
