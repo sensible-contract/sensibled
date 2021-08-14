@@ -15,14 +15,14 @@ trap _term SIGINT
 
 set -v on
 
-./satoblock -full -end 100000 &
+./sensibled -full -end 100000 &
 child=$!
 wait "$child"
 
 BLOCK_HEIGHT_STEPS="200000 300000 350000 400000 450000 500000 550000 600000 650000 690679"
 for BLOCK_HEIGHT in $BLOCK_HEIGHT_STEPS; do
     echo $BLOCK_HEIGHT
-    ./satoblock -end $BLOCK_HEIGHT &
+    ./sensibled -end $BLOCK_HEIGHT &
     child=$!
     wait "$child"
 done

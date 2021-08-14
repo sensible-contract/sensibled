@@ -7,8 +7,8 @@ import (
 	"flag"
 	"fmt"
 	_ "net/http/pprof"
-	"satoblock/logger"
-	"satoblock/parser"
+	"sensibled/logger"
+	"sensibled/parser"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"

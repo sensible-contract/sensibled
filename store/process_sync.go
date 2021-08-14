@@ -1,8 +1,8 @@
 package store
 
 import (
-	"satoblock/loader/clickhouse"
-	"satoblock/logger"
+	"sensibled/loader/clickhouse"
+	"sensibled/logger"
 	"strconv"
 
 	"go.uber.org/zap"

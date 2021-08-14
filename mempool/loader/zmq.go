@@ -3,8 +3,8 @@ package loader
 import (
 	"encoding/hex"
 	"fmt"
-	"satoblock/logger"
-	"satoblock/utils"
+	"sensibled/logger"
+	"sensibled/utils"
 
 	"github.com/spf13/viper"
 	"github.com/zeromq/goczmq"

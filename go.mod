@@ -1,4 +1,4 @@
-module satoblock
+module sensibled
 
 go 1.15
 

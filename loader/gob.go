@@ -3,9 +3,9 @@ package loader
 import (
 	"encoding/gob"
 	"os"
-	"satoblock/logger"
-	"satoblock/model"
-	"satoblock/utils"
+	"sensibled/logger"
+	"sensibled/model"
+	"sensibled/utils"
 
 	"go.uber.org/zap"
 )

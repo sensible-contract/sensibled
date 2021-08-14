@@ -2,7 +2,7 @@ package parser
 
 import (
 	"math"
-	"satoblock/model"
+	"sensibled/model"
 )
 
 func isTxFinal(tx *model.Tx) bool {

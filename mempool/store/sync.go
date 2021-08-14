@@ -3,8 +3,8 @@ package store
 import (
 	"database/sql"
 	"fmt"
-	"satoblock/loader/clickhouse"
-	"satoblock/logger"
+	"sensibled/loader/clickhouse"
+	"sensibled/logger"
 
 	"go.uber.org/zap"
 )

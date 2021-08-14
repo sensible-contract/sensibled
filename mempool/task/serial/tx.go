@@ -3,9 +3,9 @@ package serial
 import (
 	"context"
 	"encoding/hex"
-	"satoblock/logger"
-	"satoblock/model"
-	"satoblock/rdb"
+	"sensibled/logger"
+	"sensibled/model"
+	"sensibled/rdb"
 
 	redis "github.com/go-redis/redis/v8"
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
@@ -128,7 +128,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		buf := make([]byte, 20+len(data.PkScript))
 		data.Marshal(buf)
 		// redis全局utxo数据添加
-		// fixme: 会覆盖satoblock？
+		// fixme: 会覆盖sensibled？
 		pipe.SetNX(ctx, "u"+outpointKey, buf, 0)
 
 		strAddressPkh := string(data.Data.AddressPkh[:])

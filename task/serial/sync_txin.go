@@ -2,10 +2,10 @@ package serial
 
 import (
 	"encoding/binary"
-	"satoblock/logger"
-	"satoblock/model"
-	"satoblock/store"
-	"satoblock/utils"
+	"sensibled/logger"
+	"sensibled/model"
+	"sensibled/store"
+	"sensibled/utils"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"

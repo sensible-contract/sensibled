@@ -3,7 +3,7 @@ package parallel
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"satoblock/model"
+	"sensibled/model"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 )

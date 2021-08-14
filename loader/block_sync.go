@@ -5,9 +5,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"satoblock/loader/clickhouse"
-	"satoblock/logger"
-	"satoblock/model"
+	"sensibled/loader/clickhouse"
+	"sensibled/logger"
+	"sensibled/model"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"

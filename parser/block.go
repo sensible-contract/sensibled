@@ -2,8 +2,8 @@ package parser
 
 import (
 	"encoding/binary"
-	"satoblock/model"
-	"satoblock/utils"
+	"sensibled/model"
+	"sensibled/utils"
 )
 
 func NewBlock(rawblock []byte) (block *model.Block) {

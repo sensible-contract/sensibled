@@ -1,9 +1,9 @@
 package serial
 
 import (
-	"satoblock/logger"
-	"satoblock/model"
-	"satoblock/store"
+	"sensibled/logger"
+	"sensibled/model"
+	"sensibled/store"
 
 	"go.uber.org/zap"
 )

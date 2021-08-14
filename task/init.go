@@ -1,10 +1,10 @@
 package task
 
 import (
-	"satoblock/model"
-	"satoblock/store"
-	"satoblock/task/parallel"
-	"satoblock/task/serial"
+	"sensibled/model"
+	"sensibled/store"
+	"sensibled/task/parallel"
+	"sensibled/task/serial"
 )
 
 // ParseBlockParallel 先并行分析区块，不同区块并行，同区块内串行

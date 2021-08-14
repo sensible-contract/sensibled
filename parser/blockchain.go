@@ -3,12 +3,12 @@ package parser
 import (
 	"bytes"
 	"encoding/hex"
-	"satoblock/loader"
-	"satoblock/logger"
-	"satoblock/model"
-	"satoblock/task"
-	utilsTask "satoblock/task/utils"
-	"satoblock/utils"
+	"sensibled/loader"
+	"sensibled/logger"
+	"sensibled/model"
+	"sensibled/task"
+	utilsTask "sensibled/task/utils"
+	"sensibled/utils"
 	"sync"
 
 	"go.uber.org/zap"
