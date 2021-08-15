@@ -16,14 +16,14 @@ import (
 )
 
 type Mempool struct {
-	BatchTxs []*model.Tx         // 所有Tx
-	Txs      map[string]struct{} // 所有Tx
-	SkipTxs  map[string]struct{} // 需要跳过的Tx
+	Txs     map[string]struct{} // 所有Tx
+	SkipTxs map[string]struct{} // 需要跳过的Tx
 
-	SpentUtxoKeysMap  map[string]struct{}
-	SpentUtxoDataMap  map[string]*model.TxoData
-	NewUtxoDataMap    map[string]*model.TxoData
-	RemoveUtxoDataMap map[string]*model.TxoData
+	BatchTxs          []*model.Tx               // 当前同步批次的Tx
+	SpentUtxoKeysMap  map[string]struct{}       // 在当前同步批次中被花费的所有utxo集合
+	SpentUtxoDataMap  map[string]*model.TxoData // 当前同步批次中花费的已确认的utxo集合
+	NewUtxoDataMap    map[string]*model.TxoData // 当前同步批次中新产生的utxo集合
+	RemoveUtxoDataMap map[string]*model.TxoData // 当前同步批次中花费的未确认的utxo集合，且属于前批次产生的utxo
 
 	m sync.Mutex
 }
@@ -176,6 +176,8 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 	serial.ParseGetSpentUtxoDataFromRedisSerial(mp.SpentUtxoKeysMap, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
 	// 4 dep 3
 	serial.SyncBlockTxInputDetail(startIdx, mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
+	// 8 dep 3
+	serial.SyncBlockTxContract(startIdx, mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
 
 	// 5 dep 2 4
 	serial.SyncBlockTx(startIdx, mp.BatchTxs)

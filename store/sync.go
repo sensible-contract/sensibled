@@ -74,12 +74,12 @@ func prepareSyncCk(isFull bool) bool {
 
 	syncTxContract, err = clickhouse.CK.Begin()
 	if err != nil {
-		logger.Log.Error("sync-begin-blk-code", zap.Error(err))
+		logger.Log.Error("sync-begin-blk-contract", zap.Error(err))
 		return false
 	}
 	SyncStmtTxContract, err = syncTxContract.Prepare(sqlTxContract)
 	if err != nil {
-		logger.Log.Error("sync-prepare-blk-code", zap.Error(err))
+		logger.Log.Error("sync-prepare-blk-contract", zap.Error(err))
 		return false
 	}
 
