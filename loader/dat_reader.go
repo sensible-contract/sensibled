@@ -3,10 +3,14 @@ package loader
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
+	"sensibled/logger"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 type BlockData struct {
@@ -70,14 +74,19 @@ func (bf *BlockData) FetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
 	buf := [4]byte{}
 	_, err = bf.CurrentFile.Read(buf[:])
 	if err != nil {
-		// logger.Log.Info("read failed", zap.Error(err))
+		logger.Log.Info("FetchNextBlock done", zap.Error(err))
 		return
 	}
 	bf.Offset += 4
 
 	if !bytes.Equal(buf[:], bf.Magic) {
 		err = errors.New("Bad magic")
-		// logger.Log.Info("read blk%d[%d] failed: %v, %v != %v", bf.CurrentId, bf.Offset, err, buf[:], bf.Magic[:])
+		logger.Log.Info("FetchNextBlock done: Bad magic",
+			zap.Int("fid", bf.CurrentId),
+			zap.Int("offset", bf.Offset),
+			zap.String("buf", hex.EncodeToString(buf[:])),
+			zap.String("magic", hex.EncodeToString(bf.Magic[:])),
+		)
 		return
 	}
 
@@ -88,17 +97,29 @@ func (bf *BlockData) FetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
 	bf.Offset += 4
 
 	blocksize := binary.LittleEndian.Uint32(buf[:])
+	readOffset := 0
+	readSize := 0
 
 	if skipTxs {
 		rawblock = make([]byte, 80+9) // block header + txn
+		readSize = 89
 	} else {
 		rawblock = make([]byte, blocksize)
-	}
-	_, err = bf.CurrentFile.Read(rawblock[:])
-	if err != nil {
-		return
+		readSize = int(blocksize)
 	}
 
+	// read until to readSize
+	for {
+		var n int
+		n, err = bf.CurrentFile.Read(rawblock[readOffset:])
+		if err != nil {
+			return
+		}
+		readOffset += n
+		if readOffset == readSize {
+			break
+		}
+	}
 	if skipTxs {
 		_, err = bf.CurrentFile.Seek(int64(blocksize-80-9), os.SEEK_CUR)
 		if err != nil {

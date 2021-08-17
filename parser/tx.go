@@ -15,6 +15,7 @@ func NewTxs(txsraw []byte) (txs []*model.Tx) {
 
 	txoffset := uint(0)
 	for i := range txs {
+		// fmt.Println("offset:", offset)
 		txs[i], txoffset = NewTx(txsraw[offset:])
 		txs[i].Raw = txsraw[offset : offset+txoffset]
 		txs[i].Hash = utils.GetHash256(txs[i].Raw)
@@ -30,9 +31,11 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 	tx = new(model.Tx)
 	tx.Version = binary.LittleEndian.Uint32(rawtx[0:4])
 	offset = 4
+	// fmt.Println("version:", offset)
 
 	txincnt, txincntsize := utils.DecodeVarIntForBlock(rawtx[offset:])
 	offset += txincntsize
+	// fmt.Println("in:", offset)
 
 	tx.TxInCnt = uint32(txincnt)
 	tx.TxIns = make([]*model.TxIn, txincnt)
@@ -45,6 +48,7 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 
 	txoutcnt, txoutcntsize := utils.DecodeVarIntForBlock(rawtx[offset:])
 	offset += txoutcntsize
+	// fmt.Println("out:", offset)
 
 	tx.TxOutCnt = uint32(txoutcnt)
 	tx.TxOuts = make([]*model.TxOut, txoutcnt)
@@ -53,6 +57,7 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 		offset += txoffset
 	}
 
+	// fmt.Println("lock:", offset)
 	tx.LockTime = binary.LittleEndian.Uint32(rawtx[offset : offset+4])
 	offset += 4
 	return
