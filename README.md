@@ -7,9 +7,9 @@
 
 ## 运行依赖
 
-1. 需要节点开启zmq服务，至少启用hashblock队列。
+1. 需要节点开启zmq服务，至少启用 hashblock/hashtx/rawtx 3个队列。
 2. 能够直接访问节点磁盘block文件。
-3. 使用redis，clickhouse存放数据。目前redis占用15GB，clickhouse占用930GB。
+3. 使用redis，clickhouse存放数据。目前redis占用18GB内存，clickhouse占用400GB磁盘。
 
 
 ## 配置文件
