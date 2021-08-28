@@ -141,25 +141,25 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
 			if !data.Data.HasAddress {
 				// 无法识别地址，暂不记录utxo
-				logger.Log.Info("ignore mp:utxo", zap.String("key", hex.EncodeToString([]byte(outpointKey))),
-					zap.Float64("score", member.Score))
+				// logger.Log.Info("ignore mp:utxo", zap.String("key", hex.EncodeToString([]byte(outpointKey))),
+				// 	zap.Float64("score", member.Score))
 				// pipe.ZAdd(ctx, "mp:utxo", member)
 				continue
 			}
 
 			// 不是合约tx，则记录address utxo
 			// redis有序address utxo数据添加
-			logger.Log.Info("ZAdd mp:au",
-				zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
-				zap.String("key", hex.EncodeToString([]byte(outpointKey))),
-				zap.Float64("score", member.Score))
+			// logger.Log.Info("ZAdd mp:au",
+			// 	zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
+			// 	zap.String("key", hex.EncodeToString([]byte(outpointKey))),
+			// 	zap.Float64("score", member.Score))
 			mpkeyAU := "mp:{au" + strAddressPkh + "}"
 			pipe.ZAdd(ctx, mpkeyAU, member)
 
 			// balance of address
-			logger.Log.Info("IncrBy mp:bl",
-				zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
-				zap.Uint64("satoshi", data.Satoshi))
+			// logger.Log.Info("IncrBy mp:bl",
+			// 	zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
+			// 	zap.Uint64("satoshi", data.Satoshi))
 			mpkeyBL := "mp:bl" + strAddressPkh
 			pipe.IncrBy(ctx, mpkeyBL, int64(data.Satoshi))
 
