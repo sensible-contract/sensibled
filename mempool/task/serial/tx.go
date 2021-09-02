@@ -6,6 +6,7 @@ import (
 	"sensibled/logger"
 	"sensibled/model"
 	"sensibled/rdb"
+	"strconv"
 
 	redis "github.com/go-redis/redis/v8"
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
@@ -236,12 +237,17 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		// update token info
 		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
-			pipe.HSet(ctx, "ni"+strCodeHash+strGenesisId,
+			pipe.HSet(ctx, "nI"+strCodeHash+strGenesisId+strconv.Itoa(int(data.Data.NFT.TokenIndex)),
 				"metatxid", data.Data.NFT.MetaTxId[:],
 				"metavout", data.Data.NFT.MetaOutputIndex,
 				"supply", data.Data.NFT.TokenSupply,
 				"sensibleid", data.Data.NFT.SensibleId,
 			)
+			pipe.HSet(ctx, "ni"+strCodeHash+strGenesisId,
+				"supply", data.Data.NFT.TokenSupply,
+				"sensibleid", data.Data.NFT.SensibleId,
+			)
+
 		} else if data.Data.CodeType == scriptDecoder.CodeType_FT {
 			pipe.HSet(ctx, "fi"+strCodeHash+strGenesisId,
 				"decimal", data.Data.FT.Decimal,
