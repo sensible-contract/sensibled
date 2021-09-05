@@ -37,10 +37,7 @@ func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
 
 	loader.LoadFromGobFile("./cmd/headers-list.gob", bc.Blocks)
 
-	bc.BlockData, err = loader.NewBlockData(path, magic)
-	if err != nil {
-		return nil, err
-	}
+	bc.BlockData = loader.NewBlockData(path, magic)
 	return
 }
 

@@ -23,19 +23,11 @@ type BlockData struct {
 	m           sync.Mutex
 }
 
-func NewBlockData(path string, magic []byte) (bf *BlockData, err error) {
+func NewBlockData(path string, magic []byte) (bf *BlockData) {
 	bf = new(BlockData)
 	bf.Path = path
 	bf.Magic = magic
-	bf.CurrentId = 0
-	bf.Offset = 0
-	bf.LastOffset = 0
-	f, err := os.Open(blkfilename(path, 0))
-	if err != nil {
-		return
-	}
-
-	bf.CurrentFile = f
+	bf.CurrentId = -1
 	return
 }
 
