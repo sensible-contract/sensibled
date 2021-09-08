@@ -37,6 +37,13 @@ func ParseGetSpentUtxoDataFromRedisSerial(
 			continue
 		}
 
+		// 检查是否在区块缓存
+		if data, ok := model.GlobalNewUtxoDataMap[outpointKey]; ok {
+			spentUtxoDataMap[outpointKey] = data
+			// delete(model.GlobalNewUtxoDataMap, outpointKey)
+			continue
+		}
+
 		needExec = true
 		m[outpointKey] = pipe.Get(ctx, "u"+outpointKey)
 	}
