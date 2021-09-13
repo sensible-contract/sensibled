@@ -77,6 +77,7 @@ func SyncBlockTxContract(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, m
 			swapOut.Uniq.Swap.LpAmount,
 			"", //string(block.Hash),
 			uint64(startIdx+txIdx),
+			string(tx.Hash),
 		); err != nil {
 			logger.Log.Info("sync-tx-contract-err",
 				zap.String("txid", tx.HashHex),
