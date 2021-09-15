@@ -52,10 +52,6 @@ func (mp *Mempool) LoadFromMempool() bool {
 		case <-loader.RawTxNotify:
 		default:
 		}
-		select {
-		case <-loader.NewTxNotify:
-		default:
-		}
 	}
 
 	txids := loader.GetRawMemPoolRPC()
@@ -94,6 +90,11 @@ func (mp *Mempool) LoadFromMempool() bool {
 		tx.Hash = utils.GetHash256(rawtx)
 		tx.HashHex = utils.HashString(tx.Hash)
 
+		if _, ok := mp.Txs[tx.HashHex]; ok {
+			logger.Log.Info("skip dup")
+			continue
+		}
+
 		if parser.IsTxNonFinal(tx, mp.SkipTxs) {
 			logger.Log.Info("skip non final tx",
 				zap.String("txid", tx.HashHex),
@@ -102,10 +103,6 @@ func (mp *Mempool) LoadFromMempool() bool {
 			continue
 		}
 
-		if _, ok := mp.Txs[tx.HashHex]; ok {
-			logger.Log.Info("skip dup")
-			continue
-		}
 		mp.Txs[tx.HashHex] = struct{}{}
 		mp.BatchTxs = append(mp.BatchTxs, tx)
 	}
@@ -120,20 +117,7 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 	for {
 		timeout := false
 		select {
-		case txid := <-loader.NewTxNotify:
-			if _, ok := mp.Txs[txid]; ok {
-				logger.Log.Info("skip dup",
-					zap.String("txid", txid),
-				)
-				continue
-			}
-
-			rawtx = loader.GetRawTxRPC(txid)
-			if rawtx == nil {
-				// fixme, may all fail, mey need to break
-				continue
-			}
-
+		case rawtx = <-loader.RawTxNotify:
 			if !firstGot {
 				start = time.Now()
 			}
@@ -166,6 +150,13 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 		tx.Size = uint32(txoffset)
 		tx.Hash = utils.GetHash256(rawtx)
 		tx.HashHex = utils.HashString(tx.Hash)
+
+		if _, ok := mp.Txs[tx.HashHex]; ok {
+			logger.Log.Info("skip dup",
+				zap.String("txid", tx.HashHex),
+			)
+			continue
+		}
 
 		if parser.IsTxNonFinal(tx, mp.SkipTxs) {
 			logger.Log.Info("skip non final tx",
