@@ -43,10 +43,21 @@ func zmqNotify(endpoint string) {
 	}
 	defer subscriber.Destroy()
 
+	subscriber.SetTcpKeepalive(1)
+	subscriber.SetTcpKeepaliveIdle(120)
+	subscriber.SetTcpKeepaliveCnt(10)
+	subscriber.SetTcpKeepaliveIntvl(3)
+
+	logger.Log.Info("zmq conf",
+		zap.Int("keepalive", subscriber.TcpKeepalive()),
+		zap.Int("keepalive idle", subscriber.TcpKeepaliveIdle()),
+		zap.Int("keepalive count", subscriber.TcpKeepaliveCnt()),
+		zap.Int("keepalive intvl", subscriber.TcpKeepaliveIntvl()),
+	)
 	for {
 		msg, _, err := subscriber.RecvFrame()
 		if err != nil {
-			logger.Log.Info("Error ZMQ RecFrame: %s", zap.Error(err))
+			logger.Log.Info("Error ZMQ RecFrame", zap.Error(err))
 			continue
 		}
 
