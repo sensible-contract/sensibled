@@ -89,3 +89,33 @@ func getUtxoBySql(psql string) (utxosMapRsp map[string]*model.TxoData, err error
 
 	return utxosMapRsp, nil
 }
+
+////////////////////////////////////////////////////////////////
+
+func rawtxResultSRF(rows *sql.Rows) (interface{}, error) {
+	var ret []byte
+	err := rows.Scan(&ret)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+func GetRawTxByIdFromMempool(txidHex string) (txRsp []byte, err error) {
+	psql := fmt.Sprintf(`
+SELECT rawtx FROM blktx_height
+WHERE height = 4294967295 AND txid = reverse(unhex('%s'))
+LIMIT 1`, txidHex)
+
+	txRet, err := clickhouse.ScanOne(psql, rawtxResultSRF)
+	if err != nil {
+		logger.Log.Info("query tx failed", zap.Error(err))
+		return nil, err
+	}
+	if txRet == nil {
+		return nil, errors.New("not exist")
+	}
+	txRsp = txRet.([]byte)
+
+	return txRsp, nil
+}

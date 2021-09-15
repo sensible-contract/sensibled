@@ -1,6 +1,7 @@
 package task
 
 import (
+	blkLoader "sensibled/loader"
 	"sensibled/logger"
 	"sensibled/mempool/loader"
 	"sensibled/mempool/parser"
@@ -62,10 +63,20 @@ func (mp *Mempool) LoadFromMempool() bool {
 		return false
 	}
 	for _, txid := range txids {
-		rawtx := loader.GetRawTxRPC(txid)
-		if rawtx == nil {
-			// fixme, may all fail, mey need to break
-			continue
+		rawtx, err := blkLoader.GetRawTxByIdFromMempool(txid.(string))
+		if err != nil {
+			rawtx = loader.GetRawTxRPC(txid)
+			if rawtx == nil {
+				// fixme, may all fail, mey need to break
+				continue
+			}
+			logger.Log.Info("init tx in mempool from rpc",
+				zap.Any("txid", txid),
+			)
+		} else {
+			logger.Log.Info("init tx in mempool from db",
+				zap.Any("txid", txid),
+			)
 		}
 
 		tx, txoffset := parser.NewTx(rawtx)
@@ -106,6 +117,13 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 		timeout := false
 		select {
 		case txid := <-loader.NewTxNotify:
+			if _, ok := mp.Txs[txid]; ok {
+				logger.Log.Info("skip dup",
+					zap.String("txid", txid),
+				)
+				continue
+			}
+
 			rawtx = loader.GetRawTxRPC(txid)
 			if rawtx == nil {
 				// fixme, may all fail, mey need to break
@@ -153,12 +171,6 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 			continue
 		}
 
-		if _, ok := mp.Txs[tx.HashHex]; ok {
-			logger.Log.Info("skip dup",
-				zap.String("txid", tx.HashHex),
-			)
-			continue
-		}
 		logger.Log.Info("new tx in mempool",
 			zap.String("txid", tx.HashHex),
 		)
