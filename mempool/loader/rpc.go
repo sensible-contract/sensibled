@@ -61,7 +61,9 @@ func GetRawTxRPC(txid interface{}) []byte {
 	}
 
 	if response.Error != nil {
-		logger.Log.Info("Receive remote return", zap.Any("response", response))
+		logger.Log.Info("Receive remote return",
+			zap.String("txid", txid.(string)),
+			zap.Any("response", response))
 		return nil
 	}
 
