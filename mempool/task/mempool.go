@@ -51,6 +51,10 @@ func (mp *Mempool) LoadFromMempool() bool {
 		case <-loader.RawTxNotify:
 		default:
 		}
+		select {
+		case <-loader.NewTxNotify:
+		default:
+		}
 	}
 
 	txids := loader.GetRawMemPoolRPC()
@@ -60,6 +64,7 @@ func (mp *Mempool) LoadFromMempool() bool {
 	for _, txid := range txids {
 		rawtx := loader.GetRawTxRPC(txid)
 		if rawtx == nil {
+			// fixme, may all fail, mey need to break
 			continue
 		}
 
@@ -100,7 +105,13 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 	for {
 		timeout := false
 		select {
-		case rawtx = <-loader.RawTxNotify:
+		case txid := <-loader.NewTxNotify:
+			rawtx = loader.GetRawTxRPC(txid)
+			if rawtx == nil {
+				// fixme, may all fail, mey need to break
+				continue
+			}
+
 			if !firstGot {
 				start = time.Now()
 			}
@@ -143,9 +154,14 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 		}
 
 		if _, ok := mp.Txs[tx.HashHex]; ok {
-			logger.Log.Info("skip dup")
+			logger.Log.Info("skip dup",
+				zap.String("txid", tx.HashHex),
+			)
 			continue
 		}
+		logger.Log.Info("new tx in mempool",
+			zap.String("txid", tx.HashHex),
+		)
 		mp.Txs[tx.HashHex] = struct{}{}
 		mp.BatchTxs = append(mp.BatchTxs, tx)
 

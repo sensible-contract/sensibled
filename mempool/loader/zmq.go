@@ -1,10 +1,10 @@
 package loader
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"sensibled/logger"
-	"sensibled/utils"
 
 	"github.com/spf13/viper"
 	"github.com/zeromq/goczmq"
@@ -14,6 +14,7 @@ import (
 var (
 	NewBlockNotify = make(chan string, 1)
 	RawTxNotify    = make(chan []byte, 1000)
+	NewTxNotify    = make(chan string, 1000)
 )
 
 func init() {
@@ -36,7 +37,7 @@ func init() {
 
 func zmqNotify(endpoint string) {
 	logger.Log.Info("ZeroMQ started to listen for txs")
-	subscriber, err := goczmq.NewSub(endpoint, "hashblock,rawtx")
+	subscriber, err := goczmq.NewSub(endpoint, "hashblock,hashtx")
 	if err != nil {
 		logger.Log.Fatal("ZMQ connect failed", zap.Error(err))
 		return
@@ -54,8 +55,9 @@ func zmqNotify(endpoint string) {
 		zap.Int("keepalive count", subscriber.TcpKeepaliveCnt()),
 		zap.Int("keepalive intvl", subscriber.TcpKeepaliveIntvl()),
 	)
+	hashBlock := false
 	for {
-		msg, _, err := subscriber.RecvFrame()
+		msg, n, err := subscriber.RecvFrame()
 		if err != nil {
 			logger.Log.Info("Error ZMQ RecFrame", zap.Error(err))
 			continue
@@ -63,22 +65,32 @@ func zmqNotify(endpoint string) {
 
 		if len(msg) == 4 {
 			// id
-			// logger.Log.Info("id: %d, %d", zap.Int("n", n), zap.Int("id", binary.LittleEndian.Uint32(msg)))
+			logger.Log.Info("zmq id", zap.Int("n", n), zap.Uint32("id", binary.LittleEndian.Uint32(msg)))
 
-		} else if len(msg) == 5 || len(msg) == 6 || len(msg) == 9 {
+		} else if len(msg) == 5 || len(msg) == 6 {
+			logger.Log.Info("sub received", zap.Int("n", n), zap.String("topic", string(msg)))
+		} else if len(msg) == 9 {
 			// topic
-			// logger.Log.Info("sub received", zap.Int("n", n), zap.String("topic", string(msg)))
+			hashBlock = true
+			logger.Log.Info("sub received", zap.Int("n", n), zap.String("topic", string(msg)))
 		} else if len(msg) == 32 {
-			select {
-			case NewBlockNotify <- utils.HashString(msg):
-			default:
+			hashIdHex := hex.EncodeToString(msg)
+			if hashBlock {
+				hashBlock = false
+				select {
+				case NewBlockNotify <- hashIdHex:
+				default:
+				}
+				logger.Log.Info("new block received", zap.String("blkid", hashIdHex))
+			} else {
+				NewTxNotify <- hashIdHex
+				logger.Log.Info("new tx received", zap.String("txid", hashIdHex))
 			}
-			logger.Log.Info("received", zap.String("blkid", hex.EncodeToString(msg)))
 
 		} else {
 			// rawtx
-			RawTxNotify <- msg
-			// logger.Log.Info("tx received", zap.Int("n", n), zap.Int("rawtxLen", len(msg)))
+			// RawTxNotify <- msg
+			logger.Log.Info("new tx received", zap.Int("n", n), zap.Int("rawtxLen", len(msg)))
 		}
 	}
 }
