@@ -8,6 +8,7 @@ import (
 	"sensibled/loader/clickhouse"
 	"sensibled/logger"
 	"sensibled/model"
+	"sensibled/utils"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
@@ -93,29 +94,31 @@ func getUtxoBySql(psql string) (utxosMapRsp map[string]*model.TxoData, err error
 ////////////////////////////////////////////////////////////////
 
 func rawtxResultSRF(rows *sql.Rows) (interface{}, error) {
-	var ret []byte
-	err := rows.Scan(&ret)
+	var ret model.TxData
+	err := rows.Scan(&ret.Hash, &ret.Raw)
 	if err != nil {
 		return nil, err
 	}
-	return ret, nil
+	return &ret, nil
 }
 
-func GetRawTxByIdFromMempool(txidHex string) (txRsp []byte, err error) {
-	psql := fmt.Sprintf(`
-SELECT rawtx FROM blktx_height
-WHERE height = 4294967295 AND txid = reverse(unhex('%s'))
-LIMIT 1`, txidHex)
+func GetAllMempoolRawTx() (txs map[string]*model.TxData, err error) {
+	psql := "SELECT txid, rawtx FROM blktx_height WHERE height = 4294967295"
 
-	txRet, err := clickhouse.ScanOne(psql, rawtxResultSRF)
+	txsRet, err := clickhouse.ScanAll(psql, rawtxResultSRF)
 	if err != nil {
 		logger.Log.Info("query tx failed", zap.Error(err))
 		return nil, err
 	}
-	if txRet == nil {
+	if txsRet == nil {
 		return nil, errors.New("not exist")
 	}
-	txRsp = txRet.([]byte)
 
-	return txRsp, nil
+	txsRsp := txsRet.([]*model.TxData)
+	txs = make(map[string]*model.TxData, len(txsRsp))
+	for _, tx := range txsRsp {
+		txs[utils.HashString(tx.Hash)] = tx
+	}
+
+	return txs, nil
 }

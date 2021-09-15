@@ -137,6 +137,11 @@ type TokenData struct {
 	OutSatoshi   uint64
 }
 
+type TxData struct {
+	Raw  []byte
+	Hash []byte // 32
+}
+
 type TxoData struct {
 	UTxid       []byte
 	Vout        uint32

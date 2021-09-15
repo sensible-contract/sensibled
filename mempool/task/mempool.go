@@ -62,19 +62,23 @@ func (mp *Mempool) LoadFromMempool() bool {
 	if txids == nil {
 		return false
 	}
+
+	logger.Log.Info("load all tx in mempool from db")
+	allRawtxs, _ := blkLoader.GetAllMempoolRawTx()
 	for _, txid := range txids {
-		rawtx, err := blkLoader.GetRawTxByIdFromMempool(txid.(string))
-		if err != nil {
+		var rawtx []byte
+		if txData, ok := allRawtxs[txid.(string)]; ok {
+			rawtx = txData.Raw
+			logger.Log.Info("init tx in mempool from db",
+				zap.Any("txid", txid),
+			)
+		} else {
 			rawtx = loader.GetRawTxRPC(txid)
 			if rawtx == nil {
 				// fixme, may all fail, mey need to break
 				continue
 			}
 			logger.Log.Info("init tx in mempool from rpc",
-				zap.Any("txid", txid),
-			)
-		} else {
-			logger.Log.Info("init tx in mempool from db",
 				zap.Any("txid", txid),
 			)
 		}
