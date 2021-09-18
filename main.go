@@ -39,6 +39,7 @@ var (
 	blocksPath       string
 	blockMagic       string
 	isFull           bool
+	gobFlushFrom     int
 
 	cpuProfile   string
 	memProfile   string
@@ -54,6 +55,8 @@ func init() {
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
 	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
 	flag.IntVar(&batchTxCount, "batch", 0, "batch tx count")
+
+	flag.IntVar(&gobFlushFrom, "gob", -1, "gob flush block header cache after fileIdx")
 
 	flag.Parse()
 
@@ -80,6 +83,11 @@ func syncBlock() {
 	if err != nil {
 		logger.Log.Info("init mempool error: %v", zap.Error(err))
 		return
+	}
+
+	// 重新扫区块头缓存
+	if gobFlushFrom > 0 {
+		blockchain.LastFileIdx = gobFlushFrom
 	}
 
 	// 扫描区块
@@ -345,6 +353,8 @@ func main() {
 		}
 	}()
 
+	memLoader.InitRpc()
+	memLoader.InitZmq()
 	syncBlock()
 	logger.SyncLog()
 

@@ -16,7 +16,7 @@ var (
 	RawTxNotify    = make(chan []byte, 1000)
 )
 
-func init() {
+func InitZmq() {
 	viper.SetConfigFile("conf/chain.yaml")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {

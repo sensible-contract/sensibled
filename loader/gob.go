@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func LoadFromGobFile(fname string, data map[string]*model.Block) {
+func LoadFromGobFile(fname string, data map[string]*model.Block) (lastFileIdx int) {
 	logger.Log.Info("loading gob...")
 	gobFile, err := os.Open(fname)
 	if err != nil {
@@ -23,10 +23,12 @@ func LoadFromGobFile(fname string, data map[string]*model.Block) {
 	if err := gobDec.Decode(&cacheData); err != nil {
 		logger.Log.Info("load gob failed", zap.Error(err))
 	}
+
+	maxFileIdx := 0
 	for _, blk := range cacheData {
-		// if blk.FileIdx > 3030 {
-		// 	continue
-		// }
+		if blk.FileIdx > maxFileIdx {
+			maxFileIdx = blk.FileIdx
+		}
 		hashHex := utils.HashString(blk.Hash)
 		data[hashHex] = &model.Block{
 			Hash:       blk.Hash,
@@ -38,6 +40,7 @@ func LoadFromGobFile(fname string, data map[string]*model.Block) {
 			ParentHex:  utils.HashString(blk.Parent),
 		}
 	}
+	return maxFileIdx
 }
 
 func DumpToGobFile(fname string, data map[string]*model.Block) {

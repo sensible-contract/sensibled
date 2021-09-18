@@ -23,6 +23,7 @@ type Blockchain struct {
 	MaxBlock              *model.Block
 	GenesisBlock          *model.Block
 	BlockData             *loader.BlockData
+	LastFileIdx           int
 	m                     sync.Mutex
 }
 
@@ -35,7 +36,7 @@ func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
 	bc = new(Blockchain)
 	bc.Blocks = make(map[string]*model.Block, 0)
 
-	loader.LoadFromGobFile("./cmd/headers-list.gob", bc.Blocks)
+	bc.LastFileIdx = loader.LoadFromGobFile("./cmd/headers-list.gob", bc.Blocks)
 
 	bc.BlockData = loader.NewBlockData(path, magic)
 	return
@@ -203,21 +204,8 @@ func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) i
 
 // InitLongestChainHeader 初始化block header
 func (bc *Blockchain) InitLongestChainHeader() {
-	maxFileIdx := 0
-	maxFileOffset := 0
-	for _, blk := range bc.Blocks {
-		if blk.FileIdx > maxFileIdx {
-			maxFileIdx = blk.FileIdx
-			maxFileOffset = blk.FileOffset
-		} else if blk.FileIdx == maxFileIdx {
-			if blk.FileOffset > maxFileOffset {
-				maxFileOffset = blk.FileOffset
-			}
-		}
-	}
-
-	logger.Log.Info("load block header", zap.Int("file", maxFileIdx))
-	if err := bc.BlockData.SkipTo(maxFileIdx, 0); err == nil {
+	logger.Log.Info("load block header", zap.Int("last_file", bc.LastFileIdx))
+	if err := bc.BlockData.SkipTo(bc.LastFileIdx, 0); err == nil {
 		bc.LoadAllBlockHeaders()
 	}
 

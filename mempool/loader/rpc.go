@@ -14,7 +14,7 @@ import (
 
 var rpcClient jsonrpc.RPCClient
 
-func init() {
+func InitRpc() {
 	viper.SetConfigFile("conf/chain.yaml")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
