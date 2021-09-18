@@ -102,23 +102,22 @@ func rawtxResultSRF(rows *sql.Rows) (interface{}, error) {
 	return &ret, nil
 }
 
-func GetAllMempoolRawTx() (txs map[string]*model.TxData, err error) {
+func GetAllMempoolRawTx(txs map[string]*model.TxData) (err error) {
 	psql := "SELECT txid, rawtx FROM blktx_height WHERE height = 4294967295"
 
 	txsRet, err := clickhouse.ScanAll(psql, rawtxResultSRF)
 	if err != nil {
 		logger.Log.Info("query tx failed", zap.Error(err))
-		return nil, err
+		return err
 	}
 	if txsRet == nil {
-		return nil, errors.New("not exist")
+		return errors.New("not exist")
 	}
 
 	txsRsp := txsRet.([]*model.TxData)
-	txs = make(map[string]*model.TxData, len(txsRsp))
 	for _, tx := range txsRsp {
 		txs[utils.HashString(tx.Hash)] = tx
 	}
 
-	return txs, nil
+	return nil
 }

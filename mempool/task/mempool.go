@@ -47,9 +47,15 @@ func (mp *Mempool) LoadFromMempool() bool {
 	mp.Txs = make(map[string]struct{}, 0)
 	mp.SkipTxs = make(map[string]struct{}, 0)
 
+	allRawtxs := make(map[string]*model.TxData, 1)
 	for i := 0; i < 1000; i++ {
 		select {
-		case <-loader.RawTxNotify:
+		case rawtx := <-loader.RawTxNotify:
+			txid := utils.GetHash256(rawtx)
+			allRawtxs[utils.HashString(txid)] = &model.TxData{
+				Raw:  rawtx,
+				Hash: txid,
+			}
 		default:
 		}
 	}
@@ -59,8 +65,12 @@ func (mp *Mempool) LoadFromMempool() bool {
 		return false
 	}
 
-	logger.Log.Info("load all tx in mempool from db")
-	allRawtxs, _ := blkLoader.GetAllMempoolRawTx()
+	logger.Log.Info("start load all tx in mempool from db",
+		zap.Int("zmq get count", len(allRawtxs)),
+	)
+	if err := blkLoader.GetAllMempoolRawTx(allRawtxs); err != nil {
+		logger.Log.Info("load all tx in mempool from db failed", zap.Error(err))
+	}
 	for _, txid := range txids {
 		var rawtx []byte
 		if txData, ok := allRawtxs[txid.(string)]; ok {

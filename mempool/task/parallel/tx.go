@@ -50,7 +50,7 @@ func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, mpNewUtxo map[string]*mod
 			continue
 		}
 
-		d := model.TxoDataPool.Get().(*model.TxoData)
+		d := &model.TxoData{}
 		d.BlockHeight = model.MEMPOOL_HEIGHT
 		d.TxIdx = uint64(txIdx)
 		d.Satoshi = output.Satoshi

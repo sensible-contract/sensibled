@@ -63,7 +63,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(
 		} else if err != nil {
 			panic(err)
 		}
-		d := model.TxoDataPool.Get().(*model.TxoData)
+		d := &model.TxoData{}
 		d.Unmarshal([]byte(res))
 
 		// 补充数据
@@ -81,10 +81,8 @@ func UpdateUtxoInRedisSerial(pipe redis.Pipeliner, needReset bool,
 
 	insideTxo := make([]string, len(spentUtxoKeysMap))
 	for outpointKey := range spentUtxoKeysMap {
-		if data, ok := newUtxoDataMap[outpointKey]; !ok {
+		if _, ok := newUtxoDataMap[outpointKey]; !ok {
 			continue
-		} else {
-			model.TxoDataPool.Put(data)
 		}
 		insideTxo = append(insideTxo, outpointKey)
 	}
@@ -96,8 +94,7 @@ func UpdateUtxoInRedisSerial(pipe redis.Pipeliner, needReset bool,
 		model.GlobalMempoolNewUtxoDataMap[outpointKey] = data
 	}
 
-	for outpointKey, data := range removeUtxoDataMap {
-		model.TxoDataPool.Put(data)
+	for outpointKey := range removeUtxoDataMap {
 		delete(model.GlobalMempoolNewUtxoDataMap, outpointKey)
 	}
 
