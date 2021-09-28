@@ -37,3 +37,10 @@ func SyncBlockTx(block *model.Block) {
 		}
 	}
 }
+
+// MarkConfirmedBlockTx all tx in block height
+func MarkConfirmedBlockTx(block *model.Block) {
+	for _, tx := range block.Txs {
+		model.GlobalConfirmedTxMap[tx.HashHex] = true
+	}
+}

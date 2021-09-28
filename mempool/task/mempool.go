@@ -100,8 +100,9 @@ func (mp *Mempool) LoadFromMempool() bool {
 		tx.Hash = utils.GetHash256(rawtx)
 		tx.HashHex = utils.HashString(tx.Hash)
 
+		// maybe impossible dup here
 		if _, ok := mp.Txs[tx.HashHex]; ok {
-			logger.Log.Info("skip dup")
+			logger.Log.Info("init skip dup")
 			continue
 		}
 
@@ -150,6 +151,22 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 			}
 		}
 
+		txHash := utils.GetHash256(rawtx)
+		txHashHex := utils.HashString(txHash)
+		if _, ok := mp.Txs[txHashHex]; ok {
+			logger.Log.Info("skip dup",
+				zap.String("txid", txHashHex),
+			)
+			continue
+		}
+
+		if _, ok := model.GlobalConfirmedTxMap[txHashHex]; ok {
+			logger.Log.Info("skip confirmed tx",
+				zap.String("txid", txHashHex),
+			)
+			continue
+		}
+
 		tx, txoffset := parser.NewTx(rawtx)
 		if int(txoffset) < len(rawtx) {
 			logger.Log.Info("skip bad rawtx")
@@ -158,15 +175,8 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 
 		tx.Raw = rawtx
 		tx.Size = uint32(txoffset)
-		tx.Hash = utils.GetHash256(rawtx)
-		tx.HashHex = utils.HashString(tx.Hash)
-
-		if _, ok := mp.Txs[tx.HashHex]; ok {
-			logger.Log.Info("skip dup",
-				zap.String("txid", tx.HashHex),
-			)
-			continue
-		}
+		tx.Hash = txHash
+		tx.HashHex = txHashHex
 
 		if parser.IsTxNonFinal(tx, mp.SkipTxs) {
 			logger.Log.Info("skip non final tx",

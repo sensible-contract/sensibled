@@ -157,11 +157,13 @@ func syncBlock() {
 		}
 
 		needSaveBlock = true
+		model.CleanConfirmedTxMap()
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
 		stageBlockHeight = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
 		// 按批次处理区块
 		logger.Log.Info("range", zap.Int("start", startBlockHeight), zap.Int("end", stageBlockHeight))
 
+		// 无需同步内存池
 		if stageBlockHeight < len(blockchain.BlocksOfChainById)-1 ||
 			(endBlockHeight > 0 && stageBlockHeight == endBlockHeight-1) || parser.NeedStop {
 			needSaveBlock = false

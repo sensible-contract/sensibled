@@ -5,6 +5,7 @@ import (
 )
 
 var (
+	GlobalConfirmedTxMap   map[string]bool
 	GlobalNewUtxoDataMap   map[string]*TxoData
 	GlobalSpentUtxoDataMap map[string]*TxoData
 
@@ -13,6 +14,14 @@ var (
 
 func init() {
 	CleanUtxoMap()
+}
+
+// 清空本地tx map内存
+func CleanConfirmedTxMap() {
+	GlobalConfirmedTxMap = nil
+	runtime.GC()
+
+	GlobalConfirmedTxMap = make(map[string]bool, 0)
 }
 
 // 清空本地map内存
