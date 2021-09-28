@@ -5,7 +5,9 @@ import (
 )
 
 var (
-	GlobalConfirmedTxMap   map[string]bool
+	GlobalConfirmedBlkMap map[string]bool
+	GlobalConfirmedTxMap  map[string]bool
+
 	GlobalNewUtxoDataMap   map[string]*TxoData
 	GlobalSpentUtxoDataMap map[string]*TxoData
 
@@ -19,9 +21,11 @@ func init() {
 // 清空本地tx map内存
 func CleanConfirmedTxMap() {
 	GlobalConfirmedTxMap = nil
+	GlobalConfirmedBlkMap = nil
 	runtime.GC()
 
 	GlobalConfirmedTxMap = make(map[string]bool, 0)
+	GlobalConfirmedBlkMap = make(map[string]bool, 0)
 }
 
 // 清空本地map内存

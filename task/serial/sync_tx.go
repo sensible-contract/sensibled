@@ -40,6 +40,8 @@ func SyncBlockTx(block *model.Block) {
 
 // MarkConfirmedBlockTx all tx in block height
 func MarkConfirmedBlockTx(block *model.Block) {
+	model.GlobalConfirmedTxMap[block.HashHex] = true
+	model.GlobalConfirmedTxMap[block.ParentHex] = true
 	for _, tx := range block.Txs {
 		model.GlobalConfirmedTxMap[tx.HashHex] = true
 	}

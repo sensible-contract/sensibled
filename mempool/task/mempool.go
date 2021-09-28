@@ -1,6 +1,8 @@
 package task
 
 import (
+	"bytes"
+	"encoding/hex"
 	blkLoader "sensibled/loader"
 	"sensibled/logger"
 	"sensibled/mempool/loader"
@@ -122,6 +124,8 @@ func (mp *Mempool) LoadFromMempool() bool {
 
 // SyncMempoolFromZmq 从zmq同步tx
 func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
+	COINBASE_TX_PREFIX, _ := hex.DecodeString("01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff")
+
 	start := time.Now()
 	firstGot := false
 	rawtx := make([]byte, 0)
@@ -133,16 +137,21 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 				start = time.Now()
 			}
 			firstGot = true
-		case <-loader.NewBlockNotify:
+
+		case blockIdHex := <-loader.NewBlockNotify:
 			logger.Log.Info("block sync subcribe")
+			if _, ok := model.GlobalConfirmedBlkMap[blockIdHex]; ok {
+				logger.Log.Info("skip confirmed block",
+					zap.String("blockid", blockIdHex),
+				)
+				continue
+			}
+
 			blockReady = true
 		case <-time.After(time.Second):
 			timeout = true
 		}
 
-		if blockReady {
-			return true
-		}
 		if timeout {
 			if firstGot {
 				return false
@@ -150,21 +159,31 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 				continue
 			}
 		}
+		if blockReady {
+			return true
+		}
 
 		txHash := utils.GetHash256(rawtx)
 		txHashHex := utils.HashString(txHash)
+		// 在内存池重复出现，说明区块已确认，但还未收到zmq hashblock通知。
 		if _, ok := mp.Txs[txHashHex]; ok {
 			logger.Log.Info("skip dup",
 				zap.String("txid", txHashHex),
 			)
 			continue
 		}
-
+		// 被区块确认
 		if _, ok := model.GlobalConfirmedTxMap[txHashHex]; ok {
 			logger.Log.Info("skip confirmed tx",
 				zap.String("txid", txHashHex),
 			)
 			continue
+		}
+
+		// 首次遇到coinbase，说明有区块确认
+		if bytes.HasPrefix(rawtx, COINBASE_TX_PREFIX) {
+			blockReady = true
+			return true
 		}
 
 		tx, txoffset := parser.NewTx(rawtx)

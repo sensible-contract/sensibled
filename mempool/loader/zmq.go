@@ -76,12 +76,9 @@ func zmqNotifyBlock(endpoint string) {
 			logger.Log.Info("sub received", zap.Int("n", n), zap.String("topic", string(msg)))
 
 		} else if len(msg) == 32 {
-			hashIdHex := hex.EncodeToString(msg)
-			select {
-			case NewBlockNotify <- hashIdHex:
-			default:
-			}
-			logger.Log.Info("new block received", zap.String("blkid", hashIdHex))
+			blockIdHex := hex.EncodeToString(msg)
+			logger.Log.Info("new block received", zap.String("blkid", blockIdHex))
+			NewBlockNotify <- blockIdHex
 		} else {
 			logger.Log.Info("bytes received", zap.Int("n", n), zap.Int("len", len(msg)))
 		}
