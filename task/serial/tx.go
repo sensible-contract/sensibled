@@ -79,13 +79,17 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 }
 
 // UpdateUtxoInRedis 批量更新redis utxo
-func UpdateUtxoInRedis(pipe redis.Pipeliner, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) (err error) {
+func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) (err error) {
 	logger.Log.Info("UpdateUtxoInRedis",
 		zap.Int("add", len(utxoToRestore)),
 		zap.Int("del", len(utxoToRemove)))
 	if len(utxoToRestore) == 0 && len(utxoToRemove) == 0 {
 		return errors.New("empty utxo")
 	}
+
+	pipe.HSet(ctx, "info",
+		"blocks_total", blocksTotal,
+	)
 
 	for outpointKey, data := range utxoToRestore {
 		// if data.Data.CodeType == scriptDecoder.CodeType_SENSIBLE {

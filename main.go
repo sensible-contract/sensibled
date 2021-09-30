@@ -133,7 +133,7 @@ func syncBlock() {
 				// 更新redis
 				pipe := rdb.Client.Pipeline()
 				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
-				if err := serial.UpdateUtxoInRedis(pipe, addressBalanceCmds, utxoToRestore, utxoToRemove, true); err != nil {
+				if err := serial.UpdateUtxoInRedis(pipe, startBlockHeight, addressBalanceCmds, utxoToRestore, utxoToRemove, true); err != nil {
 					logger.Log.Error("restore/remove utxo from redis failed", zap.Error(err))
 					break
 				}
@@ -174,7 +174,7 @@ func syncBlock() {
 				pipe := rdb.Client.Pipeline()
 				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 				// 批量更新redis utxo
-				serial.UpdateUtxoInRedis(pipe, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
+				serial.UpdateUtxoInRedis(pipe, stageBlockHeight, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
 				// 清空本地map内存
 				model.CleanUtxoMap()
 				_, err = pipe.Exec(ctx)
@@ -257,7 +257,7 @@ func syncBlock() {
 				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 				if needSaveBlock {
 					// 批量更新redis utxo
-					serial.UpdateUtxoInRedis(pipe, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
+					serial.UpdateUtxoInRedis(pipe, stageBlockHeight, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
 					// 清空本地map内存
 					model.CleanUtxoMap()
 				}
