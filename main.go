@@ -90,6 +90,9 @@ func syncBlock() {
 		blockchain.LastFileIdx = gobFlushFrom
 	}
 
+	var onceRpc sync.Once
+	var onceZmq sync.Once
+
 	// 扫描区块
 	for {
 		blockchain.InitLongestChainHeader() // 读取新的block header
@@ -215,7 +218,11 @@ func syncBlock() {
 		initSyncMempool := true
 		for {
 			needSaveMempool := false
+
+			onceRpc.Do(memLoader.InitRpc)
+			onceZmq.Do(memLoader.InitZmq)
 			mempool.Init()
+
 			if initSyncMempool {
 				logger.Log.Info("init sync mempool...")
 				startIdx = 0
@@ -356,8 +363,6 @@ func main() {
 		}
 	}()
 
-	memLoader.InitRpc()
-	memLoader.InitZmq()
 	syncBlock()
 	logger.SyncLog()
 
