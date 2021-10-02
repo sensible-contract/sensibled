@@ -179,6 +179,12 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 			)
 			continue
 		}
+		if _, ok := model.GlobalConfirmedTxOldMap[txHashHex]; ok {
+			logger.Log.Info("skip confirmed tx",
+				zap.String("txid", txHashHex),
+			)
+			continue
+		}
 
 		// 首次遇到coinbase，说明有区块确认
 		if bytes.HasPrefix(rawtx, COINBASE_TX_PREFIX) {

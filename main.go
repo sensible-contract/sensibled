@@ -145,6 +145,7 @@ func syncBlock() {
 
 				// 清除db
 				store.RemoveOrphanPartSyncCk(startBlockHeight)
+				model.CleanConfirmedTxMap(true)
 			}
 
 			store.CreatePartSyncCk() // 初始化同步数据库表
@@ -157,7 +158,7 @@ func syncBlock() {
 		}
 
 		needSaveBlock = true
-		model.CleanConfirmedTxMap()
+		model.CleanConfirmedTxMap(false)
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
 		stageBlockHeight = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
 		// 按批次处理区块
