@@ -8,10 +8,10 @@ import (
 	"flag"
 	"fmt"
 	_ "net/http/pprof"
-	"satoblock/logger"
-	"satoblock/model"
-	"satoblock/parser"
-	"satoblock/utils"
+	"sensibled/logger"
+	"sensibled/model"
+	"sensibled/parser"
+	"sensibled/utils"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"github.com/spf13/viper"
@@ -167,8 +167,8 @@ func main() {
 		orphanSpendOutpointCount += int(tx.TxInCnt)
 		for vout, output := range tx.TxOuts {
 			// address
-			scriptType := scriptDecoder.GetLockingScriptType(output.Pkscript)
-			txo := scriptDecoder.ExtractPkScriptForTxo(output.Pkscript, scriptType)
+			scriptType := scriptDecoder.GetLockingScriptType(output.PkScript)
+			txo := scriptDecoder.ExtractPkScriptForTxo(output.PkScript, scriptType)
 			addr := utils.EncodeAddress(txo.AddressPkh, utils.PubKeyHashAddrIDMainNet)
 			orphanAddressSatoshiMap[addr] += output.Satoshi
 			orphanSpendOutAmount += output.Satoshi
@@ -189,8 +189,8 @@ func main() {
 		mainSpendOutpointCount += int(tx.TxInCnt)
 		for vout, output := range tx.TxOuts {
 			// address
-			scriptType := scriptDecoder.GetLockingScriptType(output.Pkscript)
-			txo := scriptDecoder.ExtractPkScriptForTxo(output.Pkscript, scriptType)
+			scriptType := scriptDecoder.GetLockingScriptType(output.PkScript)
+			txo := scriptDecoder.ExtractPkScriptForTxo(output.PkScript, scriptType)
 			addr := utils.EncodeAddress(txo.AddressPkh, utils.PubKeyHashAddrIDMainNet)
 			mainAddressSatoshiMap[addr] += output.Satoshi
 			mainSpendOutAmount += output.Satoshi
@@ -239,7 +239,7 @@ func getBlockTxs(bc *parser.Blockchain, block *model.Block) bool {
 		logger.Log.Error("get block error", zap.Error(err))
 		return false
 	}
-	if len(rawblock) < 80 {
+	if len(rawblock) < 80+9 {
 		return false
 	}
 
@@ -255,10 +255,7 @@ func getBlockTxs(bc *parser.Blockchain, block *model.Block) bool {
 		return false
 	}
 
-	txs := parser.NewTxs(block.Raw[80:])
-
-	block.TxCnt = len(txs)
-	block.Txs = txs
+	block.Txs = parser.NewTxs(block.Raw[80:])
 
 	return true
 }

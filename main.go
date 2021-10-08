@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -8,26 +9,37 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
-	"satoblock/loader"
-	"satoblock/logger"
-	"satoblock/parser"
-	"satoblock/store"
-	"satoblock/task/serial"
+	"sensibled/loader"
+	"sensibled/logger"
+	memLoader "sensibled/mempool/loader"
+	memStore "sensibled/mempool/store"
+	memTask "sensibled/mempool/task"
+	memSerial "sensibled/mempool/task/serial"
+	"sensibled/model"
+	"sensibled/parser"
+	"sensibled/rdb"
+	"sensibled/store"
+	"sensibled/task"
+	"sensibled/task/serial"
+	"sync"
 	"syscall"
 	"time"
 
+	redis "github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
 var (
+	ctx = context.Background()
+
 	startBlockHeight int
 	endBlockHeight   int
-	batchBlockCount  int
-	zmqEndpoint      string
+	batchTxCount     int
 	blocksPath       string
 	blockMagic       string
 	isFull           bool
+	gobFlushFrom     int
 
 	cpuProfile   string
 	memProfile   string
@@ -42,7 +54,9 @@ func init() {
 	flag.BoolVar(&isFull, "full", false, "start from genesis")
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
 	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
-	flag.IntVar(&batchBlockCount, "batch", 0, "batch block count")
+	flag.IntVar(&batchTxCount, "batch", 0, "batch tx count")
+
+	flag.IntVar(&gobFlushFrom, "gob", -1, "gob flush block header cache after fileIdx")
 
 	flag.Parse()
 
@@ -55,9 +69,247 @@ func init() {
 		}
 	}
 
-	zmqEndpoint = viper.GetString("zmq")
 	blocksPath = viper.GetString("blocks")
 	blockMagic = viper.GetString("magic")
+}
+
+func syncBlock() {
+	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic) // 初始化区块
+	if err != nil {
+		logger.Log.Error("init blockchain error", zap.Error(err))
+		return
+	}
+	mempool, err := memTask.NewMempool() // 准备内存池
+	if err != nil {
+		logger.Log.Info("init mempool error: %v", zap.Error(err))
+		return
+	}
+
+	// 重新扫区块头缓存
+	if gobFlushFrom > 0 {
+		blockchain.LastFileIdx = gobFlushFrom
+	}
+
+	var onceRpc sync.Once
+	var onceZmq sync.Once
+
+	// 扫描区块
+	for {
+		blockchain.InitLongestChainHeader() // 读取新的block header
+		if parser.NeedStop {                // 主动触发了结束，则终止
+			break
+		}
+
+		needSaveBlock := false
+		stageBlockHeight := 0
+		if !isFull {
+			// 现有追加扫描
+			needRemove := false
+			if startBlockHeight < 0 {
+				// 从clickhouse读取已同步的区块，判断新的同步位置
+				commonHeigth, orphanCount, newblock := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
+				if orphanCount > 0 {
+					needRemove = true
+				}
+				if newblock == 0 {
+					stageBlockHeight = commonHeigth
+					goto WAIT_BLOCK // 无新区块，开始等待
+				}
+				startBlockHeight = commonHeigth + 1 // 从公有块高度（COMMON_HEIGHT）下一个开始扫描
+			} else {
+				needRemove = true
+			}
+			if needRemove {
+				// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
+				logger.Log.Info("remove...")
+				utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight) // 已花费的utxo需要回滚
+				if err != nil {
+					logger.Log.Error("get utxo to restore failed", zap.Error(err))
+					break
+				}
+				utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight) // 新产生的utxo需要删除
+				if err != nil {
+					logger.Log.Error("get utxo to remove failed", zap.Error(err))
+					break
+				}
+
+				// 更新redis
+				pipe := rdb.Client.Pipeline()
+				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
+				if err := serial.UpdateUtxoInRedis(pipe, startBlockHeight, addressBalanceCmds, utxoToRestore, utxoToRemove, true); err != nil {
+					logger.Log.Error("restore/remove utxo from redis failed", zap.Error(err))
+					break
+				}
+				_, err = pipe.Exec(ctx)
+				if err != nil {
+					panic(err)
+				}
+				serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds)
+
+				// 清除db
+				store.RemoveOrphanPartSyncCk(startBlockHeight)
+				model.CleanConfirmedTxMap(true)
+			}
+
+			store.CreatePartSyncCk() // 初始化同步数据库表
+			store.PreparePartSyncCk()
+		} else {
+			startBlockHeight = 0    // 重新全量扫描
+			rdb.FlushdbInRedis()    // 清空redis
+			store.CreateAllSyncCk() // 初始化同步数据库表
+			store.PrepareFullSyncCk()
+		}
+
+		needSaveBlock = true
+		model.CleanConfirmedTxMap(false)
+		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
+		stageBlockHeight = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
+		// 按批次处理区块
+		logger.Log.Info("range", zap.Int("start", startBlockHeight), zap.Int("end", stageBlockHeight))
+
+		// 无需同步内存池
+		if stageBlockHeight < len(blockchain.BlocksOfChainById)-1 ||
+			(endBlockHeight > 0 && stageBlockHeight == endBlockHeight-1) || parser.NeedStop {
+			needSaveBlock = false
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				pipe := rdb.Client.Pipeline()
+				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
+				// 批量更新redis utxo
+				serial.UpdateUtxoInRedis(pipe, stageBlockHeight, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
+				// 清空本地map内存
+				model.CleanUtxoMap()
+				_, err = pipe.Exec(ctx)
+				if err != nil {
+					panic(err)
+				}
+				serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds)
+				logger.Log.Info("redis exec done")
+			}()
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				// 最后分析执行
+				task.ParseEnd(isFull)
+			}()
+			wg.Wait()
+
+			isFull = false // 准备继续同步
+			startBlockHeight = -1
+			logger.Log.Info("block finished")
+		}
+		if stageBlockHeight < len(blockchain.BlocksOfChainById)-1 {
+			continue
+		}
+
+	WAIT_BLOCK:
+		// 扫描完毕，结束
+		if (endBlockHeight > 0 && stageBlockHeight == endBlockHeight-1) || parser.NeedStop {
+			break
+		}
+
+		// 等待新块出现，再重新追加扫描
+		logger.Log.Info("waiting new block...")
+
+		// 同步内存池
+		startIdx := 0
+		initSyncMempool := true
+		for {
+			needSaveMempool := false
+
+			onceRpc.Do(memLoader.InitRpc)
+			onceZmq.Do(memLoader.InitZmq)
+			mempool.Init()
+
+			if initSyncMempool {
+				logger.Log.Info("init sync mempool...")
+				startIdx = 0
+				model.CleanMempoolUtxoMap()
+				if ok := mempool.LoadFromMempool(); !ok { // 重新全量同步
+					logger.Log.Info("LoadFromMempool failed")
+					goto UPDATE_UTXO
+				}
+
+				latestBlockHeight := memLoader.GetBlockCountRPC()
+				if stageBlockHeight < latestBlockHeight-1 {
+					// 有新区块，不同步内存池
+					goto UPDATE_UTXO
+				}
+
+				memStore.ProcessAllSyncCk() // 从db删除mempool数据
+			} else {
+				// 现有追加同步
+				isNewBlockReady := mempool.SyncMempoolFromZmq()
+				if isNewBlockReady {
+					break
+				}
+				if parser.NeedStop { // 主动触发了结束，则终止
+					break
+				}
+			}
+			memStore.CreatePartSyncCk()    // 初始化同步数据库表
+			memStore.PreparePartSyncCk()   // 同步db
+			mempool.ParseMempool(startIdx) // 开始同步mempool
+			needSaveMempool = true
+
+		UPDATE_UTXO:
+
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				pipe := rdb.Client.TxPipeline()
+				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
+				if needSaveBlock {
+					// 批量更新redis utxo
+					serial.UpdateUtxoInRedis(pipe, stageBlockHeight, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
+					// 清空本地map内存
+					model.CleanUtxoMap()
+				}
+				// for txin dump
+				// 6 dep 2 4
+				if needSaveMempool {
+					memSerial.UpdateUtxoInRedisSerial(pipe, initSyncMempool,
+						mempool.SpentUtxoKeysMap,
+						mempool.NewUtxoDataMap,
+						mempool.RemoveUtxoDataMap,
+						mempool.SpentUtxoDataMap)
+				}
+				_, err = pipe.Exec(ctx)
+				if err != nil {
+					panic(err)
+				}
+				serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds)
+			}()
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				// ParseEnd 最后分析执行
+				if needSaveBlock {
+					task.ParseEnd(isFull)
+				}
+				// 7 dep 5
+				if needSaveMempool {
+					memTask.ParseEnd()
+				}
+			}()
+			wg.Wait()
+
+			needSaveBlock = false
+			initSyncMempool = false
+			startIdx += len(mempool.BatchTxs) // 同步完毕
+			logger.Log.Info("mempool finished", zap.Int("idx", startIdx), zap.Int("nNewTx", len(mempool.BatchTxs)))
+		}
+
+		isFull = false // 准备继续同步
+		startBlockHeight = -1
+		logger.Log.Info("block finished")
+		loader.DumpToGobFile("./cmd/headers-list.gob", blockchain.Blocks)
+	}
+	logger.Log.Info("stoped")
 }
 
 func main() {
@@ -81,10 +333,25 @@ func main() {
 		defer trace.Stop()
 	}
 
-	// 监听新块确认
-	newBlockNotify := make(chan string)
+	//创建监听退出
+	sigCtrl := make(chan os.Signal)
+	//监听指定信号 ctrl+c kill
+	signal.Notify(sigCtrl, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
-		loader.ZmqNotify(zmqEndpoint, newBlockNotify)
+		for s := range sigCtrl {
+			switch s {
+			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
+				logger.Log.Info("program exit...")
+				parser.NeedStop = true
+				select {
+				case memLoader.NewBlockNotify <- "":
+				default:
+				}
+			default:
+				fmt.Println("other signal", s)
+				logger.Log.Info("other signal", zap.String("sig", s.String()))
+			}
+		}
 	}()
 
 	// GC
@@ -95,132 +362,8 @@ func main() {
 		}
 	}()
 
-	// 初始化区块
-	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic)
-	if err != nil {
-		logger.Log.Error("init chain error", zap.Error(err))
-		return
-	}
-
-	//创建监听退出
-	sigCtrl := make(chan os.Signal)
-	//监听指定信号 ctrl+c kill
-	signal.Notify(sigCtrl, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	go func() {
-		for s := range sigCtrl {
-			switch s {
-			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-				logger.Log.Info("program exit...")
-				blockchain.NeedStop = true
-				newBlockNotify <- ""
-			default:
-				fmt.Println("other signal", s)
-				logger.Log.Info("other signal", zap.String("sig", s.String()))
-			}
-		}
-	}()
-	needOneMoreSync := true
-	// 扫描区块
-	for {
-		// 等待新块出现，再重新追加扫描
-		logger.Log.Info("waiting new block...")
-		if !needOneMoreSync {
-			<-newBlockNotify
-		}
-		needOneMoreSync = false
-
-		// 初始化载入block header
-		blockchain.InitLongestChainHeader()
-
-		if blockchain.NeedStop {
-			// 结束
-			break
-		}
-
-		if !isFull {
-			// 现有追加扫描
-			needRemove := false
-			if startBlockHeight < 0 {
-				// 从clickhouse读取现有同步区块，判断同步位置
-				commonHeigth, orphanCount, newblock := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
-				if orphanCount > 0 {
-					needRemove = true
-				}
-				if newblock == 0 {
-					// 无新区块，开始等待
-					continue
-				}
-				// 从公有块高度（COMMON_HEIGHT）下一个开始扫描
-				startBlockHeight = commonHeigth + 1
-			} else {
-				needRemove = true
-			}
-
-			if needRemove {
-				logger.Log.Info("remove...")
-				// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
-				// 获取需要补回的utxo
-				utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight)
-				if err != nil {
-					logger.Log.Error("get utxo to restore failed", zap.Error(err))
-					break
-				}
-				utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight)
-				if err != nil {
-					logger.Log.Error("get utxo to remove failed", zap.Error(err))
-					break
-				}
-
-				if err := serial.UpdateUtxoInRedis(utxoToRestore, utxoToRemove, true); err != nil {
-					logger.Log.Error("restore/remove utxo from redis failed", zap.Error(err))
-					break
-				}
-				store.RemoveOrphanPartSyncCk(startBlockHeight)
-			}
-		}
-
-		if isFull {
-			// 重新全量扫描
-			startBlockHeight = 0
-
-			// 清空redis
-			serial.FlushdbInRedis()
-
-			// 初始化同步数据库表
-			store.CreateAllSyncCk()
-			store.PrepareFullSyncCk()
-		} else {
-			// 初始化同步数据库表
-			store.CreatePartSyncCk()
-			store.PreparePartSyncCk()
-		}
-
-		// 按批次处理区块
-		stageBlockHeight := endBlockHeight
-		if batchBlockCount > 0 {
-			needOneMoreSync = true
-			if endBlockHeight < 0 || (endBlockHeight-startBlockHeight > batchBlockCount) {
-				stageBlockHeight = startBlockHeight + batchBlockCount
-			}
-		}
-		logger.Log.Info("range", zap.Int("start", startBlockHeight), zap.Int("end", stageBlockHeight))
-		// 开始扫描区块，包括start，不包括end
-		blockchain.ParseLongestChain(startBlockHeight, stageBlockHeight, isFull)
-		logger.Log.Info("finished")
-
-		isFull = false
-		startBlockHeight = -1
-		serial.PublishBlockSyncFinished()
-
-		// 扫描完毕
-		if (stageBlockHeight == endBlockHeight && endBlockHeight > 0) || blockchain.NeedStop {
-			// 结束
-			break
-		}
-	}
-
-	loader.DumpToGobFile("./cmd/headers-list.gob", blockchain.Blocks)
-	logger.Log.Info("stoped")
+	syncBlock()
+	logger.SyncLog()
 
 	////////////////
 	//采样memory状态
@@ -233,7 +376,7 @@ func main() {
 		memf.Close()
 	}
 
-	if blockchain.NeedStop {
+	if parser.NeedStop {
 		os.Exit(1)
 	}
 }

@@ -2,7 +2,9 @@ package model
 
 import (
 	"encoding/binary"
+	"sync"
 
+	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 )
@@ -14,7 +16,6 @@ type Tx struct {
 	HashHex      string // 32
 	Hash         []byte // 32
 	Size         uint32
-	WitOffset    uint
 	LockTime     uint32
 	Version      uint32
 	TxInCnt      uint32
@@ -23,7 +24,6 @@ type Tx struct {
 	OutputsValue uint64
 	TxIns        TxIns
 	TxOuts       TxOuts
-	TxWits       []*TxWit
 	IsSensible   bool
 }
 
@@ -48,31 +48,15 @@ func (t *TxIn) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 
 type TxOut struct {
 	Satoshi  uint64
-	Pkscript []byte
+	PkScript []byte
 
-	// other:
-	AddressPkh []byte
-	CodeType   uint32
-	CodeHash   []byte
-	GenesisId  []byte
-	SensibleId []byte
+	Outpoint      []byte // 32 + 4
+	OutpointKey   string // 32 + 4
+	ScriptType    []byte
+	ScriptTypeHex string
 
-	// nft
-	MetaTxId        []byte
-	MetaOutputIndex uint32
-	TokenIndex      uint64
-	TokenSupply     uint64
+	Data *scriptDecoder.TxoData
 
-	// ft
-	Amount  uint64
-	Decimal uint8
-	Name    string
-	Symbol  string
-
-	Outpoint                 []byte // 32 + 4
-	OutpointKey              string // 32 + 4
-	LockingScriptType        []byte
-	LockingScriptTypeHex     string
 	LockingScriptUnspendable bool
 }
 
@@ -101,14 +85,6 @@ func (tt TxOuts) MarshalLogArray(arr zapcore.ArrayEncoder) error {
 	return err
 }
 
-type TxWit struct {
-	Value    uint64
-	Pkscript []byte
-
-	// other:
-	Addr string
-}
-
 ////////////////
 type Block struct {
 	Raw        []byte
@@ -124,7 +100,7 @@ type Block struct {
 	Bits       uint32
 	Nonce      uint32
 	Size       uint32
-	TxCnt      int
+	TxCnt      uint64
 	Parent     []byte // 32 bytes
 	ParentHex  string // 32 bytes
 	NextHex    string // 32 bytes
@@ -134,6 +110,7 @@ type Block struct {
 type BlockCache struct {
 	Height     int
 	Hash       []byte // 32 bytes
+	TxCnt      uint64
 	FileIdx    int
 	FileOffset int
 	Parent     []byte // 32 bytes
@@ -142,7 +119,7 @@ type BlockCache struct {
 ////////////////
 type ProcessBlock struct {
 	Height           uint32
-	SpentUtxoKeysMap map[string]bool
+	SpentUtxoKeysMap map[string]struct{}
 	SpentUtxoDataMap map[string]*TxoData
 	NewUtxoDataMap   map[string]*TxoData
 	TokenSummaryMap  map[string]*TokenData // key: CodeHash+GenesisId;  nft: CodeHash+GenesisId+tokenIndex
@@ -160,38 +137,28 @@ type TokenData struct {
 	OutSatoshi   uint64
 }
 
+type TxData struct {
+	Raw  []byte
+	Hash []byte // 32
+}
+
 type TxoData struct {
 	UTxid       []byte
 	Vout        uint32
 	BlockHeight uint32
 	TxIdx       uint64
+	Satoshi     uint64
+	PkScript    []byte
+	ScriptType  []byte
 
-	CodeType   uint32
-	CodeHash   []byte
-	GenesisId  []byte // for search: codehash + genesis
-	SensibleId []byte // GenesisTx outpoint
-	AddressPkh []byte
-
-	MetaTxId        []byte // nft metatxid
-	MetaOutputIndex uint32
-	TokenIndex      uint64 // nft tokenIndex
-	TokenSupply     uint64 // nft tokenSupply
-
-	Name    string // ft name
-	Symbol  string // ft symbol
-	Amount  uint64 // ft amount
-	Decimal uint8  // ft decimal
-
-	Satoshi    uint64
-	ScriptType []byte
-	Script     []byte
+	Data *scriptDecoder.TxoData
 }
 
 func (d *TxoData) Marshal(buf []byte) {
 	binary.LittleEndian.PutUint32(buf, d.BlockHeight)  // 4
 	binary.LittleEndian.PutUint64(buf[4:], d.TxIdx)    // 8
 	binary.LittleEndian.PutUint64(buf[12:], d.Satoshi) // 8
-	copy(buf[20:], d.Script)                           // n
+	copy(buf[20:], d.PkScript)                         // n
 }
 
 // no need marshal: ScriptType, CodeType, CodeHash, GenesisId, AddressPkh, DataValue
@@ -199,7 +166,13 @@ func (d *TxoData) Unmarshal(buf []byte) {
 	d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
 	d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
 	d.Satoshi = binary.LittleEndian.Uint64(buf[12:20])  // 8
-	d.Script = buf[20:]
+	d.PkScript = buf[20:]
 	// d.Script = make([]byte, len(buf)-20)
 	// copy(d.Script, buf[20:]) // n
+}
+
+var TxoDataPool = sync.Pool{
+	New: func() interface{} {
+		return &TxoData{}
+	},
 }

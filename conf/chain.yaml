@@ -10,4 +10,7 @@
 # "./blocks-bsv"
 blocks: "/data/bitcoin-sv-blocks/blocks"
 magic: "f9beb4d9"
-zmq: "tcp://192.168.31.236:16331"
+zmq_block: "tcp://192.168.31.236:16330"
+zmq_tx: "tcp://192.168.31.236:16331"
+rpc: "http://192.168.31.236:16332"
+rpc_auth: "jie:jIang_jIe1234567"

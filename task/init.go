@@ -1,12 +1,10 @@
 package task
 
 import (
-	"satoblock/logger"
-	"satoblock/model"
-	"satoblock/store"
-	"satoblock/task/parallel"
-	"satoblock/task/serial"
-	"sync"
+	"sensibled/model"
+	"sensibled/store"
+	"sensibled/task/parallel"
+	"sensibled/task/serial"
 )
 
 // ParseBlockParallel 先并行分析区块，不同区块并行，同区块内串行
@@ -28,6 +26,8 @@ func ParseBlockParallel(block *model.Block) {
 
 // ParseBlockSerialStart 再串行处理区块
 func ParseBlockSerialStart(block *model.Block) {
+	serial.MarkConfirmedBlockTx(block)
+
 	// 从redis中补全查询当前block内所有Tx花费的utxo信息来使用
 	serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
 
@@ -45,41 +45,21 @@ func ParseBlockParallelEnd(block *model.Block) {
 	// DB更新tx, 需要依赖txout、txin执行完毕，以统计Tx Fee
 	serial.SyncBlockTx(block)
 
+	serial.SyncBlockTxContract(block)
+
 	block.ParseData = nil
 	block.Txs = nil
 }
 
 // ParseEnd 最后分析执行
 func ParseEnd(isFull bool) {
-	defer logger.SyncLog()
-	var wg sync.WaitGroup
+	// 提交DB
+	store.CommitSyncCk()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		// 批量更新redis utxo
-		serial.UpdateUtxoInRedis(serial.GlobalNewUtxoDataMap, serial.GlobalSpentUtxoDataMap, false)
-
-		// 清空本地map内存
-		serial.CleanUtxoMap()
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		// 提交DB
-		store.CommitSyncCk()
-		store.CommitFullSyncCk(serial.SyncTxFullCount > 0)
-		store.CommitCodeHashSyncCk(serial.SyncTxCodeHashCount > 0)
-
-		// 执行DB数据额外更新
-		if isFull {
-			store.ProcessAllSyncCk()
-		} else {
-			store.ProcessPartSyncCk()
-		}
-	}()
-
-	wg.Wait()
+	// 执行DB数据额外更新
+	if isFull {
+		store.ProcessAllSyncCk()
+	} else {
+		store.ProcessPartSyncCk()
+	}
 }

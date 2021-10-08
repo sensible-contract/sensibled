@@ -37,19 +37,6 @@ func GetHash256(data []byte) (hash []byte) {
 	return
 }
 
-func GetWitnessHash256(data []byte, witOffset uint) (hash []byte) {
-	sha := sha256.New()
-	sha.Write(data[:4]) // version
-	// skip 2 bytes
-	sha.Write(data[4+2 : witOffset]) // inputs/outputs
-	// skip witness
-	sha.Write(data[len(data)-4:]) // locktime
-	tmp := sha.Sum(nil)
-	sha.Reset()
-	sha.Write(tmp)
-	hash = sha.Sum(nil)
-	return
-}
 
 func HashString(data []byte) (res string) {
 	length := 32

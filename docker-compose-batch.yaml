@@ -1,14 +1,18 @@
 version: '3'
 services:
-   satoblock:
+   sensibled:
      build: .
-     image: satoblock:latest
-     entrypoint: ./satoblock -end 698000 -batch 1000
+     image: jiedo/sensibled:v1.5.6
+     entrypoint: ./sensibled -end 680000 -batch 960000
      volumes:
        - /data/bitcoin-sv-blocks/blocks:/data/bitcoin-sv-blocks/blocks:ro
        - ./conf:/data/conf:ro
        - ./cmd:/data/cmd
+     labels:
+       - "name=sensibled-batch"
      logging:
-       driver: "local"
+       driver: "json-file"
        options:
-         max-size: "5g"
+         labels: "name"
+         max-size: "1g"
+         max-file: "3"

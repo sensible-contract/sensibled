@@ -9,7 +9,7 @@ RUN apk add --no-cache czmq-dev build-base util-linux-dev
 COPY . .
 
 # Build binary output
-RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o satoblock -ldflags '-s -w' main.go
+RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o sensibled -ldflags '-s -w' main.go
 
 FROM alpine:latest
 RUN apk add tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone
@@ -19,6 +19,6 @@ RUN adduser -u 1000 -D sato -h /data
 USER sato
 WORKDIR /data/
 
-COPY --chown=sato --from=build /build/satoblock /data/satoblock
+COPY --chown=sato --from=build /build/sensibled /data/sensibled
 
-ENTRYPOINT ["./satoblock"]
+ENTRYPOINT ["./sensibled"]

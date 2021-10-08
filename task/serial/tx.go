@@ -3,83 +3,26 @@ package serial
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
-	"satoblock/logger"
-	"satoblock/model"
+	"errors"
+	"sensibled/logger"
+	"sensibled/model"
+	"sensibled/rdb"
+	"strconv"
 
 	redis "github.com/go-redis/redis/v8"
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
 var (
-	useCluster bool
-	rdb        redis.UniversalClient
-	ctx        = context.Background()
+	ctx = context.Background()
 )
-
-func init() {
-	viper.SetConfigFile("conf/redis.yaml")
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			panic(fmt.Errorf("Fatal error config file: %s \n", err))
-		} else {
-			panic(fmt.Errorf("Fatal error config file: %s \n", err))
-		}
-	}
-
-	addrs := viper.GetStringSlice("addrs")
-	password := viper.GetString("password")
-	database := viper.GetInt("database")
-	dialTimeout := viper.GetDuration("dialTimeout")
-	readTimeout := viper.GetDuration("readTimeout")
-	writeTimeout := viper.GetDuration("writeTimeout")
-	poolSize := viper.GetInt("poolSize")
-	rdb = redis.NewUniversalClient(&redis.UniversalOptions{
-		Addrs:        addrs,
-		Password:     password,
-		DB:           database,
-		DialTimeout:  dialTimeout,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		PoolSize:     poolSize,
-	})
-
-	if len(addrs) > 1 {
-		useCluster = true
-	}
-}
-
-func PublishBlockSyncFinished() {
-	rdb.Publish(ctx, "channel_block_sync", "finished")
-}
-
-func FlushdbInRedis() {
-	logger.Log.Info("FlushdbInRedis start")
-
-	var err error
-	if useCluster {
-		rdbc := rdb.(*redis.ClusterClient)
-		err = rdbc.ForEachMaster(ctx, func(ctx context.Context, master *redis.Client) error {
-			return master.FlushDB(ctx).Err()
-		})
-	} else {
-		err = rdb.FlushDB(ctx).Err()
-	}
-
-	if err != nil {
-		logger.Log.Info("FlushdbInRedis err", zap.Error(err))
-	} else {
-		logger.Log.Info("FlushdbInRedis finish")
-	}
-}
 
 // ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用
 // 部分utxo信息在程序内存，missing的utxo将从redis查询
 // 区块同步结束时会批量更新缓存的utxo到redis
 func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
-	pipe := rdb.Pipeline()
+	pipe := rdb.Client.Pipeline()
 	m := map[string]*redis.StringCmd{}
 	needExec := false
 	for outpointKey := range block.SpentUtxoKeysMap {
@@ -90,9 +33,9 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 			continue
 		}
 		// 检查是否在本地全局缓存
-		if data, ok := GlobalNewUtxoDataMap[outpointKey]; ok {
+		if data, ok := model.GlobalNewUtxoDataMap[outpointKey]; ok {
 			block.SpentUtxoDataMap[outpointKey] = data
-			delete(GlobalNewUtxoDataMap, outpointKey)
+			delete(model.GlobalNewUtxoDataMap, outpointKey)
 			continue
 		}
 		// 剩余utxo需要查询redis
@@ -118,30 +61,12 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 		d := &model.TxoData{}
 		d.Unmarshal([]byte(res))
 
-		// 补充数据
-		d.ScriptType = scriptDecoder.GetLockingScriptType(d.Script)
-		txo := scriptDecoder.ExtractPkScriptForTxo(d.Script, d.ScriptType)
-
-		d.CodeType = txo.CodeType
-		d.CodeHash = txo.CodeHash
-		d.GenesisId = txo.GenesisId
-		d.SensibleId = txo.SensibleId
-		d.AddressPkh = txo.AddressPkh
-
-		// nft
-		d.MetaTxId = txo.MetaTxId
-		d.MetaOutputIndex = txo.MetaOutputIndex
-		d.TokenIndex = txo.TokenIndex
-		d.TokenSupply = txo.TokenSupply
-
-		// ft
-		d.Name = txo.Name
-		d.Symbol = txo.Symbol
-		d.Amount = txo.Amount
-		d.Decimal = txo.Decimal
+		// 从redis获取utxo的script，解码以备程序使用
+		d.ScriptType = scriptDecoder.GetLockingScriptType(d.PkScript)
+		d.Data = scriptDecoder.ExtractPkScriptForTxo(d.PkScript, d.ScriptType)
 
 		block.SpentUtxoDataMap[outpointKey] = d
-		GlobalSpentUtxoDataMap[outpointKey] = d
+		model.GlobalSpentUtxoDataMap[outpointKey] = d
 	}
 }
 
@@ -149,40 +74,49 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	// 更新到本地新utxo存储
 	for outpointKey, data := range block.NewUtxoDataMap {
-		GlobalNewUtxoDataMap[outpointKey] = data
+		model.GlobalNewUtxoDataMap[outpointKey] = data
 	}
 }
 
 // UpdateUtxoInRedis 批量更新redis utxo
-func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) (err error) {
+func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) (err error) {
 	logger.Log.Info("UpdateUtxoInRedis",
 		zap.Int("add", len(utxoToRestore)),
 		zap.Int("del", len(utxoToRemove)))
 	if len(utxoToRestore) == 0 && len(utxoToRemove) == 0 {
-		return
+		return errors.New("empty utxo")
 	}
-	pipe := rdb.Pipeline()
+
+	pipe.HSet(ctx, "info",
+		"blocks_total", blocksTotal,
+	)
+
 	for outpointKey, data := range utxoToRestore {
-		buf := make([]byte, 20+len(data.Script))
+		// if data.Data.CodeType == scriptDecoder.CodeType_SENSIBLE {
+		// 	// 正常情况, utxo不会有opreturn的数据
+		// 	continue
+		// }
+
+		buf := make([]byte, 20+len(data.PkScript))
 		data.Marshal(buf)
-		// redis全局utxo数据添加
+		// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
 		pipe.Set(ctx, "u"+outpointKey, buf, 0)
 
-		strAddressPkh := string(data.AddressPkh)
-		strCodeHash := string(data.CodeHash)
-		strGenesisId := string(data.GenesisId)
+		strAddressPkh := string(data.Data.AddressPkh[:])
+		strCodeHash := string(data.Data.CodeHash[:])
+		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
 
 		// redis有序utxo数据成员
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
-		// 无法识别地址，暂不记录utxo
-		if len(data.AddressPkh) < 20 {
-			// pipe.ZAdd(ctx, "utxo", member)
-			continue
-		}
-
 		// 非合约信息记录
-		if len(data.GenesisId) < 20 {
+		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
+			// 无法识别地址，暂不记录utxo
+			if !data.Data.HasAddress {
+				// pipe.ZAdd(ctx, "utxo", member)
+				continue
+			}
+			// 识别地址，只记录utxo和balance
 			pipe.ZAdd(ctx, "{au"+strAddressPkh+"}", member)           // 有序address utxo数据添加
 			pipe.IncrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
 			continue
@@ -193,21 +127,36 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 		pipe.IncrBy(ctx, "cb"+strAddressPkh, int64(data.Satoshi))
 
 		// 有序genesis utxo数据添加
-		if data.CodeType == scriptDecoder.CodeType_NFT {
+		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
 			// nftIdx as score
-			member.Score = float64(data.TokenIndex)
+			member.Score = float64(data.Data.NFT.TokenIndex)
 			pipe.ZAdd(ctx, "{nu"+strAddressPkh+"}"+strCodeHash+strGenesisId, member) // nft:utxo
 			pipe.ZAdd(ctx, "nd"+strCodeHash+strGenesisId, member)                    // nft:utxo-detail
 			pipe.ZIncrBy(ctx, "{no"+strGenesisId+strCodeHash+"}", 1, strAddressPkh)  // nft:owners
 			pipe.ZIncrBy(ctx, "{ns"+strAddressPkh+"}", 1, strCodeHash+strGenesisId)  // nft:summary
 
-		} else if data.CodeType == scriptDecoder.CodeType_FT {
-			pipe.ZAdd(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, member)                   // ft:utxo
-			pipe.ZIncrBy(ctx, "{fb"+strGenesisId+strCodeHash+"}", float64(data.Amount), strAddressPkh) // ft:balance
-			pipe.ZIncrBy(ctx, "{fs"+strAddressPkh+"}", float64(data.Amount), strCodeHash+strGenesisId) // ft:summary
+		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
+			pipe.ZAdd(ctx, "{sut}", member)                              // nft:sell:all:utxo, sort by time
+			pipe.ZAdd(ctx, "{suta"+strAddressPkh+"}", member)            // nft:sell:seller-address:utxo
+			pipe.ZAdd(ctx, "{sutc"+strGenesisId+strCodeHash+"}", member) // nft:sell
 
-		} else if data.CodeType == scriptDecoder.CodeType_UNIQUE {
-			pipe.ZAdd(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, member) // ft:utxo
+			member.Score = float64(data.Data.NFTSell.Price)
+			pipe.ZAdd(ctx, "{sup}", member)                              // nft:sell:all:utxo, sort by price
+			pipe.ZAdd(ctx, "{supa"+strAddressPkh+"}", member)            // nft:sell:seller-address:utxo
+			pipe.ZAdd(ctx, "{supc"+strGenesisId+strCodeHash+"}", member) // nft:sell
+
+			member.Score = float64(data.Data.NFTSell.TokenIndex)
+			pipe.ZAdd(ctx, "{sui}", member)                              // nft:sell:all:utxo, sort by token index
+			pipe.ZAdd(ctx, "{suia"+strAddressPkh+"}", member)            // nft:sell:seller-address:utxo
+			pipe.ZAdd(ctx, "{suic"+strGenesisId+strCodeHash+"}", member) // nft:sell
+
+		} else if data.Data.CodeType == scriptDecoder.CodeType_FT {
+			pipe.ZAdd(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, member)                           // ft:utxo
+			pipe.ZIncrBy(ctx, "{fb"+strGenesisId+strCodeHash+"}", float64(data.Data.FT.Amount), strAddressPkh) // ft:balance
+			pipe.ZIncrBy(ctx, "{fs"+strAddressPkh+"}", float64(data.Data.FT.Amount), strCodeHash+strGenesisId) // ft:summary
+
+		} else if data.Data.CodeType == scriptDecoder.CodeType_UNIQUE {
+			pipe.ZAdd(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, member) // uniq:utxo
 		}
 
 		// skip if reorg
@@ -216,43 +165,51 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 		}
 
 		// update token info
-		if data.CodeType == scriptDecoder.CodeType_NFT {
-			pipe.HSet(ctx, "ni"+strCodeHash+strGenesisId,
-				"metatxid", data.MetaTxId,
-				"metavout", data.MetaOutputIndex,
-				"supply", data.TokenSupply,
-				"sensibleid", data.SensibleId,
+		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
+			pipe.HSet(ctx, "nI"+strCodeHash+strGenesisId+strconv.Itoa(int(data.Data.NFT.TokenIndex)),
+				"metatxid", data.Data.NFT.MetaTxId[:],
+				"metavout", data.Data.NFT.MetaOutputIndex,
+				"supply", data.Data.NFT.TokenSupply,
+				"sensibleid", data.Data.NFT.SensibleId,
 			)
-		} else if data.CodeType == scriptDecoder.CodeType_FT || data.CodeType == scriptDecoder.CodeType_UNIQUE {
+			pipe.HSet(ctx, "ni"+strCodeHash+strGenesisId,
+				"supply", data.Data.NFT.TokenSupply,
+				"sensibleid", data.Data.NFT.SensibleId,
+			)
+		} else if data.Data.CodeType == scriptDecoder.CodeType_FT {
 			pipe.HSet(ctx, "fi"+strCodeHash+strGenesisId,
-				"decimal", data.Decimal,
-				"name", data.Name,
-				"symbol", data.Symbol,
-				"sensibleid", data.SensibleId,
+				"decimal", data.Data.FT.Decimal,
+				"name", data.Data.FT.Name,
+				"symbol", data.Data.FT.Symbol,
+				"sensibleid", data.Data.FT.SensibleId,
+			)
+
+		} else if data.Data.CodeType == scriptDecoder.CodeType_UNIQUE {
+			pipe.HSet(ctx, "fi"+strCodeHash+strGenesisId,
+				"sensibleid", data.Data.Uniq.SensibleId,
 			)
 		}
 	}
 
-	addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
-	addrToRemove := make(map[string]bool, 1)
-	tokenToRemove := make(map[string]bool, 1)
+	addrToRemove := make(map[string]struct{}, 1)
+	tokenToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
 		// redis全局utxo数据清除
 		pipe.Del(ctx, "u"+outpointKey)
 
-		strAddressPkh := string(data.AddressPkh)
-		strCodeHash := string(data.CodeHash)
-		strGenesisId := string(data.GenesisId)
-
-		// redis有序utxo数据清除
-		if len(data.AddressPkh) < 20 {
-			// 无法识别地址，暂不记录utxo
-			// pipe.ZRem(ctx, "utxo", outpointKey)
-			continue
-		}
+		strAddressPkh := string(data.Data.AddressPkh[:])
+		strCodeHash := string(data.Data.CodeHash[:])
+		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
 
 		// 非合约信息清理
-		if len(data.GenesisId) < 20 {
+		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
+			// redis有序utxo数据清除
+			if !data.Data.HasAddress {
+				// 无法识别地址，暂不记录utxo
+				// pipe.ZRem(ctx, "utxo", outpointKey)
+				continue
+			}
+
 			pipe.ZRem(ctx, "{au"+strAddressPkh+"}", outpointKey)                                               // 有序address utxo数据清除
 			addressBalanceCmds["bl"+strAddressPkh] = pipe.DecrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
 			continue
@@ -263,24 +220,37 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 		addressBalanceCmds["cb"+strAddressPkh] = pipe.DecrBy(ctx, "cb"+strAddressPkh, int64(data.Satoshi))
 
 		// redis有序genesis utxo数据清除
-		if data.CodeType == scriptDecoder.CodeType_NFT {
+		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
 			pipe.ZRem(ctx, "{nu"+strAddressPkh+"}"+strCodeHash+strGenesisId, outpointKey) // nft:utxo
 			pipe.ZRem(ctx, "nd"+strCodeHash+strGenesisId, outpointKey)                    // nft:utxo-detail
 			pipe.ZIncrBy(ctx, "{no"+strGenesisId+strCodeHash+"}", -1, strAddressPkh)      // nft:owners
 			pipe.ZIncrBy(ctx, "{ns"+strAddressPkh+"}", -1, strCodeHash+strGenesisId)      // nft:summary
 
-		} else if data.CodeType == scriptDecoder.CodeType_FT {
-			pipe.ZRem(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, outpointKey)               // ft:utxo
-			pipe.ZIncrBy(ctx, "{fb"+strGenesisId+strCodeHash+"}", -float64(data.Amount), strAddressPkh) // ft:balance
-			pipe.ZIncrBy(ctx, "{fs"+strAddressPkh+"}", -float64(data.Amount), strCodeHash+strGenesisId) // ft:summary
+		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
+			pipe.ZRem(ctx, "{sut}", outpointKey)                              // nft:sell:all:utxo, sort by time
+			pipe.ZRem(ctx, "{suta"+strAddressPkh+"}", outpointKey)            // nft:sell:seller-address:utxo
+			pipe.ZRem(ctx, "{sutc"+strGenesisId+strCodeHash+"}", outpointKey) // nft:sell
 
-		} else if data.CodeType == scriptDecoder.CodeType_UNIQUE {
-			pipe.ZRem(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, outpointKey) // ft:utxo
+			pipe.ZRem(ctx, "{sup}", outpointKey)                              // nft:sell:all:utxo, sort by price
+			pipe.ZRem(ctx, "{supa"+strAddressPkh+"}", outpointKey)            // nft:sell:seller-address:utxo
+			pipe.ZRem(ctx, "{supc"+strGenesisId+strCodeHash+"}", outpointKey) // nft:sell
+
+			pipe.ZRem(ctx, "{sui}", outpointKey)                              // nft:sell:all:utxo, sort by token index
+			pipe.ZRem(ctx, "{suia"+strAddressPkh+"}", outpointKey)            // nft:sell:seller-address:utxo
+			pipe.ZRem(ctx, "{suic"+strGenesisId+strCodeHash+"}", outpointKey) // nft:sell
+
+		} else if data.Data.CodeType == scriptDecoder.CodeType_FT {
+			pipe.ZRem(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, outpointKey)                       // ft:utxo
+			pipe.ZIncrBy(ctx, "{fb"+strGenesisId+strCodeHash+"}", -float64(data.Data.FT.Amount), strAddressPkh) // ft:balance
+			pipe.ZIncrBy(ctx, "{fs"+strAddressPkh+"}", -float64(data.Data.FT.Amount), strCodeHash+strGenesisId) // ft:summary
+
+		} else if data.Data.CodeType == scriptDecoder.CodeType_UNIQUE {
+			pipe.ZRem(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, outpointKey) // uniq:utxo
 		}
 
 		// 记录key以备删除
-		tokenToRemove[strGenesisId+strCodeHash] = true
-		addrToRemove[strAddressPkh] = true
+		tokenToRemove[strGenesisId+strCodeHash] = struct{}{}
+		addrToRemove[strAddressPkh] = struct{}{}
 	}
 
 	// 删除balance 为0的记录
@@ -295,12 +265,15 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 		pipe.ZRemRangeByScore(ctx, "{fs"+addr+"}", "0", "0")
 	}
 
-	_, err = pipe.Exec(ctx)
-	if err != nil {
-		panic(err)
-	}
+	logger.Log.Info("UpdateUtxoInRedis finished")
+	return nil
+}
 
-	pipe = rdb.Pipeline()
+func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.IntCmd) {
+	if len(addressBalanceCmds) == 0 {
+		return
+	}
+	pipe := rdb.Client.Pipeline()
 	// 删除balance为0的记录
 	// 要求整个函数单线程处理，否则可能删除非0数据
 	for keyString, cmd := range addressBalanceCmds {
@@ -317,11 +290,7 @@ func UpdateUtxoInRedis(utxoToRestore, utxoToRemove map[string]*model.TxoData, is
 		}
 	}
 
-	_, err = pipe.Exec(ctx)
-	if err != nil {
+	if _, err := pipe.Exec(ctx); err != nil {
 		panic(err)
 	}
-
-	logger.Log.Info("UpdateUtxoInRedis finished")
-	return nil
 }

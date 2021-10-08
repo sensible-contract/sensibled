@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"satoblock/logger"
+	"sensibled/logger"
 	"time"
 
 	"go.uber.org/zap"

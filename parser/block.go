@@ -2,8 +2,8 @@ package parser
 
 import (
 	"encoding/binary"
-	"satoblock/model"
-	"satoblock/utils"
+	"sensibled/model"
+	"sensibled/utils"
 )
 
 func NewBlock(rawblock []byte) (block *model.Block) {
@@ -29,4 +29,7 @@ func InitBlock(block *model.Block, rawblock []byte) {
 	block.Bits = binary.LittleEndian.Uint32(rawblock[72:76])
 	block.Nonce = binary.LittleEndian.Uint32(rawblock[76:80])
 	block.Size = uint32(len(rawblock))
+
+	txcnt, _ := utils.DecodeVarIntForBlock(rawblock[80:])
+	block.TxCnt = uint64(txcnt)
 }
