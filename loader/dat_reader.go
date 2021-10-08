@@ -66,7 +66,7 @@ func (bf *BlockData) FetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
 	buf := [4]byte{}
 	_, err = bf.CurrentFile.Read(buf[:])
 	if err != nil {
-		logger.Log.Info("FetchNextBlock done", zap.Error(err))
+		// logger.Log.Info("FetchNextBlock done", zap.Error(err))
 		return
 	}
 	bf.Offset += 4

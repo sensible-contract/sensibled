@@ -226,7 +226,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 		var err error
 		rawblock, err = bc.BlockData.GetRawBlockHeader()
 		if err != nil {
-			// logger.Log.Info("no more block header", zap.Error(err))
+			logger.Log.Info("no more block header", zap.Error(err))
 			break
 		}
 		if len(rawblock) < 80+9 { // block header + txn
@@ -242,9 +242,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 			block.FileOffset = fileoffset
 
 			bc.m.Lock()
-			if _, ok := bc.Blocks[block.HashHex]; !ok {
-				bc.Blocks[block.HashHex] = block
-			}
+			bc.Blocks[block.HashHex] = block
 			bc.m.Unlock()
 
 			<-parsers
