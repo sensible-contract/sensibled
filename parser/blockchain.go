@@ -242,6 +242,11 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 			block.FileOffset = fileoffset
 
 			bc.m.Lock()
+
+			if block.FileIdx > bc.LastFileIdx {
+				bc.LastFileIdx = block.FileIdx
+			}
+
 			bc.Blocks[block.HashHex] = block
 			bc.m.Unlock()
 
