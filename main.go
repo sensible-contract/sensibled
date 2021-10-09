@@ -307,7 +307,6 @@ func syncBlock() {
 		isFull = false // 准备继续同步
 		startBlockHeight = -1
 		logger.Log.Info("block finished")
-		loader.DumpToGobFile("./cmd/headers-list.gob", blockchain.Blocks)
 	}
 	logger.Log.Info("stoped")
 }

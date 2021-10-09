@@ -209,6 +209,8 @@ func (bc *Blockchain) InitLongestChainHeader() {
 		bc.LoadAllBlockHeaders()
 	}
 
+	loader.DumpToGobFile("./cmd/headers-list.gob", bc.Blocks)
+
 	bc.SetBlockHeight()
 	bc.SelectLongestChain()
 }

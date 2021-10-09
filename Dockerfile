@@ -1,11 +1,11 @@
 FROM golang:1.15-alpine AS build
 ARG GO_OS="linux"
 ARG GO_ARCH="amd64"
-WORKDIR /build/
 
 # see: https://stackoverflow.com/questions/42500973/compiling-go-library-without-gco-to-run-on-alpine-error-in-libczmq
 RUN apk add --no-cache czmq-dev build-base util-linux-dev
 
+WORKDIR /build/
 COPY . .
 
 # Build binary output
