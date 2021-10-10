@@ -29,24 +29,32 @@ func InitZmq() {
 	zmqEndpointBlock := viper.GetString("zmq_block")
 	zmqEndpointTx := viper.GetString("zmq_tx")
 
-	// 监听新Block
-	go func() {
-		zmqNotifyBlock(zmqEndpointBlock)
-	}()
-
-	// 监听新Tx
-	go func() {
-		zmqNotifyTx(zmqEndpointTx)
-	}()
-}
-
-func zmqNotifyBlock(endpoint string) {
 	logger.Log.Info("ZeroMQ started to listen for blocks")
-	subscriber, err := goczmq.NewSub(endpoint, "hashblock")
+	subscriberBlock, err := goczmq.NewSub(zmqEndpointBlock, "hashblock")
 	if err != nil {
 		logger.Log.Fatal("ZMQ connect failed", zap.Error(err))
 		return
 	}
+
+	logger.Log.Info("ZeroMQ started to listen for txs")
+	subscriberTx, err := goczmq.NewSub(zmqEndpointTx, "rawtx")
+	if err != nil {
+		logger.Log.Fatal("ZMQ connect failed", zap.Error(err))
+		return
+	}
+
+	// 监听新Block
+	go func() {
+		zmqNotifyBlock(subscriberBlock)
+	}()
+
+	// 监听新Tx
+	go func() {
+		zmqNotifyTx(subscriberTx)
+	}()
+}
+
+func zmqNotifyBlock(subscriber *goczmq.Sock) {
 	defer subscriber.Destroy()
 
 	subscriber.SetTcpKeepalive(1)
@@ -54,7 +62,7 @@ func zmqNotifyBlock(endpoint string) {
 	subscriber.SetTcpKeepaliveCnt(10)
 	subscriber.SetTcpKeepaliveIntvl(3)
 
-	logger.Log.Info("zmq conf",
+	logger.Log.Info("zmq block conf",
 		zap.Int("keepalive", subscriber.TcpKeepalive()),
 		zap.Int("keepalive idle", subscriber.TcpKeepaliveIdle()),
 		zap.Int("keepalive count", subscriber.TcpKeepaliveCnt()),
@@ -85,13 +93,7 @@ func zmqNotifyBlock(endpoint string) {
 	}
 }
 
-func zmqNotifyTx(endpoint string) {
-	logger.Log.Info("ZeroMQ started to listen for txs")
-	subscriber, err := goczmq.NewSub(endpoint, "rawtx")
-	if err != nil {
-		logger.Log.Fatal("ZMQ connect failed", zap.Error(err))
-		return
-	}
+func zmqNotifyTx(subscriber *goczmq.Sock) {
 	defer subscriber.Destroy()
 
 	subscriber.SetTcpKeepalive(1)
@@ -99,7 +101,7 @@ func zmqNotifyTx(endpoint string) {
 	subscriber.SetTcpKeepaliveCnt(10)
 	subscriber.SetTcpKeepaliveIntvl(3)
 
-	logger.Log.Info("zmq conf",
+	logger.Log.Info("zmq tx conf",
 		zap.Int("keepalive", subscriber.TcpKeepalive()),
 		zap.Int("keepalive idle", subscriber.TcpKeepaliveIdle()),
 		zap.Int("keepalive count", subscriber.TcpKeepaliveCnt()),
