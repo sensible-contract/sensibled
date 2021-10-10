@@ -241,10 +241,15 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 	serial.SyncBlockTxOutputInfo(startIdx, mp.BatchTxs)
 
 	// 3 dep 1
+	// SpentUtxoDataMap w
 	serial.ParseGetSpentUtxoDataFromRedisSerial(mp.SpentUtxoKeysMap, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
+
 	// 4 dep 3
+	// SpentUtxoDataMap r
 	serial.SyncBlockTxInputDetail(startIdx, mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
+
 	// 8 dep 3
+	// SpentUtxoDataMap r
 	serial.SyncBlockTxContract(startIdx, mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
 
 	// 5 dep 2 4
