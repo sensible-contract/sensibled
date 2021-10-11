@@ -25,9 +25,10 @@ func ParseBlockParallel(block *model.Block) {
 }
 
 // ParseBlockSerialStart 再串行处理区块
-func ParseBlockSerialStart(block *model.Block) {
-	serial.MarkConfirmedBlockTx(block)
-
+func ParseBlockSerialStart(withMempool bool, block *model.Block) {
+	if withMempool {
+		serial.MarkConfirmedBlockTx(block)
+	}
 	// 从redis中补全查询当前block内所有Tx花费的utxo信息来使用
 	serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
 

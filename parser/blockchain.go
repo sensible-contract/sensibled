@@ -140,6 +140,12 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 // ParseLongestChainBlock 按顺序消费解码后的区块
 func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, blocksReady, blocksStage chan *model.Block, startBlockHeight, maxBlockHeight int) {
 	blocksTotal := len(bc.BlocksOfChainById)
+
+	withMempool := false
+	if maxBlockHeight < 0 {
+		withMempool = true
+	}
+
 	if maxBlockHeight < 0 || maxBlockHeight > blocksTotal {
 		maxBlockHeight = blocksTotal
 	}
@@ -166,7 +172,7 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 
 			// 再串行分析区块。可执行一些严格要求按序处理的任务，区块会串行依次执行
 			// 当串行执行到某个区块时，一定运行完毕了之前区块的所有任务和本区块的预处理任务
-			task.ParseBlockSerialStart(block)
+			task.ParseBlockSerialStart(withMempool, block)
 			// block speed
 			utilsTask.ParseBlockSpeed(len(block.Txs), len(model.GlobalNewUtxoDataMap), len(model.GlobalSpentUtxoDataMap),
 				block.Height, maxBlockHeight)
