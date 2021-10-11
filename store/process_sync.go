@@ -433,7 +433,7 @@ func ProcessSyncCk(processSQLs []string) bool {
 		if partLen > 96 {
 			partLen = 96
 		}
-		logger.Log.Info("sync exec: " + psql[:partLen])
+		// logger.Log.Info("sync exec: " + psql[:partLen])
 		if _, err := clickhouse.CK.Exec(psql); err != nil {
 			logger.Log.Info("sync exec err",
 				zap.String("sql", psql[:partLen]), zap.Error(err))

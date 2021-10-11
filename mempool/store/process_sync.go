@@ -59,17 +59,17 @@ var (
 )
 
 func ProcessAllSyncCk() bool {
-	logger.Log.Info("sync sql: all")
+	logger.Log.Info("sync mempool sql: all")
 	return ProcessSyncCk(processAllSQLs)
 }
 
 func CreatePartSyncCk() bool {
-	logger.Log.Info("create sql: part")
+	logger.Log.Info("create mempool sql: part")
 	return ProcessSyncCk(createPartSQLs)
 }
 
 func ProcessPartSyncCk() bool {
-	logger.Log.Info("sync sql: part")
+	logger.Log.Info("sync mempool sql: part")
 	if !ProcessSyncCk(processPartSQLs) {
 		return false
 	}
@@ -85,7 +85,7 @@ func ProcessSyncCk(processSQLs []string) bool {
 		if partLen > 96 {
 			partLen = 96
 		}
-		logger.Log.Info("sync exec: " + psql[:partLen])
+		// logger.Log.Info("sync exec: " + psql[:partLen])
 		if _, err := clickhouse.CK.Exec(psql); err != nil {
 			logger.Log.Info("sync exec err",
 				zap.String("sql", psql[:partLen]), zap.Error(err))
