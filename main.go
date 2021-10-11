@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime"
@@ -312,6 +314,11 @@ func syncBlock() {
 }
 
 func main() {
+	// pprof
+	go func() {
+		http.ListenAndServe("0.0.0.0:8000", nil)
+	}()
+
 	//采样cpu运行状态
 	if cpuProfile != "" {
 		cpuf, err := os.Create(cpuProfile)
