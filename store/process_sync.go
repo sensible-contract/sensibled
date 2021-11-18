@@ -246,9 +246,9 @@ CREATE TABLE IF NOT EXISTS txin_genesis_height (
 	codehash     String,
 	genesis      String
 ) engine=MergeTree()
-PRIMARY KEY (codehash, genesis)
-ORDER BY (codehash, genesis, address, height)
-PARTITION BY substring(codehash, 1, 1)
+PRIMARY KEY address
+ORDER BY (address, codehash, genesis, height, txidx)
+PARTITION BY substring(address, 1, 1)
 `,
 
 		// address在哪些高度的tx中出现，按address首字节分区，分区内按address+genesis+height排序，按address索引。按address查询时可确定分区 (快)
@@ -284,9 +284,9 @@ CREATE TABLE IF NOT EXISTS txout_genesis_height (
 	codehash     String,
 	genesis      String
 ) engine=MergeTree()
-PRIMARY KEY codehash
-ORDER BY (codehash, genesis, address, height)
-PARTITION BY substring(codehash, 1, 1)
+PRIMARY KEY address
+ORDER BY (address, codehash, genesis, height, utxidx)
+PARTITION BY substring(address, 1, 1)
 `,
 	}
 
