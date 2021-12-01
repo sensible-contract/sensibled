@@ -13,8 +13,8 @@ const MEMPOOL_HEIGHT = 4294967295
 
 type Tx struct {
 	Raw          []byte
-	HashHex      string // 32
-	Hash         []byte // 32
+	TxIdHex      string // 64
+	TxId         []byte // 32
 	Size         uint32
 	LockTime     uint32
 	Version      uint32
@@ -139,7 +139,7 @@ type TokenData struct {
 
 type TxData struct {
 	Raw  []byte
-	Hash []byte // 32
+	TxId []byte // 32
 }
 
 type TxoData struct {

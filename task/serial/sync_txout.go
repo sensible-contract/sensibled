@@ -46,7 +46,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				dataValue = output.Data.FT.Amount
 			}
 			if _, err := store.SyncStmtTxOut.Exec(
-				string(tx.Hash),
+				string(tx.TxId),
 				uint32(vout),
 				address,
 				codehash,
@@ -61,7 +61,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 			); err != nil {
 				logger.Log.Info("sync-txout-err",
 					zap.String("sync", "txout err"),
-					zap.String("utxid", tx.HashHex),
+					zap.String("utxid", tx.TxIdHex),
 					zap.Uint32("vout", uint32(vout)),
 					zap.String("err", err.Error()),
 				)

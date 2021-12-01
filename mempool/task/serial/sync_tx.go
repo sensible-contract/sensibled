@@ -12,7 +12,7 @@ import (
 func SyncBlockTx(startIdx int, txs []*model.Tx) {
 	for txIdx, tx := range txs {
 		if _, err := store.SyncStmtTx.Exec(
-			string(tx.Hash),
+			string(tx.TxId),
 			tx.TxInCnt,
 			tx.TxOutCnt,
 			tx.Size,
@@ -26,7 +26,7 @@ func SyncBlockTx(startIdx int, txs []*model.Tx) {
 		); err != nil {
 			logger.Log.Info("sync-tx-err",
 				zap.String("sync", "tx err"),
-				zap.String("txid", tx.HashHex),
+				zap.String("txid", tx.TxIdHex),
 				zap.String("err", err.Error()),
 			)
 		}

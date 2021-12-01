@@ -95,7 +95,7 @@ func getUtxoBySql(psql string) (utxosMapRsp map[string]*model.TxoData, err error
 
 func rawtxResultSRF(rows *sql.Rows) (interface{}, error) {
 	var ret model.TxData
-	err := rows.Scan(&ret.Hash, &ret.Raw)
+	err := rows.Scan(&ret.TxId, &ret.Raw)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func GetAllMempoolRawTx(txs map[string]*model.TxData) (err error) {
 
 	txsRsp := txsRet.([]*model.TxData)
 	for _, tx := range txsRsp {
-		txs[utils.HashString(tx.Hash)] = tx
+		txs[utils.HashString(tx.TxId)] = tx
 	}
 
 	return nil

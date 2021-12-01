@@ -11,6 +11,7 @@ import (
 	"sensibled/mempool/task/parallel"
 	"sensibled/mempool/task/serial"
 	"sensibled/model"
+	txParser "sensibled/parser"
 	"sensibled/utils"
 	"sync"
 	"time"
@@ -53,10 +54,15 @@ func (mp *Mempool) LoadFromMempool() bool {
 	for i := 0; i < 1000; i++ {
 		select {
 		case rawtx := <-loader.RawTxNotify:
-			txid := utils.GetHash256(rawtx)
+			tx, txoffset := parser.NewTx(rawtx)
+			if int(txoffset) < len(rawtx) {
+				logger.Log.Info("skip bad rawtx")
+				continue
+			}
+			txid := txParser.GetTxId(tx)
 			allRawtxs[utils.HashString(txid)] = &model.TxData{
 				Raw:  rawtx,
-				Hash: txid,
+				TxId: txid,
 			}
 		default:
 		}
@@ -91,32 +97,32 @@ func (mp *Mempool) LoadFromMempool() bool {
 			)
 		}
 
+		// parser tx
 		tx, txoffset := parser.NewTx(rawtx)
 		if int(txoffset) < len(rawtx) {
 			logger.Log.Info("skip bad rawtx")
 			continue
 		}
-
 		tx.Raw = rawtx
 		tx.Size = uint32(txoffset)
-		tx.Hash = utils.GetHash256(rawtx)
-		tx.HashHex = utils.HashString(tx.Hash)
+		tx.TxId = txParser.GetTxId(tx)
+		tx.TxIdHex = utils.HashString(tx.TxId)
 
 		// maybe impossible dup here
-		if _, ok := mp.Txs[tx.HashHex]; ok {
+		if _, ok := mp.Txs[tx.TxIdHex]; ok {
 			logger.Log.Info("init skip dup")
 			continue
 		}
 
 		if parser.IsTxNonFinal(tx, mp.SkipTxs) {
 			logger.Log.Info("skip non final tx",
-				zap.String("txid", tx.HashHex),
+				zap.String("txid", tx.TxIdHex),
 			)
-			mp.SkipTxs[tx.HashHex] = struct{}{}
+			mp.SkipTxs[tx.TxIdHex] = struct{}{}
 			continue
 		}
 
-		mp.Txs[tx.HashHex] = struct{}{}
+		mp.Txs[tx.TxIdHex] = struct{}{}
 		mp.BatchTxs = append(mp.BatchTxs, tx)
 	}
 	return true
@@ -163,25 +169,43 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 			return true
 		}
 
-		txHash := utils.GetHash256(rawtx)
-		txHashHex := utils.HashString(txHash)
+		// parser tx
+		tx, txoffset := parser.NewTx(rawtx)
+		if int(txoffset) < len(rawtx) {
+			logger.Log.Info("skip bad rawtx")
+			continue
+		}
+		tx.Raw = rawtx
+		tx.Size = uint32(txoffset)
+		tx.TxId = txParser.GetTxId(tx)
+		tx.TxIdHex = utils.HashString(tx.TxId)
+
+		// ignore non final tx
+		if parser.IsTxNonFinal(tx, mp.SkipTxs) {
+			logger.Log.Info("skip non final tx",
+				zap.String("txid", tx.TxIdHex),
+			)
+			mp.SkipTxs[tx.TxIdHex] = struct{}{}
+			continue
+		}
+
 		// 在内存池重复出现，说明区块已确认，但还未收到zmq hashblock通知。
-		if _, ok := mp.Txs[txHashHex]; ok {
+		if _, ok := mp.Txs[tx.TxIdHex]; ok {
 			logger.Log.Info("skip dup",
-				zap.String("txid", txHashHex),
+				zap.String("txid", tx.TxIdHex),
 			)
 			continue
 		}
 		// 被区块确认
-		if _, ok := model.GlobalConfirmedTxMap[txHashHex]; ok {
+		if _, ok := model.GlobalConfirmedTxMap[tx.TxIdHex]; ok {
 			logger.Log.Info("skip confirmed tx",
-				zap.String("txid", txHashHex),
+				zap.String("txid", tx.TxIdHex),
 			)
 			continue
 		}
-		if _, ok := model.GlobalConfirmedTxOldMap[txHashHex]; ok {
+		if _, ok := model.GlobalConfirmedTxOldMap[tx.TxIdHex]; ok {
 			logger.Log.Info("skip confirmed tx",
-				zap.String("txid", txHashHex),
+				zap.String("txid", tx.TxIdHex),
 			)
 			continue
 		}
@@ -192,29 +216,10 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 			return true
 		}
 
-		tx, txoffset := parser.NewTx(rawtx)
-		if int(txoffset) < len(rawtx) {
-			logger.Log.Info("skip bad rawtx")
-			continue
-		}
-
-		tx.Raw = rawtx
-		tx.Size = uint32(txoffset)
-		tx.Hash = txHash
-		tx.HashHex = txHashHex
-
-		if parser.IsTxNonFinal(tx, mp.SkipTxs) {
-			logger.Log.Info("skip non final tx",
-				zap.String("txid", tx.HashHex),
-			)
-			mp.SkipTxs[tx.HashHex] = struct{}{}
-			continue
-		}
-
 		logger.Log.Info("new tx in mempool",
-			zap.String("txid", tx.HashHex),
+			zap.String("txid", tx.TxIdHex),
 		)
-		mp.Txs[tx.HashHex] = struct{}{}
+		mp.Txs[tx.TxIdHex] = struct{}{}
 		mp.BatchTxs = append(mp.BatchTxs, tx)
 
 		if time.Since(start) > 200*time.Millisecond {

@@ -18,13 +18,16 @@ func NewTxs(txsraw []byte) (txs []*model.Tx) {
 		// fmt.Println("offset:", offset)
 		txs[i], txoffset = NewTx(txsraw[offset:])
 		txs[i].Raw = txsraw[offset : offset+txoffset]
-		txs[i].Hash = utils.GetHash256(txs[i].Raw)
-		txs[i].HashHex = utils.HashString(txs[i].Hash)
-
+		txs[i].TxId = GetTxId(txs[i])
+		txs[i].TxIdHex = utils.HashString(txs[i].TxId)
 		txs[i].Size = uint32(txoffset)
 		offset += txoffset
 	}
 	return txs
+}
+
+func GetTxId(tx *model.Tx) []byte {
+	return utils.GetHash256(tx.Raw)
 }
 
 func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {

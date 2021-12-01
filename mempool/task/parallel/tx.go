@@ -12,14 +12,14 @@ import (
 func ParseTxFirst(tx *model.Tx) {
 	for idx, input := range tx.TxIns {
 		key := make([]byte, 36)
-		copy(key, tx.Hash)
+		copy(key, tx.TxId)
 		binary.LittleEndian.PutUint32(key[32:], uint32(idx))
 		input.InputPoint = key
 	}
 
 	for idx, output := range tx.TxOuts {
 		key := make([]byte, 36)
-		copy(key, tx.Hash)
+		copy(key, tx.TxId)
 
 		binary.LittleEndian.PutUint32(key[32:], uint32(idx))
 		output.OutpointKey = string(key)

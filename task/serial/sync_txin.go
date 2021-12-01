@@ -30,7 +30,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				} else {
 					logger.Log.Info("tx-input-err",
 						zap.String("txin", "input missing utxo"),
-						zap.String("txid", tx.HashHex),
+						zap.String("txid", tx.TxIdHex),
 						zap.Int("vin", vin),
 
 						zap.String("utxid", input.InputHashHex),
@@ -113,7 +113,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			if _, err := store.SyncStmtTxIn.Exec(
 				uint32(block.Height),
 				uint64(txIdx),
-				string(tx.Hash),
+				string(tx.TxId),
 				uint32(vin),
 				scriptsig, // prune string(input.ScriptSig),
 				uint32(input.Sequence),
@@ -133,7 +133,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			); err != nil {
 				logger.Log.Info("sync-txin-full-err",
 					zap.String("sync", "txin full err"),
-					zap.String("txid", tx.HashHex),
+					zap.String("txid", tx.TxIdHex),
 					zap.Uint32("vin", uint32(vin)),
 					zap.String("err", err.Error()),
 				)

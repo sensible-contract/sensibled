@@ -18,7 +18,7 @@ func SyncBlockTx(block *model.Block) {
 			txraw = string(tx.Raw)
 		}
 		if _, err := store.SyncStmtTx.Exec(
-			string(tx.Hash),
+			string(tx.TxId),
 			tx.TxInCnt,
 			tx.TxOutCnt,
 			tx.Size,
@@ -31,7 +31,7 @@ func SyncBlockTx(block *model.Block) {
 			uint64(txIdx),
 		); err != nil {
 			logger.Log.Info("sync-tx-err",
-				zap.String("txid", tx.HashHex),
+				zap.String("txid", tx.TxIdHex),
 				zap.String("err", err.Error()),
 			)
 		}
@@ -43,6 +43,6 @@ func MarkConfirmedBlockTx(block *model.Block) {
 	model.GlobalConfirmedBlkMap[block.HashHex] = struct{}{}
 	model.GlobalConfirmedBlkMap[block.ParentHex] = struct{}{}
 	for _, tx := range block.Txs {
-		model.GlobalConfirmedTxMap[tx.HashHex] = struct{}{}
+		model.GlobalConfirmedTxMap[tx.TxIdHex] = struct{}{}
 	}
 }
