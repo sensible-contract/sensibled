@@ -16,7 +16,7 @@ var (
 	ctx        = context.Background()
 )
 
-func init() {
+func Init() {
 	viper.SetConfigFile("conf/redis.yaml")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {

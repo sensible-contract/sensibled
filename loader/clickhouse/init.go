@@ -15,7 +15,7 @@ var (
 	CK *clickhImpl
 )
 
-func init() {
+func Init() {
 	viper.SetConfigFile("conf/db.yaml")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {

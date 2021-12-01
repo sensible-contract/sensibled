@@ -12,7 +12,7 @@ var (
 	isScriptSigPrune bool
 )
 
-func init() {
+func Init() {
 	viper.SetConfigFile("conf/prune.yaml")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {

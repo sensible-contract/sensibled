@@ -12,6 +12,7 @@ import (
 	"runtime/pprof"
 	"runtime/trace"
 	"sensibled/loader"
+	"sensibled/loader/clickhouse"
 	"sensibled/logger"
 	memLoader "sensibled/mempool/loader"
 	memStore "sensibled/mempool/store"
@@ -73,6 +74,10 @@ func init() {
 
 	blocksPath = viper.GetString("blocks")
 	blockMagic = viper.GetString("magic")
+
+	rdb.Init()
+	clickhouse.Init()
+	serial.Init()
 }
 
 func syncBlock() {
