@@ -348,7 +348,7 @@ func main() {
 	}
 
 	//创建监听退出
-	sigCtrl := make(chan os.Signal)
+	sigCtrl := make(chan os.Signal, 1)
 	//监听指定信号 ctrl+c kill
 	signal.Notify(sigCtrl, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {

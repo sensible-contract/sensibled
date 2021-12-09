@@ -135,6 +135,11 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 			pipe.ZIncrBy(ctx, "{no"+strGenesisId+strCodeHash+"}", 1, strAddressPkh)  // nft:owners
 			pipe.ZIncrBy(ctx, "{ns"+strAddressPkh+"}", 1, strCodeHash+strGenesisId)  // nft:summary
 
+		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_AUCTION {
+			pipe.ZAdd(ctx, "{nau"+strAddressPkh+"}"+strCodeHash, member) // nft:auction:utxo
+			pipe.ZAdd(ctx, "nad"+strCodeHash+strGenesisId, member)       // nft:auction:utxo-detail
+			pipe.ZIncrBy(ctx, "{nas"+strAddressPkh+"}", 1, strCodeHash)  // nft:auction:sender-summary
+
 		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
 			pipe.ZAdd(ctx, "{sut}", member)                              // nft:sell:all:utxo, sort by time
 			pipe.ZAdd(ctx, "{suta"+strAddressPkh+"}", member)            // nft:sell:seller-address:utxo
@@ -226,6 +231,11 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 			pipe.ZIncrBy(ctx, "{no"+strGenesisId+strCodeHash+"}", -1, strAddressPkh)      // nft:owners
 			pipe.ZIncrBy(ctx, "{ns"+strAddressPkh+"}", -1, strCodeHash+strGenesisId)      // nft:summary
 
+		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_AUCTION {
+			pipe.ZRem(ctx, "{nau"+strAddressPkh+"}"+strCodeHash, outpointKey) // nft:auction:utxo
+			pipe.ZRem(ctx, "nad"+strCodeHash+strGenesisId, outpointKey)       // nft:auction:utxo-detail
+			pipe.ZIncrBy(ctx, "{nas"+strAddressPkh+"}", -1, strCodeHash)      // nft:auction:sender-summary
+
 		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
 			pipe.ZRem(ctx, "{sut}", outpointKey)                              // nft:sell:all:utxo, sort by time
 			pipe.ZRem(ctx, "{suta"+strAddressPkh+"}", outpointKey)            // nft:sell:seller-address:utxo
@@ -263,6 +273,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 	for addr := range addrToRemove {
 		pipe.ZRemRangeByScore(ctx, "{ns"+addr+"}", "0", "0")
 		pipe.ZRemRangeByScore(ctx, "{fs"+addr+"}", "0", "0")
+		pipe.ZRemRangeByScore(ctx, "{nas"+addr+"}", "0", "0")
 	}
 
 	logger.Log.Info("UpdateUtxoInRedis finished")

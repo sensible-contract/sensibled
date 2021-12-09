@@ -194,6 +194,16 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 			pipe.ZIncrBy(ctx, mpkeyNO, 1, strAddressPkh)            // nft:owners
 			pipe.ZIncrBy(ctx, mpkeyNS, 1, strCodeHash+strGenesisId) // nft:summary
 
+		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_AUCTION {
+			mpkeyNAU := "mp:{nau" + strAddressPkh + "}" + strCodeHash
+			mpkeyNAD := "mp:nad" + strCodeHash + strGenesisId
+			mpkeyNAS := "mp:{nas" + strAddressPkh + "}"
+			mpkeys = append(mpkeys, mpkeyNAU, mpkeyNAD, mpkeyNAS)
+
+			pipe.ZAdd(ctx, mpkeyNAU, member)            // nft:auction:utxo
+			pipe.ZAdd(ctx, mpkeyNAD, member)            // nft:auction:utxo-detail
+			pipe.ZIncrBy(ctx, mpkeyNAS, 1, strCodeHash) // nft:auction:sender-summary
+
 		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
 			mpkeySUT := "mp:{sut}"
 			mpkeySUTA := "mp:{suta" + strAddressPkh + "}"
@@ -314,6 +324,15 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 			pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
 			pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
 
+		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_AUCTION {
+			mpkeyNAU := "mp:{nau" + strAddressPkh + "}" + strCodeHash
+			mpkeyNAD := "mp:nad" + strCodeHash + strGenesisId
+			mpkeyNAS := "mp:{nas" + strAddressPkh + "}"
+
+			pipe.ZRem(ctx, mpkeyNAU, outpointKey)        // nft:auction:utxo
+			pipe.ZRem(ctx, mpkeyNAD, outpointKey)        // nft:auction:utxo-detail
+			pipe.ZIncrBy(ctx, mpkeyNAS, -1, strCodeHash) // nft:auction:sender-summary
+
 		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
 			mpkeySUT := "mp:{sut}"
 			mpkeySUTA := "mp:{suta" + strAddressPkh + "}"
@@ -408,6 +427,17 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 			pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
 			pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
 
+		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_AUCTION {
+			mpkeyNAU := "mp:s:{nau" + strAddressPkh + "}" + strCodeHash
+			mpkeyNAD := "mp:s:nad" + strCodeHash + strGenesisId
+			mpkeyNAS := "mp:{nas" + strAddressPkh + "}"
+
+			mpkeys = append(mpkeys, mpkeyNAU, mpkeyNAD, mpkeyNAS)
+
+			pipe.ZAdd(ctx, mpkeyNAU, member)             // nft:auction:utxo
+			pipe.ZAdd(ctx, mpkeyNAD, member)             // nft:auction:utxo-detail
+			pipe.ZIncrBy(ctx, mpkeyNAS, -1, strCodeHash) // nft:auction:sender-summary
+
 		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
 			mpkeySUT := "mp:s:{sut}"
 			mpkeySUTA := "mp:s:{suta" + strAddressPkh + "}"
@@ -467,6 +497,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	for addr := range addrToRemove {
 		pipe.ZRemRangeByScore(ctx, "mp:{ns"+addr+"}", "0", "0")
 		pipe.ZRemRangeByScore(ctx, "mp:{fs"+addr+"}", "0", "0")
+		pipe.ZRemRangeByScore(ctx, "mp:{nas"+addr+"}", "0", "0")
 	}
 
 	// 记录所有的mp:keys，以备区块确认后直接删除重来
