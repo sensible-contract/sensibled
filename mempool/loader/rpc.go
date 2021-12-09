@@ -12,10 +12,12 @@ import (
 	"go.uber.org/zap"
 )
 
+var ChainConf string = "conf/chain.yaml"
+
 var rpcClient jsonrpc.RPCClient
 
 func InitRpc() {
-	viper.SetConfigFile("conf/chain.yaml")
+	viper.SetConfigFile(ChainConf)
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			panic(fmt.Errorf("Fatal error config file: %s \n", err))

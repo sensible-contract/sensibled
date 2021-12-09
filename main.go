@@ -257,7 +257,7 @@ func syncBlock() {
 				}
 			}
 			memStore.CreatePartSyncCk()    // 初始化同步数据库表
-			memStore.PreparePartSyncCk()   // 同步db
+			memStore.PreparePartSyncCk()   // 准备同步db，todo: 可能初始化失败
 			mempool.ParseMempool(startIdx) // 开始同步mempool
 			needSaveMempool = true
 

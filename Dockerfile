@@ -10,6 +10,7 @@ COPY . .
 
 # Build binary output
 RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o sensibled -ldflags '-s -w' main.go
+RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o check_mempool_double_spend -ldflags '-s -w' tools/check_mempool_double_spend/main.go
 
 FROM alpine:latest
 RUN apk add tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone
@@ -20,5 +21,6 @@ USER sato
 WORKDIR /data/
 
 COPY --chown=sato --from=build /build/sensibled /data/sensibled
+COPY --chown=sato --from=build /build/check_mempool_double_spend /data/check_mempool_double_spend
 
 ENTRYPOINT ["./sensibled"]
