@@ -7,9 +7,9 @@
 
 ## 运行依赖
 
-1. 需要节点开启zmq服务，至少启用 hashblock/hashtx/rawtx 3个队列。
+1. 需要节点开启zmq服务，至少启用 hashblock/rawtx 2个队列。
 2. 能够直接访问节点磁盘block文件。
-3. 使用redis，clickhouse存放数据。目前redis占用18GB内存，clickhouse占用400GB磁盘。
+3. 使用redis，clickhouse存放数据。目前redis占用20GB内存，clickhouse占用600GB磁盘。
 
 
 ## 配置文件
@@ -22,7 +22,7 @@ clickhouse数据库配置，主要包括address、database等。
 
 * chain.yaml
 
-节点配置，主要包括zmq地址、blocks文件路径。
+节点配置，主要包括zmq地址、blocks文件路径、节点RPC地址。
 
 * redis.yaml
 
@@ -30,13 +30,21 @@ redis配置，主要包括addrs、database等。
 
 目前同时兼容redis cluster和single-node。addrs配置单个地址将视为single-node。
 
+* prune.yaml
+
+存到db时是否裁剪相关数据，以减少db占用。目前BSV区块已超过2TB，裁剪后可以减少到500GB。
+
 ## Docker
 
 使用docker-compose可以比较方便运行sensibled。首先设置好db/redis/node配置，然后运行初始化：
 
 	$ docker-compose -f docker-compose-init.yaml up -d
 
-当运行完毕之后(>6h)，可运行正常同步：
+当运行完毕之后(< 1 min)，可以进行批次同步：
+
+	$ docker-compose -f docker-compose-batch.yaml up -d
+
+当运行完毕之后(> 6 hour)，可运行正常同步：
 
 	$ docker-compose up -d
 
@@ -59,9 +67,9 @@ redis配置，主要包括addrs、database等。
 
     $ ./sensibled -full -end 100000
 
-当执行完毕后，可以进行批次同步，每批1000个块，如果内存较小，可适当减少每次同步的区块数量。在区块高度为690000时停止：
+当执行完毕后，可以进行批次同步，每批处理1000000个tx，如果内存较小，可适当减少每次同步的tx数量。在区块高度为690000时停止：
 
-    $ ./sensibled -end 690000 -batch=1000
+    $ ./sensibled -end 690000 -batch=1000000
 
 最后，可以启动连续同步模式，即同步完最近区块后不退出，将继续监听并同步新区块：
 

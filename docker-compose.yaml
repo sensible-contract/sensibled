@@ -5,7 +5,7 @@ services:
      image: jiedo/sensibled:v1.9.5
      entrypoint: ./sensibled
      volumes:
-       - /data/bitcoin-sv-blocks/blocks:/data/bitcoin-sv-blocks/blocks:ro
+       - /data/bitcoind/data/blocks:/data/blocks:ro
        - ./conf:/data/conf:ro
        - ./cmd:/data/cmd
      labels:
