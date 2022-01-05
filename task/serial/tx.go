@@ -96,9 +96,9 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 
 	for outpointKey, data := range utxoToRestore {
 		buf := make([]byte, 20+len(data.PkScript))
-		data.Marshal(buf)
+		length := data.Marshal(buf)
 		// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
-		pipe.Set(ctx, "u"+outpointKey, buf, 0)
+		pipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
 
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])

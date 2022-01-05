@@ -154,21 +154,68 @@ type TxoData struct {
 	Data *scriptDecoder.TxoData
 }
 
-func (d *TxoData) Marshal(buf []byte) {
-	binary.LittleEndian.PutUint32(buf, d.BlockHeight)  // 4
-	binary.LittleEndian.PutUint64(buf[4:], d.TxIdx)    // 8
-	binary.LittleEndian.PutUint64(buf[12:], d.Satoshi) // 8
-	copy(buf[20:], d.PkScript)                         // n
+func (d *TxoData) Marshal(buf []byte) int {
+	binary.LittleEndian.PutUint32(buf, d.BlockHeight) // 4
+	// offset := scriptDecoder.PutVLQ(buf, uint64(d.BlockHeight))
+
+	// 当前区块高度(<16777216)可以用3个字节编码，因此使用第4个字节标记启用压缩算法。
+	// 以便解码时向前兼容非压缩算法
+	buf[3] = 0x01 // is compress
+
+	offset := 4
+	offset += scriptDecoder.PutVLQ(buf[offset:], d.TxIdx)
+	offset += scriptDecoder.PutVLQ(buf[offset:], scriptDecoder.CompressTxOutAmount(d.Satoshi))
+	offset += scriptDecoder.PutCompressedScript(buf[offset:], d.PkScript)
+
+	// binary.LittleEndian.PutUint32(buf, d.BlockHeight)  // 4
+	// binary.LittleEndian.PutUint64(buf[4:], d.TxIdx)    // 8
+	// binary.LittleEndian.PutUint64(buf[12:], d.Satoshi) // 8
+	// copy(buf[20:], d.PkScript)                         // n
+
+	return offset
 }
 
 // no need marshal: ScriptType, CodeType, CodeHash, GenesisId, AddressPkh, DataValue
 func (d *TxoData) Unmarshal(buf []byte) {
+	if buf[3] == 0x00 {
+		// not compress
+		d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
+		d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
+		d.Satoshi = binary.LittleEndian.Uint64(buf[12:20])  // 8
+		d.PkScript = buf[20:]
+		return
+	}
+
+	buf[3] = 0x00
 	d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
-	d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
-	d.Satoshi = binary.LittleEndian.Uint64(buf[12:20])  // 8
-	d.PkScript = buf[20:]
-	// d.Script = make([]byte, len(buf)-20)
-	// copy(d.Script, buf[20:]) // n
+
+	offset := 4
+	txidx, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
+	if bytesRead >= len(buf[offset:]) {
+		// errors.New("unexpected end of data after txidx")
+		return
+	}
+	d.TxIdx = txidx
+
+	offset += bytesRead
+	compressedAmount, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
+	if bytesRead >= len(buf[offset:]) {
+		// errors.New("unexpected end of data after compressed amount")
+		return
+	}
+
+	offset += bytesRead
+	// Decode the compressed script size and ensure there are enough bytes
+	// left in the slice for it.
+	scriptSize := scriptDecoder.DecodeCompressedScriptSize(buf[offset:])
+	if len(buf[offset:]) < scriptSize {
+		// errors.New("unexpected end of data after script size")
+		return
+	}
+
+	d.Satoshi = scriptDecoder.DecompressTxOutAmount(compressedAmount)
+	d.PkScript = scriptDecoder.DecompressScript(buf[offset : offset+scriptSize])
+
 }
 
 var TxoDataPool = sync.Pool{

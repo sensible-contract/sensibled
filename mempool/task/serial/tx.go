@@ -140,9 +140,9 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	mpkeys := make([]string, 5*(len(utxoToRestore)+len(utxoToRemove)+len(utxoToSpend)))
 	for outpointKey, data := range utxoToRestore {
 		buf := make([]byte, 20+len(data.PkScript))
-		data.Marshal(buf)
+		length := data.Marshal(buf)
 		// redis全局utxo数据添加
-		pipe.Set(ctx, "u"+outpointKey, buf, 0)
+		pipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
 
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
