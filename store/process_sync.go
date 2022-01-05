@@ -228,7 +228,7 @@ CREATE TABLE IF NOT EXISTS txin_address_height (
 	genesis      String
 ) engine=MergeTree()
 PRIMARY KEY address
-ORDER BY (address, codehash, genesis, height)
+ORDER BY (address, codehash, genesis, height, txidx)
 PARTITION BY substring(address, 1, 1)
 `,
 
@@ -266,7 +266,7 @@ CREATE TABLE IF NOT EXISTS txout_address_height (
 	genesis      String
 ) engine=MergeTree()
 PRIMARY KEY address
-ORDER BY (address, codehash, genesis, height)
+ORDER BY (address, codehash, genesis, height, utxidx)
 PARTITION BY substring(address, 1, 1)
 `,
 
