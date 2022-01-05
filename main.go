@@ -168,7 +168,9 @@ func syncBlock() {
 		}
 
 		needSaveBlock = true
-		model.CleanConfirmedTxMap(false)
+		// model.CleanConfirmedTxMap(false)
+		model.CleanConfirmedTxMap(true) // 注意暂时不保存10个块的txid，而是要求节点zmq通知中去掉确认区块tx
+
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
 		stageBlockHeight = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
 		// 按批次处理区块
