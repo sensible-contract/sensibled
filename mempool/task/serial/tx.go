@@ -124,8 +124,17 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		if len(keys) > 0 {
 			pipe.Del(ctx, "mp:keys")
 		}
+
+		pipe.HSet(ctx, "info",
+			"utxo_total_mempool", 0,
+		)
+
 		logger.Log.Info("FlushdbInRedis finish")
 	}
+
+	pipe.HIncrBy(ctx, "info",
+		"utxo_total_mempool", int64(len(utxoToRestore)-len(utxoToRemove)-len(utxoToSpend)),
+	)
 
 	// 更新内存池数据
 	mpkeys := make([]string, 5*(len(utxoToRestore)+len(utxoToRemove)+len(utxoToSpend)))
@@ -133,8 +142,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		buf := make([]byte, 20+len(data.PkScript))
 		data.Marshal(buf)
 		// redis全局utxo数据添加
-		// fixme: 会覆盖sensibled？
-		pipe.SetNX(ctx, "u"+outpointKey, buf, 0)
+		pipe.Set(ctx, "u"+outpointKey, buf, 0)
 
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
@@ -282,8 +290,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	tokenToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
 		// redis全局utxo数据清除
-		// 暂时不清除
-		// pipe.Del(ctx, "u"+outpointKey)
+		pipe.Del(ctx, "u"+outpointKey)
 
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
@@ -377,7 +384,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 	for outpointKey, data := range utxoToSpend {
 		// redis全局utxo数据不能在这里清除，留给区块确认时去做
-		// pipe.Del(ctx, "u"+key)
+		// pipe.Del(ctx, "u"+outpointKey)
 
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])

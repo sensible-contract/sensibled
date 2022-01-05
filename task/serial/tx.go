@@ -90,13 +90,11 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 	pipe.HSet(ctx, "info",
 		"blocks_total", blocksTotal,
 	)
+	pipe.HIncrBy(ctx, "info",
+		"utxo_total", int64(len(utxoToRestore)-len(utxoToRemove)),
+	)
 
 	for outpointKey, data := range utxoToRestore {
-		// if data.Data.CodeType == scriptDecoder.CodeType_SENSIBLE {
-		// 	// 正常情况, utxo不会有opreturn的数据
-		// 	continue
-		// }
-
 		buf := make([]byte, 20+len(data.PkScript))
 		data.Marshal(buf)
 		// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
@@ -111,8 +109,8 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 
 		// 非合约信息记录
 		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
-			// 无法识别地址，暂不记录utxo
 			if !data.Data.HasAddress {
+				// 无法识别地址，暂不记录utxo
 				// pipe.ZAdd(ctx, "utxo", member)
 				continue
 			}
@@ -214,7 +212,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 				// pipe.ZRem(ctx, "utxo", outpointKey)
 				continue
 			}
-
+			// 识别地址，只记录utxo和balance
 			pipe.ZRem(ctx, "{au"+strAddressPkh+"}", outpointKey)                                               // 有序address utxo数据清除
 			addressBalanceCmds["bl"+strAddressPkh] = pipe.DecrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
 			continue
