@@ -44,16 +44,19 @@ func LoadFromGobFile(fname string, data map[string]*model.Block) (lastFileIdx in
 }
 
 func DumpToGobFile(fname string, data map[string]*model.Block) {
-	cacheData := []model.BlockCache{}
+	cacheData := make([]model.BlockCache, len(data))
+	idx := 0
 	for _, blk := range data {
-		cacheData = append(cacheData, model.BlockCache{
+		bc := model.BlockCache{
 			Height:     blk.Height,
 			Hash:       blk.Hash,
 			TxCnt:      blk.TxCnt,
 			FileIdx:    blk.FileIdx,
 			FileOffset: blk.FileOffset,
 			Parent:     blk.Parent,
-		})
+		}
+		cacheData[idx] = bc
+		idx++
 	}
 
 	gobFile, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)

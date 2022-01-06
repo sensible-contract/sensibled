@@ -8,6 +8,8 @@ services:
        - /data/bitcoind/data/blocks:/data/blocks:ro
        - ./conf:/data/conf:ro
        - ./cmd:/data/cmd
+     ports:
+       - "6666:8000"
      labels:
        - "name=sensibled"
      logging:
