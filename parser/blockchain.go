@@ -209,16 +209,21 @@ func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) i
 }
 
 // InitLongestChainHeader 初始化block header
-func (bc *Blockchain) InitLongestChainHeader() {
+func (bc *Blockchain) InitLongestChainHeader() bool {
 	logger.Log.Info("load block header", zap.Int("last_file", bc.LastFileIdx))
 	if err := bc.BlockData.SkipTo(bc.LastFileIdx, 0); err == nil {
 		bc.LoadAllBlockHeaders()
 	}
 
+	if len(bc.Blocks) == 0 {
+		logger.Log.Error("blocks not found, skip dump gob")
+		return false
+	}
 	loader.DumpToGobFile("./cmd/headers-list.gob", bc.Blocks)
 
 	bc.SetBlockHeight()
 	bc.SelectLongestChain()
+	return true
 }
 
 // LoadAllBlockHeaders 读取所有的rawBlock

@@ -61,14 +61,14 @@ func DumpToGobFile(fname string, data map[string]*model.Block) {
 
 	gobFile, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
 	if err != nil {
-		logger.Log.Info("dump gob file failed", zap.Error(err))
+		logger.Log.Error("dump gob file failed", zap.Error(err))
 		return
 	}
 	defer gobFile.Close()
 
 	enc := gob.NewEncoder(gobFile)
 	if err := enc.Encode(cacheData); err != nil {
-		logger.Log.Info("dump gob failed", zap.Error(err))
+		logger.Log.Error("dump gob failed", zap.Error(err))
 	}
 	logger.Log.Info("dump gob ok")
 }

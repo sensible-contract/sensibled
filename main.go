@@ -102,8 +102,8 @@ func syncBlock() {
 
 	// 扫描区块
 	for {
-		blockchain.InitLongestChainHeader() // 读取新的block header
-		if parser.NeedStop {                // 主动触发了结束，则终止
+		ok := blockchain.InitLongestChainHeader() // 读取新的block header
+		if !ok || parser.NeedStop {               // 主动触发了结束，则终止
 			break
 		}
 
