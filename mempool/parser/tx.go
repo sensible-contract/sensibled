@@ -113,7 +113,6 @@ func NewTxOut(txoutraw []byte) (txout *model.TxOut, offset uint) {
 
 	txout.PkScript = make([]byte, pkscript)
 	copy(txout.PkScript, txoutraw[offset:offset+pkscript])
-	// txout.PkScript = txoutraw[offset : offset+pkscript]
 	offset += pkscript
 
 	return

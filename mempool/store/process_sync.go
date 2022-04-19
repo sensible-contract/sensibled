@@ -10,12 +10,6 @@ import (
 var (
 	processAllSQLs = []string{
 		// 删除mempool数据
-		// "ALTER TABLE blktx_contract_height DELETE WHERE height >= 4294967295",
-		// "ALTER TABLE blktx_height DELETE WHERE height >= 4294967295",
-		// "ALTER TABLE txin_spent DELETE WHERE height >= 4294967295",
-		// "ALTER TABLE txin DELETE WHERE height >= 4294967295",
-		// "ALTER TABLE txout DELETE WHERE height >= 4294967295",
-
 		"ALTER TABLE blktx_contract_height DROP PARTITION '2045222'",
 		"ALTER TABLE blktx_height DROP PARTITION '2045222'",
 		"ALTER TABLE txin_spent DROP PARTITION '2045222'",
