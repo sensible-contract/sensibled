@@ -25,9 +25,8 @@ func SyncBlockTx(block *model.Block) {
 			tx.LockTime,
 			tx.InputsValue,
 			tx.OutputsValue,
-			txraw, // string(tx.Raw)
+			txraw,
 			uint32(block.Height),
-			string(block.Hash),
 			uint64(txIdx),
 		); err != nil {
 			logger.Log.Info("sync-tx-err",

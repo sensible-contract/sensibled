@@ -108,7 +108,6 @@ CREATE TABLE IF NOT EXISTS blktx_height (
 	outvalue     UInt64,
 	rawtx        String,
 	height       UInt32,
-	blkid        FixedString(32),
 	txidx        UInt64
 ) engine=MergeTree()
 ORDER BY (height, txid)
@@ -344,7 +343,7 @@ PARTITION BY substring(address, 1, 1)
 		"CREATE TABLE IF NOT EXISTS txin_new AS txin",
 	}
 
-	// 更新现有基础数据表blk_height、blktx_height、txin、txout
+	// 更新现有基础数据表txin、txout
 	processPartSQLsForTxIn = []string{
 		"INSERT INTO txin SELECT * FROM txin_new",
 		// 更新txo被花费的tx索引
