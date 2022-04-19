@@ -49,6 +49,7 @@ func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 	return &ret, nil
 }
 
+// 已花费的utxo需要回滚
 func GetSpentUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.TxoData, err error) {
 	psql := fmt.Sprintf(`
 SELECT utxid, vout, satoshi, script_type, script_pk, height_txo, utxidx FROM txin
@@ -58,6 +59,7 @@ SELECT utxid, vout, satoshi, script_type, script_pk, height_txo, utxidx FROM txi
 	return getUtxoBySql(psql)
 }
 
+// 新产生的utxo需要删除
 func GetNewUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.TxoData, err error) {
 	psql := fmt.Sprintf(`
 SELECT utxid, vout, satoshi, script_type, script_pk, 0, 0 FROM txout
