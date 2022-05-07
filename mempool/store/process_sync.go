@@ -33,7 +33,7 @@ var (
 	processPartSQLsForTxIn = []string{
 		"INSERT INTO txin SELECT * FROM txin_mempool_new",
 		// 更新txo被花费的tx索引
-		"INSERT INTO txin_spent SELECT height, substring(txid, 1, 12), idx, substring(utxid, 1, 12), vout FROM txin_mempool_new",
+		"INSERT INTO txin_spent SELECT height, txid, idx, substring(utxid, 1, 12), vout FROM txin_mempool_new",
 
 		"DROP TABLE IF EXISTS txin_mempool_new",
 	}

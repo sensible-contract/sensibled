@@ -146,7 +146,7 @@ PARTITION BY intDiv(height, 2100)
 		`
 CREATE TABLE IF NOT EXISTS txin_spent (
 	height       UInt32,
-	txid         FixedString(12),
+	txid         FixedString(32),
 	idx          UInt32,
 	utxid        FixedString(12),
 	vout         UInt32
@@ -299,7 +299,7 @@ PARTITION BY substring(address, 1, 1)
 		"INSERT INTO tx_height SELECT substring(txid, 1, 12), height FROM blktx_height",
 
 		// 生成txo被花费的tx索引
-		"INSERT INTO txin_spent SELECT height, substring(txid, 1, 12), idx, substring(utxid, 1, 12), vout FROM txin",
+		"INSERT INTO txin_spent SELECT height, txid, idx, substring(utxid, 1, 12), vout FROM txin",
 		// 生成txo被花费的tx区块高度索引
 		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_spent",
 
@@ -349,7 +349,7 @@ PARTITION BY substring(address, 1, 1)
 	processPartSQLsForTxIn = []string{
 		"INSERT INTO txin SELECT * FROM txin_new",
 		// 更新txo被花费的tx索引
-		"INSERT INTO txin_spent SELECT height, substring(txid, 1, 12), idx, substring(utxid, 1, 12), vout FROM txin_new",
+		"INSERT INTO txin_spent SELECT height, txid, idx, substring(utxid, 1, 12), vout FROM txin_new",
 		// 更新txo被花费的tx区块高度索引，注意这里并未清除孤立区块的数据
 		"INSERT INTO txout_spent_height SELECT height, substring(utxid, 1, 12), vout FROM txin_new ORDER BY utxid",
 		// 更新地址参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
