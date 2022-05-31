@@ -22,7 +22,7 @@ var (
 // 部分utxo信息在程序内存，missing的utxo将从redis查询
 // 区块同步结束时会批量更新缓存的utxo到redis
 func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
-	pipe := rdb.Client.Pipeline()
+	pipe := rdb.PikaClient.Pipeline()
 	m := map[string]*redis.StringCmd{}
 	needExec := false
 	for outpointKey := range block.SpentUtxoKeysMap {
@@ -79,7 +79,7 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 }
 
 // UpdateUtxoInRedis 批量更新redis utxo
-func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) (err error) {
+func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) (err error) {
 	logger.Log.Info("UpdateUtxoInRedis",
 		zap.Int("add", len(utxoToRestore)),
 		zap.Int("del", len(utxoToRemove)))
@@ -98,7 +98,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		buf := make([]byte, 20+len(data.PkScript))
 		length := data.Marshal(buf)
 		// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
-		pipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
+		pikaPipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
 
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
@@ -198,7 +198,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 	tokenToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
 		// redis全局utxo数据清除
-		pipe.Del(ctx, "u"+outpointKey)
+		pikaPipe.Del(ctx, "u"+outpointKey)
 
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
@@ -282,7 +282,7 @@ func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.Int
 	if len(addressBalanceCmds) == 0 {
 		return
 	}
-	pipe := rdb.Client.Pipeline()
+	pipe := rdb.RedisClient.Pipeline()
 	// 删除balance为0的记录
 	// 要求整个函数单线程处理，否则可能删除非0数据
 	for keyString, cmd := range addressBalanceCmds {

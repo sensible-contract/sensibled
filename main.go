@@ -75,7 +75,8 @@ func init() {
 	blocksPath = viper.GetString("blocks")
 	blockMagic = viper.GetString("magic")
 
-	rdb.Init()
+	rdb.RedisClient = rdb.Init("conf/redis.yaml")
+	rdb.PikaClient = rdb.Init("conf/pika.yaml")
 	clickhouse.Init()
 	serial.Init()
 }
@@ -141,13 +142,18 @@ func syncBlock() {
 				}
 
 				// 更新redis
-				pipe := rdb.Client.Pipeline()
+				rdsPipe := rdb.RedisClient.Pipeline()
+				pikaPipe := rdb.PikaClient.Pipeline()
 				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
-				if err := serial.UpdateUtxoInRedis(pipe, startBlockHeight, addressBalanceCmds, utxoToRestore, utxoToRemove, true); err != nil {
+				if err := serial.UpdateUtxoInRedis(rdsPipe, pikaPipe, startBlockHeight, addressBalanceCmds, utxoToRestore, utxoToRemove, true); err != nil {
 					logger.Log.Error("restore/remove utxo from redis failed", zap.Error(err))
 					break
 				}
-				_, err = pipe.Exec(ctx)
+				_, err = rdsPipe.Exec(ctx)
+				if err != nil {
+					panic(err)
+				}
+				_, err = pikaPipe.Exec(ctx)
 				if err != nil {
 					panic(err)
 				}
@@ -184,13 +190,18 @@ func syncBlock() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				pipe := rdb.Client.Pipeline()
+				rdsPipe := rdb.RedisClient.Pipeline()
+				pikaPipe := rdb.PikaClient.Pipeline()
 				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 				// 批量更新redis utxo
-				serial.UpdateUtxoInRedis(pipe, stageBlockHeight, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
+				serial.UpdateUtxoInRedis(rdsPipe, pikaPipe, stageBlockHeight, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
 				// 清空本地map内存
 				model.CleanUtxoMap()
-				_, err = pipe.Exec(ctx)
+				_, err = rdsPipe.Exec(ctx)
+				if err != nil {
+					panic(err)
+				}
+				_, err = pikaPipe.Exec(ctx)
 				if err != nil {
 					panic(err)
 				}
@@ -270,24 +281,29 @@ func syncBlock() {
 			go func() {
 				defer wg.Done()
 
-				pipe := rdb.Client.TxPipeline()
+				rdsPipe := rdb.RedisClient.TxPipeline()
+				pikaPipe := rdb.PikaClient.Pipeline()
 				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 				if needSaveBlock {
 					// 批量更新redis utxo
-					serial.UpdateUtxoInRedis(pipe, stageBlockHeight, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
+					serial.UpdateUtxoInRedis(rdsPipe, pikaPipe, stageBlockHeight, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
 					// 清空本地map内存
 					model.CleanUtxoMap()
 				}
 				// for txin dump
 				// 6 dep 2 4
 				if needSaveMempool {
-					memSerial.UpdateUtxoInRedisSerial(pipe, initSyncMempool,
+					memSerial.UpdateUtxoInRedisSerial(rdsPipe, pikaPipe, initSyncMempool,
 						mempool.SpentUtxoKeysMap,
 						mempool.NewUtxoDataMap,
 						mempool.RemoveUtxoDataMap,
 						mempool.SpentUtxoDataMap)
 				}
-				_, err = pipe.Exec(ctx)
+				_, err = rdsPipe.Exec(ctx)
+				if err != nil {
+					panic(err)
+				}
+				_, err = pikaPipe.Exec(ctx)
 				if err != nil {
 					panic(err)
 				}

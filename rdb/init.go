@@ -11,13 +11,15 @@ import (
 )
 
 var (
-	useCluster bool
-	Client     redis.UniversalClient
-	ctx        = context.Background()
+	useCluster  bool
+	RedisClient redis.UniversalClient
+	PikaClient  redis.UniversalClient
+	ctx         = context.Background()
 )
 
-func Init() {
-	viper.SetConfigFile("conf/redis.yaml")
+// "conf/redis.yaml"
+func Init(filename string) (rds redis.UniversalClient) {
+	viper.SetConfigFile(filename)
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			panic(fmt.Errorf("Fatal error config file: %s \n", err))
@@ -33,7 +35,7 @@ func Init() {
 	readTimeout := viper.GetDuration("readTimeout")
 	writeTimeout := viper.GetDuration("writeTimeout")
 	poolSize := viper.GetInt("poolSize")
-	Client = redis.NewUniversalClient(&redis.UniversalOptions{
+	rds = redis.NewUniversalClient(&redis.UniversalOptions{
 		Addrs:        addrs,
 		Password:     password,
 		DB:           database,
@@ -46,6 +48,7 @@ func Init() {
 	if len(addrs) > 1 {
 		useCluster = true
 	}
+	return rds
 }
 
 func FlushdbInRedis() {
@@ -53,12 +56,14 @@ func FlushdbInRedis() {
 
 	var err error
 	if useCluster {
-		rdbc := Client.(*redis.ClusterClient)
+		rdbc := RedisClient.(*redis.ClusterClient)
 		err = rdbc.ForEachMaster(ctx, func(ctx context.Context, master *redis.Client) error {
 			return master.FlushDB(ctx).Err()
 		})
+		// todo: pika cluster flushdb
 	} else {
-		err = Client.FlushDB(ctx).Err()
+		err = RedisClient.FlushDB(ctx).Err()
+		err = PikaClient.FlushDB(ctx).Err()
 	}
 
 	if err != nil {
