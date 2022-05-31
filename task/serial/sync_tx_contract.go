@@ -63,6 +63,7 @@ func SyncBlockTxContract(block *model.Block) {
 
 		if _, err := store.SyncStmtTxContract.Exec(
 			uint32(block.Height),
+			block.BlockTime,
 			string(swapOut.CodeHash[:]),
 			string(swapOut.GenesisId[:swapOut.GenesisIdLen]),
 			swapOut.CodeType,

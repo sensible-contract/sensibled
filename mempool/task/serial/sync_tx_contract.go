@@ -65,6 +65,7 @@ func SyncBlockTxContract(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, m
 
 		if _, err := store.SyncStmtTxContract.Exec(
 			model.MEMPOOL_HEIGHT, // uint32(block.Height),
+			0,                    // block.BlockTime,
 			string(swapOut.CodeHash[:]),
 			string(swapOut.GenesisId[:swapOut.GenesisIdLen]),
 			swapOut.CodeType,

@@ -75,6 +75,7 @@ PARTITION BY intDiv(height, 2100)
 		`
 CREATE TABLE IF NOT EXISTS blktx_contract_height (
 	height       UInt32,
+	blocktime    UInt32,
 	codehash     String,
 	genesis      String,
 	code_type    UInt32,      -- 0: none, 1: ft, 2: unique, 3: nft
