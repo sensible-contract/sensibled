@@ -42,6 +42,7 @@ var (
 	blocksPath       string
 	blockMagic       string
 	isFull           bool
+	syncOnce         bool
 	gobFlushFrom     int
 
 	cpuProfile   string
@@ -54,6 +55,7 @@ func init() {
 	flag.StringVar(&memProfile, "mem", "", "write mem profile to file")
 	flag.StringVar(&traceProfile, "trace", "", "write trace profile to file")
 
+	flag.BoolVar(&syncOnce, "once", false, "sync 1 block then stop")
 	flag.BoolVar(&isFull, "full", false, "start from genesis")
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
 	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
@@ -335,6 +337,11 @@ func syncBlock() {
 		if parser.NeedStop { // 主动触发了结束，则终止
 			break
 		}
+
+		if syncOnce { // 终止
+			logger.Log.Info("sync once")
+			break
+		}
 	}
 	logger.Log.Info("stoped")
 }
@@ -373,12 +380,7 @@ func main() {
 		for s := range sigCtrl {
 			switch s {
 			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-				logger.Log.Info("program exit...")
-				parser.NeedStop = true
-				select {
-				case memLoader.NewBlockNotify <- "":
-				default:
-				}
+				triggerStop()
 			default:
 				fmt.Println("other signal", s)
 				logger.Log.Info("other signal", zap.String("sig", s.String()))
@@ -410,5 +412,14 @@ func main() {
 
 	if parser.NeedStop {
 		os.Exit(1)
+	}
+}
+
+func triggerStop() {
+	logger.Log.Info("program exit...")
+	parser.NeedStop = true
+	select {
+	case memLoader.NewBlockNotify <- "":
+	default:
 	}
 }
