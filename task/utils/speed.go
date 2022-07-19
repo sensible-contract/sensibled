@@ -30,7 +30,7 @@ func byteCountBinary(b uint64) string {
 	return fmt.Sprintf("%.1f %ciB", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
-func ParseBlockSpeed(nTx, lenGlobalNewUtxoDataMap, lenGlobalSpentUtxoDataMap, nextBlockHeight, maxBlockHeight int) {
+func ParseBlockSpeed(nTx, lenGlobalNewUtxoDataMap, lenGlobalSpentUtxoDataMap, nextBlockHeight, maxBlockHeight, fileIdx int) {
 	msg := "parsing block"
 	if nTx == 0 {
 		// parsing header
@@ -61,6 +61,7 @@ func ParseBlockSpeed(nTx, lenGlobalNewUtxoDataMap, lenGlobalSpentUtxoDataMap, ne
 	}
 
 	logger.Log.Info(msg,
+		zap.Int("file", fileIdx),
 		zap.Int("height", nextBlockHeight),
 		zap.Int("nblk", nextBlockHeight-lastBlockHeight),
 		zap.Int("ntx", lastBlockTxCount),

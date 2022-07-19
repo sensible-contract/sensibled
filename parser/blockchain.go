@@ -175,7 +175,7 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 			task.ParseBlockSerialStart(withMempool, block)
 			// block speed
 			utilsTask.ParseBlockSpeed(len(block.Txs), len(model.GlobalNewUtxoDataMap), len(model.GlobalSpentUtxoDataMap),
-				block.Height, maxBlockHeight)
+				block.Height, maxBlockHeight, block.FileIdx)
 
 			blocksStage <- block
 
@@ -267,7 +267,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 		}(rawblock, bc.BlockData.CurrentId, bc.BlockData.LastOffset)
 
 		// header speed
-		utilsTask.ParseBlockSpeed(0, len(model.GlobalNewUtxoDataMap), len(model.GlobalSpentUtxoDataMap), idx, 0)
+		utilsTask.ParseBlockSpeed(0, len(model.GlobalNewUtxoDataMap), len(model.GlobalSpentUtxoDataMap), idx, 0, bc.BlockData.CurrentId)
 	}
 	wg.Wait()
 }
