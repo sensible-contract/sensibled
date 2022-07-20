@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"context"
 	"database/sql"
 	"encoding/binary"
 	"errors"
@@ -8,8 +9,10 @@ import (
 	"sensibled/loader/clickhouse"
 	"sensibled/logger"
 	"sensibled/model"
+	"sensibled/rdb"
 	"sensibled/utils"
 
+	redis "github.com/go-redis/redis/v8"
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
 )
@@ -38,6 +41,22 @@ func GetLatestBlockFromDB() (blkRsp *model.BlockDO, err error) {
 	return blkRsp, nil
 }
 
+////////////////
+func GetBestBlockHeightFromRedis() (height int, err error) {
+	// get decimal from f info
+	ctx := context.Background()
+	height, err = rdb.RedisClient.HGet(ctx, "info", "blocks_total").Int()
+	if err == redis.Nil {
+		height = 0
+		logger.Log.Info("GetBestBlockHeightFromRedis, but info missing")
+	} else if err != nil {
+		logger.Log.Info("GetBestBlockHeightFromRedis, but redis failed", zap.Error(err))
+		return
+	}
+
+	return height, nil
+}
+
 func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 	var ret model.TxoData
 	err := rows.Scan(&ret.UTxid, &ret.Vout, &ret.Satoshi, &ret.ScriptType, &ret.PkScript, &ret.BlockHeight, &ret.TxIdx)
@@ -50,24 +69,31 @@ func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 }
 
 // 已花费的utxo需要回滚
-func GetSpentUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.TxoData, err error) {
+func GetSpentUTXOAfterBlockHeight(start, end int) (utxosMapRsp map[string]*model.TxoData, err error) {
+	if end == 0 {
+		end = model.MEMPOOL_HEIGHT
+	}
+
 	psql := fmt.Sprintf(`
 SELECT utxid, vout, satoshi, script_type, script_pk, height_txo, utxidx FROM txin
    WHERE satoshi > 0 AND
       height >= %d AND
-      height < %d`, height, model.MEMPOOL_HEIGHT)
+      height < %d`, start, end)
 	return getUtxoBySql(psql)
 }
 
 // 新产生的utxo需要删除
-func GetNewUTXOAfterBlockHeight(height int) (utxosMapRsp map[string]*model.TxoData, err error) {
+func GetNewUTXOAfterBlockHeight(start, end int) (utxosMapRsp map[string]*model.TxoData, err error) {
+	if end == 0 {
+		end = model.MEMPOOL_HEIGHT
+	}
 	psql := fmt.Sprintf(`
 SELECT utxid, vout, satoshi, script_type, script_pk, 0, 0 FROM txout
    WHERE satoshi > 0 AND
       NOT startsWith(script_type, char(0x6a)) AND
       NOT startsWith(script_type, char(0x00, 0x6a)) AND
       height >= %d AND
-      height < %d`, height, model.MEMPOOL_HEIGHT)
+      height < %d`, start, end)
 	return getUtxoBySql(psql)
 }
 

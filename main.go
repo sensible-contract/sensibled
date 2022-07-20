@@ -113,6 +113,70 @@ func syncBlock() {
 		needSaveBlock := false
 		stageBlockHeight := 0
 		if !isFull {
+			// 修复redis
+			bestHeightFromRedis, err := loader.GetBestBlockHeightFromRedis()
+			if err != nil {
+				panic("sync check by GetBestBlockHeightFromRedis, but failed.")
+			}
+			lastBlock, err := loader.GetLatestBlockFromDB()
+			if err != nil {
+				panic("sync check by GetLatestBlocksFromDB, but failed.")
+			}
+
+			startFixHeight := bestHeightFromRedis + 1
+			for startFixHeight < int(lastBlock.Height)+1 {
+				endFixHeight := startFixHeight + 128
+				if endFixHeight > int(lastBlock.Height)+1 {
+					endFixHeight = int(lastBlock.Height) + 1
+				}
+
+				logger.Log.Info("fixing redis...",
+					zap.Int("start", startFixHeight), zap.Int("end", endFixHeight))
+
+				utxoToRestore, err := loader.GetNewUTXOAfterBlockHeight(startFixHeight, endFixHeight) // 新产生的utxo需要增加
+				if err != nil {
+					logger.Log.Error("get utxo to restore failed", zap.Error(err))
+					break
+				}
+				utxoToRemove, err := loader.GetSpentUTXOAfterBlockHeight(startFixHeight, endFixHeight) // 已花费的utxo需要删除
+				if err != nil {
+					logger.Log.Error("get utxo to remove failed", zap.Error(err))
+					break
+				}
+
+				utxosMapCommon := make(map[string]bool, len(utxoToRemove))
+				for key := range utxoToRemove {
+					if _, ok := utxoToRestore[key]; ok {
+						utxosMapCommon[key] = true
+					}
+				}
+				for key := range utxosMapCommon {
+					delete(utxoToRemove, key)
+					delete(utxoToRestore, key)
+				}
+				utxosMapCommon = nil
+				runtime.GC()
+
+				startFixHeight = endFixHeight
+
+				// 更新redis
+				rdsPipe := rdb.RedisClient.Pipeline()
+				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
+				if err := serial.UpdateUtxoInRedis(rdsPipe, nil, endFixHeight-1, addressBalanceCmds, utxoToRestore, utxoToRemove, true); err != nil {
+					logger.Log.Error("restore/remove utxo from redis failed", zap.Error(err))
+					break
+				}
+				_, err = rdsPipe.Exec(ctx)
+				if err != nil {
+					panic(err)
+				}
+				serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds)
+
+				if parser.NeedStop {
+					break
+				}
+			}
+
 			// 现有追加扫描
 			needRemove := false
 			if startBlockHeight < 0 {
@@ -127,17 +191,18 @@ func syncBlock() {
 				}
 				startBlockHeight = commonHeigth + 1 // 从公有块高度（COMMON_HEIGHT）下一个开始扫描
 			} else {
+				// 手动指定同步位置
 				needRemove = true
 			}
 			if needRemove {
 				// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
 				logger.Log.Info("remove...")
-				utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight) // 已花费的utxo需要回滚
+				utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight, 0) // 已花费的utxo需要回滚
 				if err != nil {
 					logger.Log.Error("get utxo to restore failed", zap.Error(err))
 					break
 				}
-				utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight) // 新产生的utxo需要删除
+				utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight, 0) // 新产生的utxo需要删除
 				if err != nil {
 					logger.Log.Error("get utxo to remove failed", zap.Error(err))
 					break

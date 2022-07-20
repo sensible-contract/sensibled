@@ -97,8 +97,11 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, blocksTot
 	for outpointKey, data := range utxoToRestore {
 		buf := make([]byte, 20+len(data.PkScript))
 		length := data.Marshal(buf)
-		// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
-		pikaPipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
+
+		if pikaPipe != nil {
+			// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
+			pikaPipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
+		}
 
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
@@ -197,9 +200,11 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, blocksTot
 	addrToRemove := make(map[string]struct{}, 1)
 	tokenToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
-		// redis全局utxo数据清除
-		pikaPipe.Del(ctx, "u"+outpointKey)
 
+		if pikaPipe != nil {
+			// redis全局utxo数据清除
+			pikaPipe.Del(ctx, "u"+outpointKey)
+		}
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
 		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
