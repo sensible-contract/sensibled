@@ -12,7 +12,7 @@ import (
 // SyncBlockTxOutputInfo all tx output info
 func SyncBlockTxOutputInfo(block *model.Block) {
 	for txIdx, tx := range block.Txs {
-		for vout, output := range tx.TxOuts {
+		for _, output := range tx.TxOuts {
 			tx.OutputsValue += output.Satoshi
 			// set sensible flag
 			if output.Data.CodeType != scriptDecoder.CodeType_NONE {
