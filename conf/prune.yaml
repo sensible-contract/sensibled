@@ -6,3 +6,6 @@ pkscript: false
 
 # 清理所有的解锁脚本
 scriptsig: false
+
+# 清理所有非sensible交易的false opreturn输出
+opreturn: false

@@ -10,6 +10,7 @@ var (
 	isTxrawPrune     bool
 	isPkScriptPrune  bool
 	isScriptSigPrune bool
+	isOpReturnPrune  bool
 )
 
 func Init() {
@@ -31,4 +32,7 @@ func Init() {
 
 	// 清理所有的解锁脚本
 	isScriptSigPrune = viper.GetBool("scriptsig")
+
+	// 清理所有非sensible交易的false opreturn输出
+	isOpReturnPrune = viper.GetBool("opreturn")
 }

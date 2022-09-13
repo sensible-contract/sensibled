@@ -14,10 +14,16 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 	for txIdx, tx := range block.Txs {
 		for vout, output := range tx.TxOuts {
 			tx.OutputsValue += output.Satoshi
-
 			// set sensible flag
 			if output.Data.CodeType != scriptDecoder.CodeType_NONE {
 				tx.IsSensible = true
+			}
+		}
+
+		for vout, output := range tx.TxOuts {
+			// prune false opreturn output
+			if isOpReturnPrune && !tx.IsSensible && scriptDecoder.IsOpreturn(output.ScriptType) {
+				continue
 			}
 
 			// prune string(output.Pkscript),
