@@ -88,26 +88,27 @@ func PreparePartSyncCk() bool {
 }
 
 func CommitSyncCk() {
+	logger.Log.Info("sync commit...")
 	defer SyncStmtTx.Close()
 	defer SyncStmtTxOut.Close()
 	defer SyncStmtTxIn.Close()
 	defer SyncStmtTxContract.Close()
 
-	logger.Log.Info("sync-commit-tx...")
+	// logger.Log.Info("sync-commit-tx...")
 	if err := syncTx.Commit(); err != nil {
 		logger.Log.Error("sync-commit-tx", zap.Error(err))
 	}
-	logger.Log.Info("sync-commit-txout...")
+	// logger.Log.Info("sync-commit-txout...")
 	if err := syncTxOut.Commit(); err != nil {
 		logger.Log.Error("sync-commit-txout", zap.Error(err))
 	}
 
-	logger.Log.Info("sync-commit-txin...")
+	// logger.Log.Info("sync-commit-txin...")
 	if err := syncTxIn.Commit(); err != nil {
 		logger.Log.Error("sync-commit-txin", zap.Error(err))
 	}
 
-	logger.Log.Info("sync-commit-tx-contract...")
+	// logger.Log.Info("sync-commit-tx-contract...")
 	if err := syncTxContract.Commit(); err != nil {
 		logger.Log.Error("sync-commit-tx-contract", zap.Error(err))
 	}

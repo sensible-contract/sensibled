@@ -1,7 +1,6 @@
 package loader
 
 import (
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"sensibled/logger"
@@ -77,11 +76,11 @@ func zmqNotifyBlock(subscriber *goczmq.Sock) {
 
 		if len(msg) == 4 {
 			// id
-			logger.Log.Info("zmq id", zap.Int("n", n), zap.Uint32("id", binary.LittleEndian.Uint32(msg)))
+			// logger.Log.Info("zmq id", zap.Int("n", n), zap.Uint32("id", binary.LittleEndian.Uint32(msg)))
 
 		} else if len(msg) == 9 {
 			// topic
-			logger.Log.Info("sub received", zap.Int("n", n), zap.String("topic", string(msg)))
+			// logger.Log.Info("sub received", zap.Int("n", n), zap.String("topic", string(msg)))
 
 		} else if len(msg) == 32 {
 			blockIdHex := hex.EncodeToString(msg)
@@ -116,11 +115,11 @@ func zmqNotifyTx(subscriber *goczmq.Sock) {
 
 		if len(msg) == 4 {
 			// id
-			logger.Log.Info("zmq id", zap.Int("n", n), zap.Uint32("id", binary.LittleEndian.Uint32(msg)))
+			// logger.Log.Info("zmq id", zap.Int("n", n), zap.Uint32("id", binary.LittleEndian.Uint32(msg)))
 
 		} else if len(msg) == 5 || len(msg) == 6 {
 			// topic
-			logger.Log.Info("sub received", zap.Int("n", n), zap.String("topic", string(msg)))
+			// logger.Log.Info("sub received", zap.Int("n", n), zap.String("topic", string(msg)))
 
 		} else {
 			// rawtx
