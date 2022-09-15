@@ -3,7 +3,6 @@ package task
 import (
 	"bytes"
 	"encoding/hex"
-	blkLoader "sensibled/loader"
 	"sensibled/logger"
 	"sensibled/mempool/loader"
 	"sensibled/mempool/parser"
@@ -50,51 +49,26 @@ func (mp *Mempool) LoadFromMempool() bool {
 	mp.Txs = make(map[string]struct{}, 0)
 	mp.SkipTxs = make(map[string]struct{}, 0)
 
-	allRawtxs := make(map[string]*model.TxData, 1)
 	for i := 0; i < 1000; i++ {
 		select {
-		case rawtx := <-loader.RawTxNotify:
-			tx, txoffset := parser.NewTx(rawtx)
-			if int(txoffset) < len(rawtx) {
-				logger.Log.Info("skip bad rawtx")
-				continue
-			}
-			txid := txParser.GetTxId(tx)
-			allRawtxs[utils.HashString(txid)] = &model.TxData{
-				Raw:  rawtx,
-				TxId: txid,
-			}
+		case <-loader.RawTxNotify:
 		default:
+			// skip
 		}
 	}
 
-	txids := loader.GetRawMemPoolRPC()
-	if txids == nil {
+	rawtxs := loader.GetRawMemPoolRPC()
+	if rawtxs == nil {
 		return false
 	}
 
-	logger.Log.Info("start load all tx in mempool from db",
-		zap.Int("zmq get count", len(allRawtxs)),
-	)
-	if err := blkLoader.GetAllMempoolRawTx(allRawtxs); err != nil {
-		logger.Log.Info("load all tx in mempool from db failed", zap.Error(err))
-	}
-	for _, txid := range txids {
-		var rawtx []byte
-		if txData, ok := allRawtxs[txid.(string)]; ok {
-			rawtx = txData.Raw
-			logger.Log.Info("init tx in mempool from db",
-				zap.Any("txid", txid),
-			)
-		} else {
-			rawtx = loader.GetRawTxRPC(txid)
-			if rawtx == nil {
-				// fixme, may all fail, mey need to break
-				continue
-			}
-			logger.Log.Info("init tx in mempool from rpc",
-				zap.Any("txid", txid),
-			)
+	logger.Log.Info("start load all tx in mempool from rpc", zap.Int("count", len(rawtxs)))
+
+	for _, rawtxHex := range rawtxs {
+		rawtx, err := hex.DecodeString(rawtxHex.(string))
+		if err != nil {
+			logger.Log.Info("skip bad rawtxHex")
+			continue
 		}
 
 		// parser tx

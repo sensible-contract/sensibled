@@ -36,7 +36,7 @@ func InitRpc() {
 }
 
 func GetRawMemPoolRPC() []interface{} {
-	response, err := rpcClient.Call("getrawmempool", []string{})
+	response, err := rpcClient.Call("getrawtxmempool", []string{})
 	if err != nil {
 		logger.Log.Info("call failed", zap.Error(err))
 		return nil
@@ -47,12 +47,12 @@ func GetRawMemPoolRPC() []interface{} {
 		return nil
 	}
 
-	txids, ok := response.Result.([]interface{})
+	rawtxs, ok := response.Result.([]interface{})
 	if !ok {
 		logger.Log.Info("mempool not list: %T", zap.Any("response", response.Result))
 		return nil
 	}
-	return txids
+	return rawtxs
 }
 
 func GetRawTxRPC(txid interface{}) []byte {
