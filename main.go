@@ -41,6 +41,7 @@ var (
 	batchTxCount     int
 	blocksPath       string
 	blockMagic       string
+	blockStrip       bool
 	isFull           bool
 	syncOnce         bool
 	gobFlushFrom     int
@@ -76,6 +77,7 @@ func init() {
 
 	blocksPath = viper.GetString("blocks")
 	blockMagic = viper.GetString("magic")
+	blockStrip = viper.GetBool("strip")
 
 	rdb.RedisClient = rdb.Init("conf/redis.yaml")
 	rdb.PikaClient = rdb.Init("conf/pika.yaml")
@@ -84,7 +86,7 @@ func init() {
 }
 
 func syncBlock() {
-	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic) // 初始化区块
+	blockchain, err := parser.NewBlockchain(blockStrip, blocksPath, blockMagic) // 初始化区块
 	if err != nil {
 		logger.Log.Error("init blockchain error", zap.Error(err))
 		return

@@ -27,7 +27,7 @@ type Blockchain struct {
 	m                     sync.Mutex
 }
 
-func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
+func NewBlockchain(stripMode bool, path string, magicHex string) (bc *Blockchain, err error) {
 	magic, err := hex.DecodeString(magicHex)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func NewBlockchain(path string, magicHex string) (bc *Blockchain, err error) {
 
 	bc.LastFileIdx = loader.LoadFromGobFile("./cmd/headers-list.gob", bc.Blocks)
 
-	bc.BlockData = loader.NewBlockData(path, magic)
+	bc.BlockData = loader.NewBlockData(stripMode, path, magic)
 	return
 }
 
@@ -122,7 +122,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 				TokenSummaryMap:  make(map[string]*model.TokenData, 1), // key: CodeHash+GenesisId  nft: CodeHash+GenesisId+tokenIdx
 			}
 			block.ParseData = processBlock
-			block.Txs = NewTxs(block.Raw[80:])
+			block.Txs = NewTxs(bc.BlockData.StripMode, block.Raw[80:])
 
 			// 先并行分析区块。可执行一些区块内的独立预处理任务，不同区块会并行乱序执行
 			task.ParseBlockParallel(block)

@@ -14,6 +14,7 @@ import (
 )
 
 type BlockData struct {
+	StripMode   bool
 	Path        string
 	Magic       []byte
 	CurrentFile *os.File
@@ -23,21 +24,61 @@ type BlockData struct {
 	m           sync.Mutex
 }
 
-func NewBlockData(path string, magic []byte) (bf *BlockData) {
+func NewBlockData(stripMode bool, path string, magic []byte) (bf *BlockData) {
 	bf = new(BlockData)
 	bf.Path = path
 	bf.Magic = magic
 	bf.CurrentId = -1
+	bf.StripMode = stripMode
 	return
 }
 
 // GetRawBlockHeader
 func (bf *BlockData) GetRawBlockHeader() (rawblockheader []byte, err error) {
+	if bf.StripMode {
+		return bf.fetchNextStripedBlockHeader()
+	}
 	return bf.nextRawBlockData(true)
 }
 
 func (bf *BlockData) GetRawBlock() (rawblock []byte, err error) {
+	if bf.StripMode {
+		rawblock, err = os.ReadFile(bf.getBlockFileName(bf.Path, bf.CurrentId))
+		if err == nil {
+			bf.CurrentId += 1
+		}
+		return
+	}
 	return bf.nextRawBlockData(false)
+}
+
+func (bf *BlockData) fetchNextStripedBlockHeader() (rawblock []byte, err error) {
+	readOffset := 0
+	readSize := 89
+
+	rawblock = make([]byte, 80+9) // block header + txn
+
+	fd, err := os.Open(bf.getBlockFileName(bf.Path, bf.CurrentId))
+	if err != nil {
+		return
+	}
+	defer fd.Close()
+
+	// read until to readSize
+	for {
+		var n int
+		n, err = fd.Read(rawblock[readOffset:])
+		if err != nil {
+			return
+		}
+		readOffset += n
+		if readOffset == readSize {
+			break
+		}
+	}
+
+	bf.CurrentId += 1
+	return
 }
 
 func (bf *BlockData) nextRawBlockData(skipTxs bool) (rawblock []byte, err error) {
@@ -46,7 +87,7 @@ func (bf *BlockData) nextRawBlockData(skipTxs bool) (rawblock []byte, err error)
 
 	rawblock, err = bf.fetchNextBlock(skipTxs)
 	if err != nil {
-		newblkfile, err2 := os.Open(blkfilename(bf.Path, bf.CurrentId+1))
+		newblkfile, err2 := os.Open(bf.getBlockFileName(bf.Path, bf.CurrentId+1))
 		if err2 != nil {
 			return nil, err2
 		}
@@ -128,8 +169,14 @@ func (bf *BlockData) SkipTo(blkId int, offset int) (err error) {
 	bf.m.Lock()
 	defer bf.m.Unlock()
 
+	if bf.StripMode {
+		bf.CurrentId = blkId
+		bf.Offset = 0
+		return
+	}
+
 	if bf.CurrentId != blkId {
-		f, err := os.Open(blkfilename(bf.Path, blkId))
+		f, err := os.Open(bf.getBlockFileName(bf.Path, blkId))
 		if err != nil {
 			return err
 		}
@@ -149,6 +196,9 @@ func (bf *BlockData) SkipTo(blkId int, offset int) (err error) {
 	return
 }
 
-func blkfilename(path string, id int) string {
+func (bf *BlockData) getBlockFileName(path string, id int) string {
+	if bf.StripMode {
+		return fmt.Sprintf("%s/%04d/%07d", path, id/1000, id)
+	}
 	return fmt.Sprintf("%s/blk%05d.dat", path, id)
 }

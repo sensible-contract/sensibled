@@ -6,22 +6,31 @@ import (
 	"sensibled/utils"
 )
 
-func NewTxs(txsraw []byte) (txs []*model.Tx) {
+func NewTxs(stripMode bool, txsraw []byte) (txs []*model.Tx) {
 	offset := uint(0)
 	txcnt, txcnt_size := utils.DecodeVarIntForBlock(txsraw[offset:])
 	offset += txcnt_size
 
 	txs = make([]*model.Tx, txcnt)
 
-	txoffset := uint(0)
 	for i := range txs {
-		// fmt.Println("offset:", offset)
+		txoffset := uint(0)
 		txs[i], txoffset = NewTx(txsraw[offset:])
 		txs[i].Raw = txsraw[offset : offset+txoffset]
-		txs[i].TxId = GetTxId(txs[i])
-		txs[i].TxIdHex = utils.HashString(txs[i].TxId)
-		txs[i].Size = uint32(txoffset)
 		offset += txoffset
+
+		if stripMode {
+			txs[i].TxId = make([]byte, 32)
+			copy(txs[i].TxId, txsraw[offset:offset+32])
+			offset += 32
+
+			txs[i].Size = binary.LittleEndian.Uint32(txsraw[offset : offset+4])
+			offset += 4
+		} else {
+			txs[i].TxId = GetTxId(txs[i])
+			txs[i].Size = uint32(txoffset)
+		}
+		txs[i].TxIdHex = utils.HashString(txs[i].TxId)
 	}
 	return txs
 }
