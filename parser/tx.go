@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"sensibled/model"
 	"sensibled/utils"
+
+	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 )
 
 func NewTxs(stripMode bool, txsraw []byte) (txs []*model.Tx) {
@@ -164,15 +166,15 @@ func NewRawTxOut(txout *model.TxOut, txoutraw []byte) (offset int) {
 	if len(txout.PkScript) == 0 {
 		txoutraw[offset] = 0x00
 		offset += 1
-	} else if txout.PkScript[0] == 0x6a {
-		txoutraw[offset] = 0x01
-		txoutraw[offset+1] = 0x6a
-		offset += 2
-	} else if len(txout.PkScript) >= 2 && txout.PkScript[0] == 0x00 && txout.PkScript[1] == 0x6a {
+	} else if scriptDecoder.IsFalseOpreturn(txout.PkScript) {
 		txoutraw[offset] = 0x02
 		txoutraw[offset+1] = 0x00
 		txoutraw[offset+2] = 0x6a
 		offset += 3
+	} else if scriptDecoder.IsOpreturn(txout.PkScript) {
+		txoutraw[offset] = 0x01
+		txoutraw[offset+1] = 0x6a
+		offset += 2
 	} else {
 		pkscript := len(txout.PkScript)
 		pkscriptsize := utils.EncodeVarIntForBlock(uint64(pkscript), txoutraw[offset:])

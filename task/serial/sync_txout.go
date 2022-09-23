@@ -22,7 +22,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 
 		for vout, output := range tx.TxOuts {
 			// prune false opreturn output
-			if isOpReturnPrune && !tx.IsSensible && scriptDecoder.IsOpreturn(output.ScriptType) {
+			if isOpReturnPrune && !tx.IsSensible && scriptDecoder.IsFalseOpreturn(output.ScriptType) {
 				continue
 			}
 
