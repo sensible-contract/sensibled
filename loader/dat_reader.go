@@ -19,6 +19,7 @@ type BlockData struct {
 	Magic       []byte
 	CurrentFile *os.File
 	CurrentId   int
+	LastFileId  int
 	LastOffset  int
 	Offset      int
 	m           sync.Mutex
@@ -33,7 +34,6 @@ func NewBlockData(stripMode bool, path string, magic []byte) (bf *BlockData) {
 	return
 }
 
-// GetRawBlockHeader
 func (bf *BlockData) GetRawBlockHeader() (rawblockheader []byte, err error) {
 	if bf.StripMode {
 		return bf.fetchNextStripedBlockHeader()
@@ -45,6 +45,7 @@ func (bf *BlockData) GetRawBlock() (rawblock []byte, err error) {
 	if bf.StripMode {
 		rawblock, err = os.ReadFile(bf.getBlockFileName(bf.Path, bf.CurrentId))
 		if err == nil {
+			bf.LastFileId = bf.CurrentId
 			bf.CurrentId += 1
 		}
 		return
@@ -77,6 +78,7 @@ func (bf *BlockData) fetchNextStripedBlockHeader() (rawblock []byte, err error) 
 		}
 	}
 
+	bf.LastFileId = bf.CurrentId
 	bf.CurrentId += 1
 	return
 }
@@ -96,6 +98,7 @@ func (bf *BlockData) nextRawBlockData(skipTxs bool) (rawblock []byte, err error)
 		bf.CurrentFile.Close()
 		bf.CurrentFile = newblkfile
 		bf.Offset = 0
+		bf.LastFileId = bf.CurrentId
 		rawblock, err = bf.fetchNextBlock(skipTxs)
 	}
 	return rawblock, nil
@@ -171,6 +174,7 @@ func (bf *BlockData) SkipTo(blkId int, offset int) (err error) {
 
 	if bf.StripMode {
 		bf.CurrentId = blkId
+		bf.LastFileId = bf.CurrentId
 		bf.Offset = 0
 		return
 	}
@@ -183,6 +187,7 @@ func (bf *BlockData) SkipTo(blkId int, offset int) (err error) {
 		bf.CurrentFile.Close()
 		bf.CurrentFile = f
 		bf.CurrentId = blkId
+		bf.LastFileId = bf.CurrentId
 		bf.Offset = 0
 	}
 
