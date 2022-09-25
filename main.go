@@ -268,13 +268,19 @@ func syncBlock() {
 				model.CleanUtxoMap()
 				_, err = rdsPipe.Exec(ctx)
 				if err != nil {
-					panic(err)
+					logger.Log.Error("redis exec failed", zap.Error(err))
+					parser.NeedStop = true
 				}
+				if ok := serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds); !ok {
+					logger.Log.Error("redis clean zero balance failed")
+					parser.NeedStop = true
+				}
+
 				_, err = pikaPipe.Exec(ctx)
 				if err != nil {
-					panic(err)
+					logger.Log.Error("pika exec failed", zap.Error(err))
+					parser.NeedStop = true
 				}
-				serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds)
 				logger.Log.Info("redis exec done")
 			}()
 			wg.Add(1)
@@ -282,6 +288,7 @@ func syncBlock() {
 				defer wg.Done()
 				// 最后分析执行
 				task.ParseEnd(isFull)
+				logger.Log.Info("ck done")
 			}()
 			wg.Wait()
 
@@ -370,13 +377,20 @@ func syncBlock() {
 				}
 				_, err = rdsPipe.Exec(ctx)
 				if err != nil {
-					panic(err)
+					logger.Log.Error("redis exec failed", zap.Error(err))
+					parser.NeedStop = true
 				}
+				if ok := serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds); !ok {
+					logger.Log.Error("redis clean zero balance failed")
+					parser.NeedStop = true
+				}
+
 				_, err = pikaPipe.Exec(ctx)
 				if err != nil {
-					panic(err)
+					logger.Log.Error("pika exec failed", zap.Error(err))
+					parser.NeedStop = true
 				}
-				serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds)
+
 			}()
 			wg.Add(1)
 			go func() {

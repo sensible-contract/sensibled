@@ -283,9 +283,9 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, blocksTot
 	return nil
 }
 
-func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.IntCmd) {
+func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.IntCmd) bool {
 	if len(addressBalanceCmds) == 0 {
-		return
+		return true
 	}
 	pipe := rdb.RedisClient.Pipeline()
 	// 删除balance为0的记录
@@ -296,7 +296,8 @@ func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.Int
 			logger.Log.Error("redis not found balance", zap.String("key", hex.EncodeToString([]byte(keyString))))
 			continue
 		} else if err != nil {
-			panic(err)
+			logger.Log.Error("DeleteKeysWhitchAddressBalanceZero get failed", zap.Error(err))
+			return false
 		}
 
 		if balance == 0 {
@@ -305,6 +306,8 @@ func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.Int
 	}
 
 	if _, err := pipe.Exec(ctx); err != nil {
-		panic(err)
+		logger.Log.Error("DeleteKeysWhitchAddressBalanceZero failed", zap.Error(err))
+		return false
 	}
+	return true
 }
