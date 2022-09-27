@@ -108,7 +108,7 @@ func syncBlock() {
 	// 扫描区块
 	for {
 		ok := blockchain.InitLongestChainHeader() // 读取新的block header
-		if !ok || parser.NeedStop {               // 主动触发了结束，则终止
+		if !ok || model.NeedStop {                // 主动触发了结束，则终止
 			break
 		}
 
@@ -158,7 +158,7 @@ func syncBlock() {
 
 		// 无需同步内存池
 		if stageBlockHeight < len(blockchain.BlocksOfChainById)-1 ||
-			(endBlockHeight > 0 && stageBlockHeight == endBlockHeight-1) || parser.NeedStop {
+			(endBlockHeight > 0 && stageBlockHeight == endBlockHeight-1) || model.NeedStop {
 			needSaveBlock = false
 			var wg sync.WaitGroup
 			wg.Add(1)
@@ -207,7 +207,7 @@ func syncBlock() {
 
 	WAIT_BLOCK:
 		// 扫描完毕，结束
-		if (endBlockHeight > 0 && stageBlockHeight == endBlockHeight-1) || parser.NeedStop {
+		if (endBlockHeight > 0 && stageBlockHeight == endBlockHeight-1) || model.NeedStop {
 			break
 		}
 
@@ -320,7 +320,7 @@ func syncBlock() {
 		isFull = false // 准备继续同步
 		startBlockHeight = -1
 		logger.Log.Info("block finished")
-		if parser.NeedStop { // 主动触发了结束，则终止
+		if model.NeedStop { // 主动触发了结束，则终止
 			break
 		}
 
@@ -396,14 +396,14 @@ func main() {
 		memf.Close()
 	}
 
-	if parser.NeedStop {
+	if model.NeedStop {
 		os.Exit(1)
 	}
 }
 
 func triggerStop() {
 	logger.Log.Info("program exit...")
-	parser.NeedStop = true
+	model.NeedStop = true
 	select {
 	case memLoader.NewBlockNotify <- "":
 	default:

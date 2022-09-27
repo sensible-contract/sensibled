@@ -14,8 +14,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var NeedStop bool
-
 type Blockchain struct {
 	Blocks                map[string]*model.Block // 所有区块
 	BlocksOfChainById     map[string]*model.Block // 按blkid主链区块
@@ -70,7 +68,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 
 	var txCount int
 	for nextBlockHeight := startBlockHeight; nextBlockHeight < endBlockHeight; nextBlockHeight++ {
-		if NeedStop {
+		if model.NeedStop {
 			break
 		}
 
@@ -231,7 +229,7 @@ func (bc *Blockchain) LoadAllBlockHeaders() {
 	parsers := make(chan struct{}, 30)
 	var wg sync.WaitGroup
 	for idx := 0; ; idx++ {
-		if NeedStop {
+		if model.NeedStop {
 			break
 		}
 		// 获取所有Block Header字节，不要求有序返回或属于主链
