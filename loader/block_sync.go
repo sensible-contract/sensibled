@@ -90,7 +90,6 @@ func GetNewUTXOAfterBlockHeight(start, end int) (utxosMapRsp map[string]*model.T
 	psql := fmt.Sprintf(`
 SELECT utxid, vout, satoshi, script_type, script_pk, 0, 0 FROM txout
    WHERE satoshi > 0 AND
-      NOT startsWith(script_type, char(0x6a)) AND
       NOT startsWith(script_type, char(0x00, 0x6a)) AND
       height >= %d AND
       height < %d`, start, end)
