@@ -74,10 +74,9 @@ func ParseGetSpentUtxoDataFromRedisSerial(
 	}
 }
 
-// UpdateUtxoInRedisSerial 顺序更新当前区块的utxo信息变化到redis
-func UpdateUtxoInRedisSerial(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, needReset bool,
-	spentUtxoKeysMap map[string]struct{},
-	newUtxoDataMap, removeUtxoDataMap, spentUtxoDataMap map[string]*model.TxoData) {
+// UpdateUtxoInLocalMapSerial 顺序更新当前处理的一批内存池交易的utxo信息变化，删除产生又立即花费的utxo
+func UpdateUtxoInLocalMapSerial(spentUtxoKeysMap map[string]struct{},
+	newUtxoDataMap, removeUtxoDataMap map[string]*model.TxoData) {
 
 	insideTxo := make([]string, len(spentUtxoKeysMap))
 	for outpointKey := range spentUtxoKeysMap {
@@ -97,8 +96,8 @@ func UpdateUtxoInRedisSerial(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, nee
 	for outpointKey := range removeUtxoDataMap {
 		delete(model.GlobalMempoolNewUtxoDataMap, outpointKey)
 	}
+}
 
-	UpdateUtxoInRedis(pipe, pikaPipe, needReset, newUtxoDataMap, removeUtxoDataMap, spentUtxoDataMap)
 // UpdateUtxoInPika 批量更新redis utxo
 func UpdateUtxoInPika(pikaPipe redis.Pipeliner, utxoToRestore, utxoToRemove map[string]*model.TxoData) {
 	logger.Log.Info("UpdateUtxoInPika",

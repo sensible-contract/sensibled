@@ -81,8 +81,8 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 	}
 }
 
-// ParseTxoSpendByTxParallel utxo被使用
-func ParseTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
+// ParseUpdateTxoSpendByTxParallel utxo被使用
+func ParseUpdateTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 	if isCoinbase {
 		return
 	}
@@ -91,8 +91,8 @@ func ParseTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model.Proce
 	}
 }
 
-// ParseNewUtxoInTxParallel utxo 信息
-func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock) {
+// ParseUpdateNewUtxoInTxParallel utxo 信息
+func ParseUpdateNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock) {
 	for _, output := range tx.TxOuts {
 		if output.LockingScriptUnspendable {
 			continue

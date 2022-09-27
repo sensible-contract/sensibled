@@ -207,13 +207,14 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 	// first
 	for txIdx, tx := range mp.BatchTxs {
 		// no dep, 准备utxo花费关系数据
-		parallel.ParseTxoSpendByTxParallel(tx, mp.SpentUtxoKeysMap)
+		parallel.ParseUpdateTxoSpendByTxParallel(tx, mp.SpentUtxoKeysMap)
 
 		// 0
 		parallel.ParseTxFirst(tx)
 
 		// 1 dep 0
-		parallel.ParseNewUtxoInTxParallel(startIdx+txIdx, tx, mp.NewUtxoDataMap)
+		// NewUtxoDataMap w
+		parallel.ParseUpdateNewUtxoInTxParallel(startIdx+txIdx, tx, mp.NewUtxoDataMap)
 	}
 
 	// 2 dep 0

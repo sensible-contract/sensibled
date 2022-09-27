@@ -36,15 +36,15 @@ func ParseTxFirst(tx *model.Tx) {
 	}
 }
 
-// ParseTxoSpendByTxParallel utxo被使用
-func ParseTxoSpendByTxParallel(tx *model.Tx, spentUtxoKeysMap map[string]struct{}) {
+// ParseUpdateTxoSpendByTxParallel utxo被使用
+func ParseUpdateTxoSpendByTxParallel(tx *model.Tx, spentUtxoKeysMap map[string]struct{}) {
 	for _, input := range tx.TxIns {
 		spentUtxoKeysMap[input.InputOutpointKey] = struct{}{}
 	}
 }
 
-// ParseNewUtxoInTxParallel utxo 信息
-func ParseNewUtxoInTxParallel(txIdx int, tx *model.Tx, mpNewUtxo map[string]*model.TxoData) {
+// ParseUpdateNewUtxoInTxParallel utxo 信息
+func ParseUpdateNewUtxoInTxParallel(txIdx int, tx *model.Tx, mpNewUtxo map[string]*model.TxoData) {
 	for _, output := range tx.TxOuts {
 		if output.LockingScriptUnspendable {
 			continue
