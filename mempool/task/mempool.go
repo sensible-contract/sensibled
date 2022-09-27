@@ -243,6 +243,7 @@ func ParseEnd() {
 	store.CommitSyncCk()
 	store.ProcessPartSyncCk()
 }
+
 func (mp *Mempool) Process(initSyncMempool bool, stageBlockHeight, startIdx int) bool {
 	mp.Init()
 	if initSyncMempool {

@@ -11,11 +11,9 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
-	"sensibled/loader"
 	"sensibled/loader/clickhouse"
 	"sensibled/logger"
 	memLoader "sensibled/mempool/loader"
-	memStore "sensibled/mempool/store"
 	memTask "sensibled/mempool/task"
 	memSerial "sensibled/mempool/task/serial"
 	"sensibled/model"
@@ -28,7 +26,6 @@ import (
 	"syscall"
 	"time"
 
-	redis "github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -192,11 +189,17 @@ func syncBlock() {
 				break
 			}
 
+			memSerial.UpdateUtxoInLocalMapSerial(mempool.SpentUtxoKeysMap,
+				mempool.NewUtxoDataMap,
+				mempool.RemoveUtxoDataMap)
 
+			if needSaveBlock {
+				task.SubmitBlocksWithMempool(isFull, stageBlockHeight, mempool, initSyncMempool)
+				needSaveBlock = false
 			} else {
+				mempool.SubmitMempoolWithoutBlocks(initSyncMempool)
 			}
 
-			needSaveBlock = false
 			initSyncMempool = false
 			startIdx += len(mempool.BatchTxs) // 同步完毕
 			logger.Log.Info("mempool finished", zap.Int("idx", startIdx), zap.Int("nNewTx", len(mempool.BatchTxs)))
