@@ -13,7 +13,7 @@ import (
 	"sensibled/rdb"
 	"sensibled/task/serial"
 
-	"github.com/go-redis/redis"
+	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 )
 
