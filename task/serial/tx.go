@@ -3,7 +3,6 @@ package serial
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"sensibled/logger"
 	"sensibled/model"
 	"sensibled/rdb"
@@ -78,14 +77,32 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	}
 }
 
+// UpdateUtxoInPika 批量更新redis utxo
+func UpdateUtxoInPika(pikaPipe redis.Pipeliner, utxoToRestore, utxoToRemove map[string]*model.TxoData) {
+	logger.Log.Info("UpdateUtxoInPika",
+		zap.Int("add", len(utxoToRestore)),
+		zap.Int("del", len(utxoToRemove)))
+
+	for outpointKey, data := range utxoToRestore {
+		buf := make([]byte, 20+len(data.PkScript))
+		length := data.Marshal(buf)
+		// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
+		pikaPipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
+	}
+
+	for outpointKey := range utxoToRemove {
+		// redis全局utxo数据清除
+		pikaPipe.Del(ctx, "u"+outpointKey)
+	}
+
+	logger.Log.Info("UpdateUtxoInPika finished")
+}
+
 // UpdateUtxoInRedis 批量更新redis utxo
-func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) (err error) {
+func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) {
 	logger.Log.Info("UpdateUtxoInRedis",
 		zap.Int("add", len(utxoToRestore)),
 		zap.Int("del", len(utxoToRemove)))
-	if len(utxoToRestore) == 0 && len(utxoToRemove) == 0 {
-		return errors.New("empty utxo")
-	}
 
 	pipe.HSet(ctx, "info",
 		"blocks_total", blocksTotal,
@@ -95,14 +112,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, blocksTot
 	)
 
 	for outpointKey, data := range utxoToRestore {
-		buf := make([]byte, 20+len(data.PkScript))
-		length := data.Marshal(buf)
-
-		if pikaPipe != nil {
-			// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
-			pikaPipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
-		}
-
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
 		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
@@ -200,11 +209,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, blocksTot
 	addrToRemove := make(map[string]struct{}, 1)
 	tokenToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
-
-		if pikaPipe != nil {
-			// redis全局utxo数据清除
-			pikaPipe.Del(ctx, "u"+outpointKey)
-		}
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
 		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
@@ -280,7 +284,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, blocksTot
 	}
 
 	logger.Log.Info("UpdateUtxoInRedis finished")
-	return nil
 }
 
 func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.IntCmd) bool {

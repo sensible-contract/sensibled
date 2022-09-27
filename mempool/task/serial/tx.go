@@ -99,10 +99,30 @@ func UpdateUtxoInRedisSerial(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, nee
 	}
 
 	UpdateUtxoInRedis(pipe, pikaPipe, needReset, newUtxoDataMap, removeUtxoDataMap, spentUtxoDataMap)
+// UpdateUtxoInPika 批量更新redis utxo
+func UpdateUtxoInPika(pikaPipe redis.Pipeliner, utxoToRestore, utxoToRemove map[string]*model.TxoData) {
+	logger.Log.Info("UpdateUtxoInPika",
+		zap.Int("nStore", len(utxoToRestore)),
+		zap.Int("nRemove", len(utxoToRemove)))
+
+	for outpointKey, data := range utxoToRestore {
+		buf := make([]byte, 20+len(data.PkScript))
+		length := data.Marshal(buf)
+		// redis全局utxo数据添加
+		pikaPipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
+	}
+	for outpointKey := range utxoToRemove {
+		// redis全局utxo数据清除
+		pikaPipe.Del(ctx, "u"+outpointKey)
+	}
+	// for outpointKey := range utxoToSpend {
+	// 	// redis全局utxo数据不能在这里清除，留给区块确认时去做
+	// 	pikaPipe.Del(ctx, "u"+outpointKey)
+	// }
 }
 
 // UpdateUtxoInRedis 批量更新redis utxo
-func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, needReset bool, utxoToRestore, utxoToRemove, utxoToSpend map[string]*model.TxoData) (err error) {
+func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxoToRemove, utxoToSpend map[string]*model.TxoData) {
 	logger.Log.Info("UpdateUtxoInRedis",
 		zap.Int("nStore", len(utxoToRestore)),
 		zap.Int("nRemove", len(utxoToRemove)),
@@ -139,11 +159,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, needReset
 	// 更新内存池数据
 	mpkeys := make([]string, 5*(len(utxoToRestore)+len(utxoToRemove)+len(utxoToSpend)))
 	for outpointKey, data := range utxoToRestore {
-		buf := make([]byte, 20+len(data.PkScript))
-		length := data.Marshal(buf)
-		// redis全局utxo数据添加
-		pikaPipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
-
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
 		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
@@ -289,9 +304,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, needReset
 	addrToRemove := make(map[string]struct{}, 1)
 	tokenToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
-		// redis全局utxo数据清除
-		pikaPipe.Del(ctx, "u"+outpointKey)
-
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
 		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
@@ -383,9 +395,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, needReset
 	}
 
 	for outpointKey, data := range utxoToSpend {
-		// redis全局utxo数据不能在这里清除，留给区块确认时去做
-		// pipe.Del(ctx, "u"+outpointKey)
-
 		strAddressPkh := string(data.Data.AddressPkh[:])
 		strCodeHash := string(data.Data.CodeHash[:])
 		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
@@ -511,6 +520,4 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, pikaPipe redis.Pipeliner, needReset
 	for _, mpkey := range mpkeys {
 		pipe.SAdd(ctx, "mp:keys", mpkey)
 	}
-
-	return nil
 }
