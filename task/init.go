@@ -64,3 +64,74 @@ func ParseEnd(isFull bool) {
 		store.ProcessPartSyncCk()
 	}
 }
+
+// RemoveBlocksForReorg
+func RemoveBlocksForReorg(startBlockHeight int) bool {
+	// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
+	logger.Log.Info("remove...")
+	utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight, 0) // 已花费的utxo需要回滚
+	if err != nil {
+		logger.Log.Error("get utxo to restore failed", zap.Error(err))
+		return false
+	}
+	utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight, 0) // 新产生的utxo需要删除
+	if err != nil {
+		logger.Log.Error("get utxo to remove failed", zap.Error(err))
+		return false
+	}
+
+	var wg sync.WaitGroup
+	// ck
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		// 清除db
+		store.RemoveOrphanPartSyncCk(startBlockHeight)
+		model.CleanConfirmedTxMap(true)
+
+		logger.Log.Info("ck done")
+	}()
+
+	// pika
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		pikaPipe := rdb.PikaClient.Pipeline()
+		serial.UpdateUtxoInPika(pikaPipe, utxoToRestore, utxoToRemove)
+		if _, err = pikaPipe.Exec(ctx); err != nil {
+			logger.Log.Error("pika exec failed", zap.Error(err))
+			model.NeedStop = true
+		}
+
+		logger.Log.Info("pika done")
+	}()
+
+	// redis
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		// 更新redis
+		rdsPipe := rdb.RedisClient.Pipeline()
+		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
+		serial.UpdateUtxoInRedis(rdsPipe, startBlockHeight, addressBalanceCmds, utxoToRestore, utxoToRemove, true)
+		if _, err = rdsPipe.Exec(ctx); err != nil {
+			logger.Log.Error("redis exec failed", zap.Error(err))
+			model.NeedStop = true
+		} else {
+			if ok := serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds); !ok {
+				logger.Log.Error("redis clean zero balance failed")
+				model.NeedStop = true
+			}
+		}
+		logger.Log.Info("redis done")
+	}()
+	wg.Wait()
+
+	if model.NeedStop {
+		return false
+	}
+	return true
+}

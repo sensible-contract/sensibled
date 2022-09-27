@@ -133,40 +133,9 @@ func syncBlock() {
 				needRemove = true
 			}
 			if needRemove {
-				// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
-				logger.Log.Info("remove...")
-				utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight, 0) // 已花费的utxo需要回滚
-				if err != nil {
-					logger.Log.Error("get utxo to restore failed", zap.Error(err))
+				if ok := task.RemoveBlocksForReorg(startBlockHeight); !ok {
 					break
 				}
-				utxoToRemove, err := loader.GetNewUTXOAfterBlockHeight(startBlockHeight, 0) // 新产生的utxo需要删除
-				if err != nil {
-					logger.Log.Error("get utxo to remove failed", zap.Error(err))
-					break
-				}
-
-				// 更新redis
-				rdsPipe := rdb.RedisClient.Pipeline()
-				pikaPipe := rdb.PikaClient.Pipeline()
-				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
-				if err := serial.UpdateUtxoInRedis(rdsPipe, pikaPipe, startBlockHeight, addressBalanceCmds, utxoToRestore, utxoToRemove, true); err != nil {
-					logger.Log.Error("restore/remove utxo from redis failed", zap.Error(err))
-					break
-				}
-				_, err = rdsPipe.Exec(ctx)
-				if err != nil {
-					panic(err)
-				}
-				_, err = pikaPipe.Exec(ctx)
-				if err != nil {
-					panic(err)
-				}
-				serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds)
-
-				// 清除db
-				store.RemoveOrphanPartSyncCk(startBlockHeight)
-				model.CleanConfirmedTxMap(true)
 			}
 
 			store.CreatePartSyncCk() // 初始化同步数据库表
