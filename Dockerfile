@@ -11,6 +11,7 @@ COPY . .
 # Build binary output
 RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o sensibled -ldflags '-s -w' main.go
 RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o strip_block -ldflags '-s -w' tools/strip_block/main.go
+RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o fix_utxo -ldflags '-s -w' tools/fix_utxo/main.go
 
 FROM alpine:latest
 RUN apk add tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone
@@ -22,5 +23,7 @@ WORKDIR /data/
 
 COPY --chown=sato --from=build /build/sensibled /data/sensibled
 COPY --chown=sato --from=build /build/strip_block /data/strip_block
+COPY --chown=sato --from=build /build/fix_utxo /data/fix_utxo
+
 
 ENTRYPOINT ["./sensibled"]
