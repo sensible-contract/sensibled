@@ -29,16 +29,12 @@ func NewTxs(stripMode bool, txsraw []byte) (txs []*model.Tx) {
 			txs[i].Size = binary.LittleEndian.Uint32(txsraw[offset : offset+4])
 			offset += 4
 		} else {
-			txs[i].TxId = GetTxId(txs[i])
+			txs[i].TxId = utils.GetHash256(txs[i].Raw)
 			txs[i].Size = uint32(txoffset)
 		}
 		txs[i].TxIdHex = utils.HashString(txs[i].TxId)
 	}
 	return txs
-}
-
-func GetTxId(tx *model.Tx) []byte {
-	return utils.GetHash256(tx.Raw)
 }
 
 func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {

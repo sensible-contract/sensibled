@@ -2,6 +2,7 @@ package task
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"sensibled/logger"
 	"sensibled/mempool/loader"
@@ -10,7 +11,7 @@ import (
 	"sensibled/mempool/task/parallel"
 	"sensibled/mempool/task/serial"
 	"sensibled/model"
-	txParser "sensibled/parser"
+	"sensibled/rdb"
 	"sensibled/utils"
 	"sync"
 	"time"
@@ -79,7 +80,7 @@ func (mp *Mempool) LoadFromMempool() bool {
 		}
 		tx.Raw = rawtx
 		tx.Size = uint32(txoffset)
-		tx.TxId = txParser.GetTxId(tx)
+		tx.TxId = utils.GetHash256(tx.Raw)
 		tx.TxIdHex = utils.HashString(tx.TxId)
 
 		// maybe impossible dup here
@@ -151,7 +152,7 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 		}
 		tx.Raw = rawtx
 		tx.Size = uint32(txoffset)
-		tx.TxId = txParser.GetTxId(tx)
+		tx.TxId = utils.GetHash256(tx.Raw)
 		tx.TxIdHex = utils.HashString(tx.TxId)
 
 		// ignore non final tx
