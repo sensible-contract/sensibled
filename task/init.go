@@ -1,11 +1,23 @@
 package task
 
 import (
+	"context"
+	"sensibled/loader"
+	"sensibled/logger"
+	memTask "sensibled/mempool/task"
+	memSerial "sensibled/mempool/task/serial"
 	"sensibled/model"
+	"sensibled/rdb"
 	"sensibled/store"
 	"sensibled/task/parallel"
 	"sensibled/task/serial"
+	"sync"
+
+	redis "github.com/go-redis/redis/v8"
+	"go.uber.org/zap"
 )
+
+var ctx = context.Background()
 
 // ParseBlockParallel 先并行分析区块，不同区块并行，同区块内串行
 func ParseBlockParallel(block *model.Block) {
@@ -134,4 +146,58 @@ func RemoveBlocksForReorg(startBlockHeight int) bool {
 		return false
 	}
 	return true
+}
+
+// SubmitBlocksWithoutMempool
+func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
+	var wg sync.WaitGroup
+	// ck
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// 最后分析执行
+		ParseEnd(isFull)
+		logger.Log.Info("ck done")
+	}()
+
+	// pika
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		pikaPipe := rdb.PikaClient.Pipeline()
+		serial.UpdateUtxoInPika(pikaPipe,
+			model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap)
+
+		if _, err := pikaPipe.Exec(ctx); err != nil {
+			logger.Log.Error("pika exec failed", zap.Error(err))
+			model.NeedStop = true
+		}
+		logger.Log.Info("pika done")
+	}()
+
+	// redis
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rdsPipe := rdb.RedisClient.Pipeline()
+		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
+		// 批量更新redis utxo
+		serial.UpdateUtxoInRedis(rdsPipe, stageBlockHeight, addressBalanceCmds,
+			model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
+		if _, err := rdsPipe.Exec(ctx); err != nil {
+			logger.Log.Error("redis exec failed", zap.Error(err))
+			model.NeedStop = true
+		} else {
+			if ok := serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds); !ok {
+				logger.Log.Error("redis clean zero balance failed")
+				model.NeedStop = true
+			}
+		}
+		logger.Log.Info("redis done")
+	}()
+	wg.Wait()
+
+	// 清空本地map内存
+	model.CleanUtxoMap()
 }

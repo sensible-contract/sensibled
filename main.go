@@ -160,42 +160,8 @@ func syncBlock() {
 		if stageBlockHeight < len(blockchain.BlocksOfChainById)-1 ||
 			(endBlockHeight > 0 && stageBlockHeight == endBlockHeight-1) || model.NeedStop {
 			needSaveBlock = false
-			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				rdsPipe := rdb.RedisClient.Pipeline()
-				pikaPipe := rdb.PikaClient.Pipeline()
-				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
-				// 批量更新redis utxo
-				serial.UpdateUtxoInRedis(rdsPipe, pikaPipe, stageBlockHeight, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
-				// 清空本地map内存
-				model.CleanUtxoMap()
-				_, err = rdsPipe.Exec(ctx)
-				if err != nil {
-					logger.Log.Error("redis exec failed", zap.Error(err))
-					parser.NeedStop = true
-				}
-				if ok := serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds); !ok {
-					logger.Log.Error("redis clean zero balance failed")
-					parser.NeedStop = true
-				}
 
-				_, err = pikaPipe.Exec(ctx)
-				if err != nil {
-					logger.Log.Error("pika exec failed", zap.Error(err))
-					parser.NeedStop = true
-				}
-				logger.Log.Info("redis exec done")
-			}()
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				// 最后分析执行
-				task.ParseEnd(isFull)
-				logger.Log.Info("ck done")
-			}()
-			wg.Wait()
+			task.SubmitBlocksWithoutMempool(isFull, stageBlockHeight)
 
 			isFull = false // 准备继续同步
 			startBlockHeight = -1
@@ -317,6 +283,10 @@ func syncBlock() {
 			logger.Log.Info("mempool finished", zap.Int("idx", startIdx), zap.Int("nNewTx", len(mempool.BatchTxs)))
 		}
 
+		// 未完成同步内存池 且未同步区块
+		if needSaveBlock {
+			task.SubmitBlocksWithoutMempool(isFull, stageBlockHeight)
+		}
 		isFull = false // 准备继续同步
 		startBlockHeight = -1
 		logger.Log.Info("block finished")
