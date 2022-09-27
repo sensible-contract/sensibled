@@ -276,3 +276,55 @@ func (mp *Mempool) Process(initSyncMempool bool, stageBlockHeight, startIdx int)
 	return true
 }
 
+// SubmitMempoolWithoutBlocks
+func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool) {
+	var wg sync.WaitGroup
+	// ck
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// ParseEnd 最后分析执行
+		// 7 dep 5
+		ParseEnd()
+		logger.Log.Info("ck done")
+	}()
+
+	// pika
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		// 批量更新redis utxo
+		pikaPipe := rdb.PikaClient.Pipeline()
+		// for txin dump
+		// 6 dep 2 4
+		serial.UpdateUtxoInPika(pikaPipe, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap)
+		ctx := context.Background()
+		if _, err := pikaPipe.Exec(ctx); err != nil {
+			logger.Log.Error("pika exec failed", zap.Error(err))
+			model.NeedStop = true
+		}
+		logger.Log.Info("pika done")
+	}()
+
+	// redis
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		rdsPipe := rdb.RedisClient.TxPipeline()
+		// for txin dump
+		// 6 dep 2 4
+		serial.UpdateUtxoInRedis(rdsPipe, initSyncMempool,
+			mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
+
+		ctx := context.Background()
+		if _, err := rdsPipe.Exec(ctx); err != nil {
+			logger.Log.Error("redis exec failed", zap.Error(err))
+			model.NeedStop = true
+		}
+		logger.Log.Info("redis done")
+	}()
+	wg.Wait()
+
+}

@@ -201,3 +201,82 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 	// 清空本地map内存
 	model.CleanUtxoMap()
 }
+
+// SubmitBlocksWithMempool
+func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask.Mempool, initSyncMempool bool) {
+	needSaveBlock := true
+	needSaveMempool := true
+
+	var wg sync.WaitGroup
+	// ck
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// ParseEnd 最后分析执行
+		if needSaveBlock {
+			ParseEnd(isFull)
+		}
+		// 7 dep 5
+		if needSaveMempool {
+			memTask.ParseEnd()
+		}
+	}()
+
+	// pika
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		// 批量更新redis utxo
+		pikaPipe := rdb.PikaClient.Pipeline()
+		if needSaveBlock {
+			serial.UpdateUtxoInPika(pikaPipe, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap)
+		}
+		// for txin dump
+		// 6 dep 2 4
+		if needSaveMempool {
+			memSerial.UpdateUtxoInPika(pikaPipe, mempool.NewUtxoDataMap, mempool.RemoveUtxoDataMap)
+		}
+		if _, err := pikaPipe.Exec(ctx); err != nil {
+			logger.Log.Error("pika exec failed", zap.Error(err))
+			model.NeedStop = true
+		}
+	}()
+
+	// redis
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		rdsPipe := rdb.RedisClient.TxPipeline()
+		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
+		if needSaveBlock {
+			// 批量更新redis utxo
+			serial.UpdateUtxoInRedis(rdsPipe, stageBlockHeight, addressBalanceCmds,
+				model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
+
+		}
+		// for txin dump
+		// 6 dep 2 4
+		if needSaveMempool {
+			memSerial.UpdateUtxoInRedis(rdsPipe, initSyncMempool,
+				mempool.NewUtxoDataMap, mempool.RemoveUtxoDataMap, mempool.SpentUtxoDataMap)
+		}
+		if _, err := rdsPipe.Exec(ctx); err != nil {
+			logger.Log.Error("redis exec failed", zap.Error(err))
+			model.NeedStop = true
+		} else {
+			// should after rdsPipe.exec finished
+			if ok := serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds); !ok {
+				logger.Log.Error("redis clean zero balance failed")
+				model.NeedStop = true
+			}
+		}
+	}()
+	wg.Wait()
+
+	if needSaveBlock {
+		// 清空本地map内存
+		model.CleanUtxoMap()
+	}
+}

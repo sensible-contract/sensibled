@@ -196,62 +196,6 @@ func syncBlock() {
 			} else {
 			}
 
-		UPDATE_UTXO:
-
-			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-
-				rdsPipe := rdb.RedisClient.TxPipeline()
-				pikaPipe := rdb.PikaClient.Pipeline()
-				addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
-				if needSaveBlock {
-					// 批量更新redis utxo
-					serial.UpdateUtxoInRedis(rdsPipe, pikaPipe, stageBlockHeight, addressBalanceCmds, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
-					// 清空本地map内存
-					model.CleanUtxoMap()
-				}
-				// for txin dump
-				// 6 dep 2 4
-				if needSaveMempool {
-					memSerial.UpdateUtxoInRedisSerial(rdsPipe, pikaPipe, initSyncMempool,
-						mempool.SpentUtxoKeysMap,
-						mempool.NewUtxoDataMap,
-						mempool.RemoveUtxoDataMap,
-						mempool.SpentUtxoDataMap)
-				}
-				_, err = rdsPipe.Exec(ctx)
-				if err != nil {
-					logger.Log.Error("redis exec failed", zap.Error(err))
-					parser.NeedStop = true
-				}
-				if ok := serial.DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds); !ok {
-					logger.Log.Error("redis clean zero balance failed")
-					parser.NeedStop = true
-				}
-
-				_, err = pikaPipe.Exec(ctx)
-				if err != nil {
-					logger.Log.Error("pika exec failed", zap.Error(err))
-					parser.NeedStop = true
-				}
-
-			}()
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				// ParseEnd 最后分析执行
-				if needSaveBlock {
-					task.ParseEnd(isFull)
-				}
-				// 7 dep 5
-				if needSaveMempool {
-					memTask.ParseEnd()
-				}
-			}()
-			wg.Wait()
-
 			needSaveBlock = false
 			initSyncMempool = false
 			startIdx += len(mempool.BatchTxs) // 同步完毕
