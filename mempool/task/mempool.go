@@ -243,3 +243,36 @@ func ParseEnd() {
 	store.CommitSyncCk()
 	store.ProcessPartSyncCk()
 }
+func (mp *Mempool) Process(initSyncMempool bool, stageBlockHeight, startIdx int) bool {
+	mp.Init()
+	if initSyncMempool {
+		logger.Log.Info("init sync mempool...")
+		model.CleanMempoolUtxoMap()
+		if ok := mp.LoadFromMempool(); !ok { // 重新全量同步
+			logger.Log.Info("LoadFromMempool failed")
+			return false
+		}
+
+		latestBlockHeight := loader.GetBlockCountRPC()
+		if stageBlockHeight < latestBlockHeight-1 {
+			// 有新区块，不同步内存池
+			return false
+		}
+
+		store.ProcessAllSyncCk() // 从db删除mempool数据
+	} else {
+		// 现有追加同步
+		isNewBlockReady := mp.SyncMempoolFromZmq()
+		if isNewBlockReady {
+			return false
+		}
+		if model.NeedStop { // 主动触发了结束，则终止
+			return false
+		}
+	}
+	store.CreatePartSyncCk()  // 初始化同步数据库表
+	store.PreparePartSyncCk() // 准备同步db，todo: 可能初始化失败
+	mp.ParseMempool(startIdx) // 开始同步mempool
+	return true
+}
+

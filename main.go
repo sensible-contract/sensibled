@@ -91,11 +91,6 @@ func syncBlock() {
 		logger.Log.Error("init blockchain error", zap.Error(err))
 		return
 	}
-	mempool, err := memTask.NewMempool() // 准备内存池
-	if err != nil {
-		logger.Log.Info("init mempool error: %v", zap.Error(err))
-		return
-	}
 
 	// 重新扫区块头缓存
 	if gobFlushFrom > 0 {
@@ -183,43 +178,23 @@ func syncBlock() {
 		// 同步内存池
 		startIdx := 0
 		initSyncMempool := true
+
+		mempool, err := memTask.NewMempool() // 准备内存池
+		if err != nil {
+			logger.Log.Info("init mempool error: %v", zap.Error(err))
+			return
+		}
+		onceRpc.Do(memLoader.InitRpc)
+		onceZmq.Do(memLoader.InitZmq)
 		for {
-			needSaveMempool := false
-
-			onceRpc.Do(memLoader.InitRpc)
-			onceZmq.Do(memLoader.InitZmq)
-			mempool.Init()
-
-			if initSyncMempool {
-				logger.Log.Info("init sync mempool...")
-				startIdx = 0
-				model.CleanMempoolUtxoMap()
-				if ok := mempool.LoadFromMempool(); !ok { // 重新全量同步
-					logger.Log.Info("LoadFromMempool failed")
-					goto UPDATE_UTXO
-				}
-
-				latestBlockHeight := memLoader.GetBlockCountRPC()
-				if stageBlockHeight < latestBlockHeight-1 {
-					// 有新区块，不同步内存池
-					goto UPDATE_UTXO
-				}
-
-				memStore.ProcessAllSyncCk() // 从db删除mempool数据
-			} else {
-				// 现有追加同步
-				isNewBlockReady := mempool.SyncMempoolFromZmq()
-				if isNewBlockReady {
-					break
-				}
-				if parser.NeedStop { // 主动触发了结束，则终止
-					break
-				}
+			needSaveMempool := mempool.Process(initSyncMempool, stageBlockHeight, startIdx)
+			if !needSaveMempool {
+				break
 			}
-			memStore.CreatePartSyncCk()    // 初始化同步数据库表
-			memStore.PreparePartSyncCk()   // 准备同步db，todo: 可能初始化失败
-			mempool.ParseMempool(startIdx) // 开始同步mempool
-			needSaveMempool = true
+
+
+			} else {
+			}
 
 		UPDATE_UTXO:
 
