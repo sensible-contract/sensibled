@@ -23,12 +23,14 @@ func LoadFromGobFile(fname string, data map[string]*model.Block) (lastFileIdx in
 	if err := gobDec.Decode(&cacheData); err != nil {
 		logger.Log.Info("load gob failed", zap.Error(err))
 	}
-
+	maxHeight := 0
 	maxFileIdx := 0
 	for _, blk := range cacheData {
-		if blk.FileIdx > maxFileIdx {
+		if blk.Height > maxHeight && blk.FileIdx > 0 {
 			maxFileIdx = blk.FileIdx
+			maxHeight = blk.Height
 		}
+
 		hashHex := utils.HashString(blk.Hash)
 		data[hashHex] = &model.Block{
 			Hash:       blk.Hash,

@@ -209,6 +209,8 @@ func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) i
 // InitLongestChainHeader 初始化block header
 func (bc *Blockchain) InitLongestChainHeader() bool {
 	logger.Log.Info("load block header", zap.Int("last_file", bc.LastFileIdx))
+	startFileIdx := bc.LastFileIdx
+
 	if err := bc.BlockData.SkipTo(bc.LastFileIdx, 0); err == nil {
 		bc.LoadAllBlockHeaders()
 	}
@@ -217,10 +219,11 @@ func (bc *Blockchain) InitLongestChainHeader() bool {
 		logger.Log.Error("blocks not found, skip dump gob")
 		return false
 	}
-	loader.DumpToGobFile("./cmd/headers-list.gob", bc.Blocks)
 
 	bc.SetBlockHeight()
-	bc.SelectLongestChain()
+	bc.SelectLongestChain(startFileIdx)
+	loader.DumpToGobFile("./cmd/headers-list.gob", bc.Blocks)
+
 	return true
 }
 
@@ -325,16 +328,22 @@ func (bc *Blockchain) SetBlockHeight() {
 }
 
 // SelectLongestChain 提取最长主链
-func (bc *Blockchain) SelectLongestChain() {
+func (bc *Blockchain) SelectLongestChain(startFileIdx int) {
 	bc.BlocksOfChainById = make(map[string]*model.Block, 0)
 	bc.BlocksOfChainByHeight = make(map[int]*model.Block, 0)
 	block := bc.MaxBlock
+	startFileIdxHeight := -1
 	logger.Log.Info("chain", zap.Int("maxheight", block.Height))
 	for {
 		bc.BlocksOfChainById[block.HashHex] = block
 		bc.BlocksOfChainByHeight[block.Height] = block
 		// 设置genesis
 		bc.GenesisBlock = block
+
+		if block.FileIdx == startFileIdx && block.FileIdx != block.Height {
+			startFileIdxHeight = block.Height
+		}
+
 		var ok bool
 		block, ok = bc.Blocks[block.ParentHex]
 		if !ok {
@@ -343,6 +352,7 @@ func (bc *Blockchain) SelectLongestChain() {
 	}
 	logger.Log.Info("chain",
 		zap.String("genesis", bc.GenesisBlock.HashHex),
+		zap.Int("new_from_height", startFileIdxHeight),
 		zap.Int("length", len(bc.BlocksOfChainById)),
 		zap.Int("allBlks", len(bc.Blocks)),
 	)
