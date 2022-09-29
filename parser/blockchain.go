@@ -22,6 +22,7 @@ type Blockchain struct {
 	GenesisBlock          *model.Block
 	BlockData             *loader.BlockData
 	LastFileIdx           int
+	BlockIndexFileName    string
 	m                     sync.Mutex
 }
 
@@ -34,7 +35,13 @@ func NewBlockchain(stripMode bool, path string, magicHex string) (bc *Blockchain
 	bc = new(Blockchain)
 	bc.Blocks = make(map[string]*model.Block, 0)
 
-	bc.LastFileIdx = loader.LoadFromGobFile("./cmd/headers-list.gob", bc.Blocks)
+	if stripMode {
+		bc.BlockIndexFileName = "./cmd/striped-block-index.gob"
+	} else {
+		bc.BlockIndexFileName = "./cmd/block-index.gob"
+	}
+
+	bc.LastFileIdx = loader.LoadFromGobFile(bc.BlockIndexFileName, bc.Blocks)
 
 	bc.BlockData = loader.NewBlockData(stripMode, path, magic)
 	return
@@ -222,7 +229,7 @@ func (bc *Blockchain) InitLongestChainHeader() bool {
 
 	bc.SetBlockHeight()
 	bc.SelectLongestChain(startFileIdx)
-	loader.DumpToGobFile("./cmd/headers-list.gob", bc.Blocks)
+	loader.DumpToGobFile(bc.BlockIndexFileName, bc.Blocks)
 
 	return true
 }
