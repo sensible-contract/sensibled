@@ -10,12 +10,14 @@ import (
 	"fmt"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"runtime"
 	"sensibled/logger"
 	"sensibled/model"
 	"sensibled/parser"
 	"sensibled/utils"
 	"sync"
+	"syscall"
 	"time"
 
 	"go.uber.org/zap"
@@ -32,6 +34,7 @@ var (
 )
 
 func init() {
+	flag.StringVar(&blockMagicHex, "magic", "f9beb4d9", "block magic, main: f9beb4d9, test: 0b110907")
 	flag.StringVar(&blocksPath, "blocks", "", "blocks data path")
 	flag.StringVar(&outputBlocksPath, "output", "blocks", "output blocks data path")
 
@@ -40,8 +43,6 @@ func init() {
 
 	flag.IntVar(&gobFlushFrom, "gob", -1, "gob flush block header cache after fileIdx")
 	flag.Parse()
-
-	blockMagicHex = "f9beb4d9"
 }
 
 func hasSensibleFlag(pkScript []byte) bool {
@@ -54,6 +55,21 @@ func main() {
 		for {
 			runtime.GC()
 			time.Sleep(time.Second * 1)
+		}
+	}()
+	//创建监听退出
+	sigCtrl := make(chan os.Signal, 1)
+	//监听指定信号 ctrl+c kill
+	signal.Notify(sigCtrl, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		for s := range sigCtrl {
+			switch s {
+			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
+				model.NeedStop = true
+			default:
+				fmt.Println("other signal", s)
+				logger.Log.Info("other signal", zap.String("sig", s.String()))
+			}
 		}
 	}()
 
@@ -87,11 +103,19 @@ func main() {
 			break
 		}
 
+		if model.NeedStop {
+			break
+		}
+
 		bc.BlockData.SkipTo(block.FileIdx, block.FileOffset)
 		// 获取所有Block字节
 		rawblock, err := bc.BlockData.GetRawBlock()
 		if err != nil {
-			logger.Log.Error("get block error", zap.Error(err))
+			logger.Log.Error("get block error",
+				zap.Int("height", nextBlockHeight),
+				zap.Int("fileIdx", block.FileIdx),
+				zap.Int("fileOffset", block.FileOffset),
+				zap.Error(err))
 			break
 		}
 		if len(rawblock) < 80+9 { // block header + txn
