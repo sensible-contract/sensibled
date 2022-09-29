@@ -191,9 +191,9 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 			return true
 		}
 
-		logger.Log.Info("new tx in mempool",
-			zap.String("txid", tx.TxIdHex),
-		)
+		// new tx id
+		logger.Log.Info(tx.TxIdHex)
+
 		mp.Txs[tx.TxIdHex] = struct{}{}
 		mp.BatchTxs = append(mp.BatchTxs, tx)
 

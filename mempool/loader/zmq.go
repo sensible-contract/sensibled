@@ -124,7 +124,7 @@ func zmqNotifyTx(subscriber *goczmq.Sock) {
 		} else {
 			// rawtx
 			RawTxNotify <- msg
-			logger.Log.Info("new tx received", zap.Int("n", n), zap.Int("rawtxLen", len(msg)))
+			// logger.Log.Info("new tx received", zap.Int("n", n), zap.Int("rawtxLen", len(msg)))
 		}
 	}
 }
