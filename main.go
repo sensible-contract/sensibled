@@ -53,6 +53,7 @@ func init() {
 	flag.StringVar(&memProfile, "mem", "", "write mem profile to file")
 	flag.StringVar(&traceProfile, "trace", "", "write trace profile to file")
 
+	flag.BoolVar(&blockStrip, "strip", false, "load blocks from striped files")
 	flag.BoolVar(&syncOnce, "once", false, "sync 1 block then stop")
 	flag.BoolVar(&isFull, "full", false, "start from genesis")
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
@@ -74,7 +75,6 @@ func init() {
 
 	blocksPath = viper.GetString("blocks")
 	blockMagic = viper.GetString("magic")
-	blockStrip = viper.GetBool("strip")
 
 	rdb.RedisClient = rdb.Init("conf/redis.yaml")
 	rdb.PikaClient = rdb.Init("conf/pika.yaml")
