@@ -109,7 +109,7 @@ func zmqNotifyTx(subscriber *goczmq.Sock) {
 	for {
 		msg, n, err := subscriber.RecvFrame()
 		if err != nil {
-			logger.Log.Info("Tx Error ZMQ RecFrame", zap.Error(err))
+			logger.Log.Info("Tx Error ZMQ RecFrame", zap.Int("n", n), zap.Error(err))
 			continue
 		}
 
