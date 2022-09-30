@@ -120,7 +120,7 @@ func syncBlock() {
 	// 扫描区块
 	for {
 		if info.Header == 0 {
-			info.Header = time.Now().Unix()
+			info.Header = time.Now().Unix() - info.Start
 			logProcessInfo(info)
 		}
 		ok := blockchain.InitLongestChainHeader() // 读取新的block header
@@ -168,7 +168,7 @@ func syncBlock() {
 		model.CleanConfirmedTxMap(true) // 注意暂时不保存10个块的txid，而是要求节点zmq通知中去掉确认区块tx
 
 		if info.Block == 0 {
-			info.Block = time.Now().Unix()
+			info.Block = time.Now().Unix() - info.Start
 			logProcessInfo(info)
 		}
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
@@ -218,7 +218,7 @@ func syncBlock() {
 		onceZmq.Do(memLoader.InitZmq)
 
 		if info.Mempool == 0 {
-			info.Mempool = time.Now().Unix()
+			info.Mempool = time.Now().Unix() - info.Start
 			logProcessInfo(info)
 		}
 		for {
@@ -243,7 +243,7 @@ func syncBlock() {
 			logger.Log.Info("mempool finished", zap.Int("idx", startIdx), zap.Int("nNewTx", len(mempool.BatchTxs)))
 
 			if info.Zmq == 0 {
-				info.Zmq = time.Now().Unix()
+				info.Zmq = time.Now().Unix() - info.Start
 				info.MempoolSize = startIdx
 				logProcessInfo(info)
 			}
@@ -266,7 +266,7 @@ func syncBlock() {
 		}
 	}
 	logger.Log.Info("stoped")
-	info.Stop = time.Now().Unix()
+	info.Stop = time.Now().Unix() - info.Start
 	logProcessInfo(info)
 }
 
