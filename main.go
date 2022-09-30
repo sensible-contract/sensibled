@@ -30,6 +30,17 @@ import (
 	"go.uber.org/zap"
 )
 
+type processInfo struct {
+	Start       int64
+	Stop        int64
+	Header      int64
+	Block       int64
+	Mempool     int64
+	Zmq         int64
+	Height      int
+	MempoolSize int
+}
+
 var (
 	ctx = context.Background()
 
@@ -82,7 +93,16 @@ func init() {
 	serial.Init()
 }
 
+func logProcessInfo(info processInfo) {
+	content := fmt.Sprintf("%v", info)
+	rdb.RedisClient.HSet(ctx, "sensibled", info.Start, content)
+}
+
 func syncBlock() {
+	var info processInfo
+	info.Start = time.Now().Unix()
+	logProcessInfo(info)
+
 	blockchain, err := parser.NewBlockchain(blockStrip, blocksPath, blockMagic) // 初始化区块
 	if err != nil {
 		logger.Log.Error("init blockchain error", zap.Error(err))
@@ -99,6 +119,10 @@ func syncBlock() {
 
 	// 扫描区块
 	for {
+		if info.Header == 0 {
+			info.Header = time.Now().Unix()
+			logProcessInfo(info)
+		}
 		ok := blockchain.InitLongestChainHeader() // 读取新的block header
 		if !ok || model.NeedStop {                // 主动触发了结束，则终止
 			break
@@ -143,10 +167,19 @@ func syncBlock() {
 		// model.CleanConfirmedTxMap(false)
 		model.CleanConfirmedTxMap(true) // 注意暂时不保存10个块的txid，而是要求节点zmq通知中去掉确认区块tx
 
+		if info.Block == 0 {
+			info.Block = time.Now().Unix()
+			logProcessInfo(info)
+		}
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
 		stageBlockHeight = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
 		// 按批次处理区块
 		logger.Log.Info("range", zap.Int("start", startBlockHeight), zap.Int("end", stageBlockHeight))
+
+		if info.Height == 0 {
+			info.Height = stageBlockHeight
+			logProcessInfo(info)
+		}
 
 		// 无需同步内存池
 		if stageBlockHeight < len(blockchain.BlocksOfChainById)-1 ||
@@ -183,6 +216,11 @@ func syncBlock() {
 		}
 		onceRpc.Do(memLoader.InitRpc)
 		onceZmq.Do(memLoader.InitZmq)
+
+		if info.Mempool == 0 {
+			info.Mempool = time.Now().Unix()
+			logProcessInfo(info)
+		}
 		for {
 			needSaveMempool := mempool.Process(initSyncMempool, stageBlockHeight, startIdx)
 			if !needSaveMempool {
@@ -203,6 +241,12 @@ func syncBlock() {
 			initSyncMempool = false
 			startIdx += len(mempool.BatchTxs) // 同步完毕
 			logger.Log.Info("mempool finished", zap.Int("idx", startIdx), zap.Int("nNewTx", len(mempool.BatchTxs)))
+
+			if info.Zmq == 0 {
+				info.Zmq = time.Now().Unix()
+				info.MempoolSize = startIdx
+				logProcessInfo(info)
+			}
 		}
 
 		// 未完成同步内存池 且未同步区块
@@ -222,6 +266,8 @@ func syncBlock() {
 		}
 	}
 	logger.Log.Info("stoped")
+	info.Stop = time.Now().Unix()
+	logProcessInfo(info)
 }
 
 func main() {
