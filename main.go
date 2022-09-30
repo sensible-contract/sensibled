@@ -22,23 +22,27 @@ import (
 	"sensibled/store"
 	"sensibled/task"
 	"sensibled/task/serial"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
 
+	redis "github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
 type processInfo struct {
-	Start       int64
-	Stop        int64
-	Header      int64
-	Block       int64
-	Mempool     int64
-	Zmq         int64
-	Height      int
-	MempoolSize int
+	Start        int64
+	Header       int64
+	Block        int64
+	Mempool      int64
+	ZmqFirst     int64
+	ZmqLast      int64
+	Stop         int64
+	Height       int
+	MempoolFirst int
+	MempoolLast  int
 }
 
 var (
@@ -95,7 +99,10 @@ func init() {
 
 func logProcessInfo(info processInfo) {
 	content := fmt.Sprintf("%v", info)
-	rdb.RedisClient.HSet(ctx, "sensibled", info.Start, content)
+	member := &redis.Z{Score: float64(info.Start), Member: content}
+
+	rdb.RedisClient.ZRemRangeByScore(ctx, "log", strconv.Itoa(int(info.Start)), strconv.Itoa(int(info.Start)))
+	rdb.RedisClient.ZAdd(ctx, "log", member)
 }
 
 func syncBlock() {
@@ -242,11 +249,13 @@ func syncBlock() {
 			startIdx += len(mempool.BatchTxs) // 同步完毕
 			logger.Log.Info("mempool finished", zap.Int("idx", startIdx), zap.Int("nNewTx", len(mempool.BatchTxs)))
 
-			if info.Zmq == 0 {
-				info.Zmq = time.Now().Unix() - info.Start
-				info.MempoolSize = startIdx
-				logProcessInfo(info)
+			if info.ZmqFirst == 0 {
+				info.ZmqFirst = time.Now().Unix() - info.Start
+				info.MempoolFirst = startIdx
 			}
+			info.ZmqLast = time.Now().Unix() - info.Start
+			info.MempoolLast = startIdx
+			logProcessInfo(info)
 		}
 
 		// 未完成同步内存池 且未同步区块
