@@ -401,5 +401,5 @@ func (bc *Blockchain) GetBlockSyncCommonBlockHeight(endBlockHeight int) (heigth,
 		)
 		blockIdHex = block.ParentHex
 	}
-	panic("sync check, but found more then 1000 orphan blocks.")
+	return -1, 0, 0
 }

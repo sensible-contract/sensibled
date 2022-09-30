@@ -48,6 +48,9 @@ type processInfo struct {
 var (
 	ctx = context.Background()
 
+	selfLabel  = os.Getenv("SELF_LABEL")
+	otherLabel = os.Getenv("OTHER_LABEL")
+
 	startBlockHeight int
 	endBlockHeight   int
 	batchTxCount     int
@@ -101,8 +104,29 @@ func logProcessInfo(info processInfo) {
 	content := fmt.Sprintf("%v", info)
 	member := &redis.Z{Score: float64(info.Start), Member: content}
 
-	rdb.RedisClient.ZRemRangeByScore(ctx, "log", strconv.Itoa(int(info.Start)), strconv.Itoa(int(info.Start)))
-	rdb.RedisClient.ZAdd(ctx, "log", member)
+	rdb.RedisClient.ZRemRangeByScore(ctx, "s:log"+selfLabel, strconv.Itoa(int(info.Start)), strconv.Itoa(int(info.Start)))
+	rdb.RedisClient.ZAdd(ctx, "s:log"+selfLabel, member)
+}
+
+func isPrimary() bool {
+	label, err := rdb.RedisClient.Get(ctx, "s:primary").Result()
+	if err != nil {
+		return false
+	}
+	return label == selfLabel
+}
+
+func switchToSecondary() {
+	rdb.RedisClient.Set(ctx, "s:switch", "false", 0)
+	rdb.RedisClient.Set(ctx, "s:primary", otherLabel, 0)
+}
+
+func needToSwitchToSecondary() bool {
+	label, err := rdb.RedisClient.Get(ctx, "s:switch").Result()
+	if err != nil {
+		return false
+	}
+	return label == "true"
 }
 
 func syncBlock() {
@@ -135,6 +159,17 @@ func syncBlock() {
 			break
 		}
 
+		if selfLabel != "" && !isPrimary() {
+			logger.Log.Info("secondary, waiting...")
+			time.Sleep(time.Second * 5)
+			continue
+		}
+		if needToSwitchToSecondary() {
+			switchToSecondary()
+			logger.Log.Info("switch to secondary, quit.")
+			break
+		}
+
 		needSaveBlock := false
 		stageBlockHeight := 0
 		if !isFull {
@@ -145,6 +180,12 @@ func syncBlock() {
 				commonHeigth, orphanCount, newblock := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
 				if orphanCount > 0 {
 					needRemove = true
+				}
+				if commonHeigth < 0 {
+					// 节点区块落后于db高度
+					logger.Log.Error("less blocks on disk")
+					time.Sleep(time.Second * 5)
+					break
 				}
 				if newblock == 0 {
 					stageBlockHeight = commonHeigth
@@ -241,6 +282,7 @@ func syncBlock() {
 			if needSaveBlock {
 				task.SubmitBlocksWithMempool(isFull, stageBlockHeight, mempool, initSyncMempool)
 				needSaveBlock = false
+				logger.Log.Info("block finished")
 			} else {
 				mempool.SubmitMempoolWithoutBlocks(initSyncMempool)
 			}
@@ -256,15 +298,26 @@ func syncBlock() {
 			info.ZmqLast = time.Now().Unix() - info.Start
 			info.MempoolLast = startIdx
 			logProcessInfo(info)
+
+			if needToSwitchToSecondary() {
+				break
+			}
 		}
 
 		// 未完成同步内存池 且未同步区块
 		if needSaveBlock {
 			task.SubmitBlocksWithoutMempool(isFull, stageBlockHeight)
+			logger.Log.Info("block finished")
 		}
 		isFull = false // 准备继续同步
 		startBlockHeight = -1
-		logger.Log.Info("block finished")
+
+		if needToSwitchToSecondary() {
+			switchToSecondary()
+			logger.Log.Info("switch to secondary, quit.")
+			break
+		}
+
 		if model.NeedStop { // 主动触发了结束，则终止
 			break
 		}
