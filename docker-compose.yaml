@@ -2,7 +2,7 @@ version: '3'
 services:
    sensibled:
      build: .
-     image: jiedo/sensibled:v1.12.1
+     image: jiedo/sensibled:v1.12.2
      entrypoint: ./sensibled
      volumes:
        - /data/bitcoind/data/blocks:/data/blocks:ro

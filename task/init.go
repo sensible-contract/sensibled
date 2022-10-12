@@ -12,6 +12,7 @@ import (
 	"sensibled/task/parallel"
 	"sensibled/task/serial"
 	"sync"
+	"time"
 
 	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
@@ -165,15 +166,20 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 	go func() {
 		defer wg.Done()
 
-		pikaPipe := rdb.PikaClient.Pipeline()
-		serial.UpdateUtxoInPika(pikaPipe,
-			model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap)
+		for idx := 0; idx < 3; idx++ {
+			pikaPipe := rdb.PikaClient.Pipeline()
+			serial.UpdateUtxoInPika(pikaPipe,
+				model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap)
 
-		if _, err := pikaPipe.Exec(ctx); err != nil {
-			logger.Log.Error("pika exec failed", zap.Error(err))
-			model.NeedStop = true
+			if _, err := pikaPipe.Exec(ctx); err != nil {
+				logger.Log.Error("pika exec failed", zap.Error(err))
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			logger.Log.Info("pika done")
+			return
 		}
-		logger.Log.Info("pika done")
+		model.NeedStop = true
 	}()
 
 	// redis
