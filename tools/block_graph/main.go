@@ -1,5 +1,5 @@
 // go build -v -o block_graph tools/block_graph/main.go
-// ./block_graph -end 695441  > tools/branch.dot
+// ./block_graph -end 760213  > tools/branch.dot
 // dot branch.dot -T svg -o branch.svg
 
 package main
@@ -79,7 +79,7 @@ func main() {
 	}
 
 	// 初始化区块
-	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic)
+	blockchain, err := parser.NewBlockchain(false, blocksPath, blockMagic)
 	if err != nil {
 		logger.Log.Error("init chain error", zap.Error(err))
 		return

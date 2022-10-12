@@ -43,7 +43,7 @@ func init() {
 
 func main() {
 	// 初始化区块
-	blockchain, err := parser.NewBlockchain(blocksPath, blockMagic)
+	blockchain, err := parser.NewBlockchain(false, blocksPath, blockMagic)
 	if err != nil {
 		logger.Log.Error("init chain error", zap.Error(err))
 		return
@@ -67,7 +67,7 @@ func main() {
 
 		if _, ok := blockchain.BlocksOfChainById[blockIdHex]; ok {
 			newblock := endBlockHeight - int(block.Height) - 1
-			logger.Log.Info("shoud sync block",
+			logger.Log.Info("should sync block",
 				zap.Int("lastHeight", block.Height),
 				zap.Int("nOrphan", orphanCount),
 				zap.Int("nBlkNew", newblock))

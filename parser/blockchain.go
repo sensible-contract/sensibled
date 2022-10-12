@@ -387,8 +387,9 @@ func (bc *Blockchain) GetBlockSyncCommonBlockHeight(endBlockHeight int) (heigth,
 
 		if _, ok := bc.BlocksOfChainById[blockIdHex]; ok {
 			newblock = endBlockHeight - int(block.Height) - 1
-			logger.Log.Info("shoud sync block",
+			logger.Log.Info("should sync block",
 				zap.Int("lastHeight", block.Height),
+				zap.Int("lastFileId", block.FileIdx),
 				zap.Int("nOrphan", orphanCount),
 				zap.Int("nBlkNew", newblock))
 			return block.Height, orphanCount, newblock
