@@ -218,6 +218,7 @@ func (bc *Blockchain) InitLongestChainHeader() bool {
 	logger.Log.Info("load block header", zap.Int("last_file", bc.LastFileIdx))
 	startFileIdx := bc.LastFileIdx
 
+	nBlocksBefore := len(bc.Blocks)
 	if err := bc.BlockData.SkipTo(bc.LastFileIdx, 0); err == nil {
 		bc.LoadAllBlockHeaders()
 	}
@@ -229,8 +230,10 @@ func (bc *Blockchain) InitLongestChainHeader() bool {
 
 	bc.SetBlockHeight()
 	bc.SelectLongestChain(startFileIdx)
-	loader.DumpToGobFile(bc.BlockIndexFileName, bc.Blocks)
 
+	if len(bc.Blocks) != nBlocksBefore {
+		loader.DumpToGobFile(bc.BlockIndexFileName, bc.Blocks)
+	}
 	return true
 }
 
