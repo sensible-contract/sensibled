@@ -33,16 +33,17 @@ import (
 )
 
 type processInfo struct {
-	Start        int64
-	Header       int64
-	Block        int64
-	Mempool      int64
-	ZmqFirst     int64
-	ZmqLast      int64
-	Stop         int64
-	Height       int
-	MempoolFirst int
-	MempoolLast  int
+	Start           int64 // 启动开始
+	Header          int64 // 读取索引完成
+	Block           int64 // 新区块头读取完成，block读取开始
+	Mempool         int64 // block读取结束，mempool 同步开始，
+	ZmqFirst        int64 // mempool读取完成，zmq读取开始
+	ZmqLast         int64 // zmq最后一条消息
+	Stop            int64 // 新区块到来，退出
+	Height          int
+	ConfirmedTx     int
+	MempoolFirstIdx int
+	MempoolLastIdx  int
 }
 
 var (
@@ -172,6 +173,8 @@ func syncBlock() {
 
 		needSaveBlock := false
 		stageBlockHeight := 0
+		txCount := 0
+
 		if !isFull {
 			// 现有追加扫描
 			needRemove := false
@@ -219,13 +222,15 @@ func syncBlock() {
 			info.Block = time.Now().Unix() - info.Start
 			logProcessInfo(info)
 		}
+
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
-		stageBlockHeight = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
+		stageBlockHeight, txCount = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
 		// 按批次处理区块
 		logger.Log.Info("range", zap.Int("start", startBlockHeight), zap.Int("end", stageBlockHeight))
 
 		if info.Height == 0 {
 			info.Height = stageBlockHeight
+			info.ConfirmedTx = txCount
 			logProcessInfo(info)
 		}
 
@@ -293,10 +298,10 @@ func syncBlock() {
 
 			if info.ZmqFirst == 0 {
 				info.ZmqFirst = time.Now().Unix() - info.Start
-				info.MempoolFirst = startIdx
+				info.MempoolFirstIdx = startIdx
 			}
 			info.ZmqLast = time.Now().Unix() - info.Start
-			info.MempoolLast = startIdx
+			info.MempoolLastIdx = startIdx
 			logProcessInfo(info)
 
 			if needToSwitchToSecondary() {

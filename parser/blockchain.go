@@ -48,7 +48,7 @@ func NewBlockchain(stripMode bool, path string, magicHex string) (bc *Blockchain
 }
 
 // ParseLongestChain 两遍遍历区块。先获取header，再遍历区块
-func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount int) int {
+func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount int) (lastHeight, txCount int) {
 	blocksReady := make(chan *model.Block, 64)
 	blocksDone := make(chan struct{}, 64)
 
@@ -61,8 +61,7 @@ func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchT
 	go bc.ParseLongestChainBlockStart(blocksDone, blocksReady, blocksStage, startBlockHeight, endBlockHeight)
 
 	// 并行消费处理后的区块
-	lastHeight := bc.ParseLongestChainBlockEnd(blocksStage)
-	return lastHeight
+	return bc.ParseLongestChainBlockEnd(blocksStage)
 }
 
 // InitLongestChainBlock 解码区块，生产者
@@ -194,12 +193,12 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 }
 
 // ParseLongestChainBlock 再并行分析区块。接下来是无关顺序的收尾工作
-func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) int {
+func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) (lastHeight, txCount int) {
 	var wg sync.WaitGroup
-	lastHeight := 0
 	blocksLimit := make(chan struct{}, 64)
 	for block := range blocksStage {
 		lastHeight = block.Height
+		txCount += int(block.TxCnt)
 		blocksLimit <- struct{}{}
 		wg.Add(1)
 		go func(block *model.Block) {
@@ -210,7 +209,7 @@ func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) i
 	}
 	wg.Wait()
 	logger.Log.Info("consume ok")
-	return lastHeight
+	return lastHeight, txCount
 }
 
 // InitLongestChainHeader 初始化block header
