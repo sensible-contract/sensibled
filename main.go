@@ -65,8 +65,8 @@ func (info *processInfo) String() string {
 		info.Mempool,
 		info.ZmqFirst,
 		info.ZmqLast,
-		info.Stop,
 		stopType,
+		info.Stop,
 	)
 }
 
