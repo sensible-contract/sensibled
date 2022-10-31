@@ -59,6 +59,8 @@ func ParseGetSpentUtxoDataFromRedisSerial(
 	for outpointKey, v := range m {
 		res, err := v.Result()
 		if err == redis.Nil {
+			logger.Log.Error("parse mempool, but missing utxo from redis",
+				zap.String("outpoint", hex.EncodeToString([]byte(outpointKey))))
 			continue
 		} else if err != nil {
 			panic(err)
@@ -195,9 +197,9 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		}
 
 		// contract balance of address
-		logger.Log.Info("IncrBy mp:cb",
-			zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
-			zap.Uint64("satoshi", data.Satoshi))
+		// logger.Log.Info("IncrBy mp:cb",
+		// 	zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
+		// 	zap.Uint64("satoshi", data.Satoshi))
 		mpkeyCB := "mp:cb" + strAddressPkh
 		pipe.IncrBy(ctx, mpkeyCB, int64(data.Satoshi))
 		mpkeys = append(mpkeys, mpkeyCB)

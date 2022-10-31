@@ -53,6 +53,8 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 	for outpointKey, v := range m {
 		res, err := v.Result()
 		if err == redis.Nil {
+			logger.Log.Error("parse block, but missing utxo from redis",
+				zap.String("outpoint", hex.EncodeToString([]byte(outpointKey))))
 			continue
 		} else if err != nil {
 			panic(err)
@@ -83,16 +85,19 @@ func UpdateUtxoInPika(pikaPipe redis.Pipeliner, utxoToRestore, utxoToRemove map[
 		zap.Int("add", len(utxoToRestore)),
 		zap.Int("del", len(utxoToRemove)))
 
+	for outpointKey := range utxoToRemove {
+		// redis全局utxo数据清除
+		pikaPipe.Del(ctx, "u"+outpointKey)
+	}
+
 	for outpointKey, data := range utxoToRestore {
 		buf := make([]byte, 20+len(data.PkScript))
 		length := data.Marshal(buf)
 		// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
 		pikaPipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
-	}
-
-	for outpointKey := range utxoToRemove {
-		// redis全局utxo数据清除
-		pikaPipe.Del(ctx, "u"+outpointKey)
+		logger.Log.Info("save new utxo",
+			zap.String("outpoint", hex.EncodeToString([]byte(outpointKey))),
+			zap.Int("size", length))
 	}
 
 	logger.Log.Info("UpdateUtxoInPika finished")

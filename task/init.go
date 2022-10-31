@@ -170,7 +170,6 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 			pikaPipe := rdb.PikaClient.Pipeline()
 			serial.UpdateUtxoInPika(pikaPipe,
 				model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap)
-
 			if _, err := pikaPipe.Exec(ctx); err != nil {
 				logger.Log.Error("pika exec failed", zap.Error(err))
 				time.Sleep(1 * time.Second)
