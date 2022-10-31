@@ -44,6 +44,30 @@ type processInfo struct {
 	ConfirmedTx     int
 	MempoolFirstIdx int
 	MempoolLastIdx  int
+	NeedStop        bool
+}
+
+func (info *processInfo) String() string {
+	stopType := ""
+	if info.NeedStop {
+		stopType = "!ABNORMAL!"
+	}
+	return fmt.Sprintf("%d StartH:%d nTxInBlk:%d nTxInMempool:%d-%d=%d | idx:%d hdr:%d blk:%d mem:%d zmq:%d %s stop:%d",
+		info.Start,
+		info.Height,
+		info.ConfirmedTx,
+		info.MempoolLastIdx,
+		info.MempoolFirstIdx,
+		info.MempoolLastIdx-info.MempoolFirstIdx,
+
+		info.Header,
+		info.Block,
+		info.Mempool,
+		info.ZmqFirst,
+		info.ZmqLast,
+		info.Stop,
+		stopType,
+	)
 }
 
 var (
@@ -102,7 +126,7 @@ func init() {
 }
 
 func logProcessInfo(info processInfo) {
-	content := fmt.Sprintf("%v", info)
+	content := fmt.Sprintf("%s", info.String())
 	member := &redis.Z{Score: float64(info.Start), Member: content}
 
 	rdb.RedisClient.ZRemRangeByScore(ctx, "s:log"+selfLabel, strconv.Itoa(int(info.Start)), strconv.Itoa(int(info.Start)))
@@ -333,6 +357,7 @@ func syncBlock() {
 		}
 	}
 	logger.Log.Info("stoped")
+	info.NeedStop = model.NeedStop
 	info.Stop = time.Now().Unix() - info.Start
 	logProcessInfo(info)
 }
