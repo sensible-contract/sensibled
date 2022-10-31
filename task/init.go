@@ -127,7 +127,7 @@ func RemoveBlocksForReorg(startBlockHeight int) bool {
 		defer wg.Done()
 
 		// 更新redis
-		rdsPipe := rdb.RedisClient.Pipeline()
+		rdsPipe := rdb.RedisClient.TxPipeline()
 		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 		serial.UpdateUtxoInRedis(rdsPipe, startBlockHeight, addressBalanceCmds, utxoToRestore, utxoToRemove, true)
 		if _, err = rdsPipe.Exec(ctx); err != nil {
@@ -185,7 +185,7 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		rdsPipe := rdb.RedisClient.Pipeline()
+		rdsPipe := rdb.RedisClient.TxPipeline()
 		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 		// 批量更新redis utxo
 		serial.UpdateUtxoInRedis(rdsPipe, stageBlockHeight, addressBalanceCmds,

@@ -295,7 +295,7 @@ func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.Int
 	if len(addressBalanceCmds) == 0 {
 		return true
 	}
-	pipe := rdb.RedisClient.Pipeline()
+	pipe := rdb.RedisClient.TxPipeline()
 	// 删除balance为0的记录
 	// 要求整个函数单线程处理，否则可能删除非0数据
 	for keyString, cmd := range addressBalanceCmds {
