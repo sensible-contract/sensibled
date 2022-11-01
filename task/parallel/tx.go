@@ -111,3 +111,12 @@ func ParseUpdateNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.Proces
 		block.NewUtxoDataMap[output.OutpointKey] = d
 	}
 }
+
+// ParseUpdateAddressInTxParallel address tx历史记录
+func ParseUpdateAddressInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock) {
+	for _, output := range tx.TxOuts {
+		if output.Data.HasAddress {
+			block.AddrPkhInTxMap[txIdx][string(output.Data.AddressPkh[:])] = struct{}{}
+		}
+	}
+}

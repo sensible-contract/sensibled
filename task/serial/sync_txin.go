@@ -40,6 +40,11 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			}
 			tx.InputsValue += objData.Satoshi
 
+			// address tx历史记录
+			if objData.Data.HasAddress {
+				block.ParseData.AddrPkhInTxMap[txIdx][string(objData.Data.AddressPkh[:])] = struct{}{}
+			}
+
 			// set sensible flag
 			if objData.Data.CodeType != scriptDecoder.CodeType_NONE {
 				tx.IsSensible = true

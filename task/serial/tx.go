@@ -3,6 +3,7 @@ package serial
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sensibled/logger"
 	"sensibled/model"
 	"sensibled/rdb"
@@ -76,6 +77,67 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	// 更新到本地新utxo存储
 	for outpointKey, data := range block.NewUtxoDataMap {
 		model.GlobalNewUtxoDataMap[outpointKey] = data
+	}
+}
+
+// SaveAddressTxHistoryIntoPika Pika更新addr tx历史
+func SaveAddressTxHistoryIntoPika(block *model.Block) {
+	pipe := rdb.PikaClient.Pipeline()
+
+	for txIdx, addrPkhInTxMap := range block.ParseData.AddrPkhInTxMap {
+		if len(addrPkhInTxMap) == 0 {
+			continue
+		}
+
+		txid := string(block.Txs[txIdx].TxId)
+		score := float64(block.Height)*1000000000 + float64(txIdx)
+		// redis有序utxo数据成员
+		member := &redis.Z{Score: score, Member: txid}
+
+		for strAddressPkh := range addrPkhInTxMap {
+			pipe.ZAdd(ctx, "{ah"+strAddressPkh+"}", member) // 有序address tx history数据添加
+		}
+	}
+
+	if _, err := pipe.Exec(ctx); err != nil {
+		logger.Log.Error("pika exec failed", zap.Error(err))
+		model.NeedStop = true
+	}
+
+	logger.Log.Info("pika address done")
+}
+
+// RemoveAddressTxHistoryFromPikaForReorg 清理被重组区块内的address tx历史
+func RemoveAddressTxHistoryFromPikaForReorg(height int, utxoToRestore, utxoToRemove map[string]*model.TxoData) {
+	pipe := rdb.PikaClient.Pipeline()
+
+	addressMap := make(map[string]struct{})
+	for _, data := range utxoToRemove {
+		scriptType := scriptDecoder.GetLockingScriptType(data.PkScript)
+		dData := scriptDecoder.ExtractPkScriptForTxo(data.PkScript, scriptType)
+		if dData.HasAddress {
+			addressMap[string(dData.AddressPkh[:])] = struct{}{}
+		}
+	}
+	for _, data := range utxoToRestore {
+		scriptType := scriptDecoder.GetLockingScriptType(data.PkScript)
+		dData := scriptDecoder.ExtractPkScriptForTxo(data.PkScript, scriptType)
+		if dData.HasAddress {
+			addressMap[string(dData.AddressPkh[:])] = struct{}{}
+		}
+	}
+
+	logger.Log.Info("RemoveAddressTxHistoryFromPikaForReorg",
+		zap.Int("nAddr", len(addressMap)))
+
+	strHeight := fmt.Sprintf("%d000000000", height)
+	for strAddressPkh := range addressMap {
+		pipe.ZRemRangeByScore(ctx, "{ah"+strAddressPkh+"}", strHeight, "+inf") // 有序address tx history数据添加
+	}
+
+	if _, err := pipe.Exec(ctx); err != nil {
+		logger.Log.Error("pika exec failed", zap.Error(err))
+		model.NeedStop = true
 	}
 }
 

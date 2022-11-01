@@ -31,6 +31,10 @@ func ParseBlockParallel(block *model.Block) {
 		parallel.ParseUpdateTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
 		// 所有txout产生的utxo记录
 		parallel.ParseUpdateNewUtxoInTxParallel(txIdx, tx, block.ParseData)
+
+		// 按address追踪tx历史
+		block.ParseData.AddrPkhInTxMap[txIdx] = make(map[string]struct{}, len(tx.TxIns)+len(tx.TxOuts))
+		parallel.ParseUpdateAddressInTxParallel(txIdx, tx, block.ParseData)
 	}
 
 	// DB更新txout，比较独立，可以并行更新
@@ -58,8 +62,10 @@ func ParseBlockParallelEnd(block *model.Block) {
 	serial.SyncBlock(block)
 	// DB更新tx, 需要依赖txout、txin执行完毕，以统计Tx Fee
 	serial.SyncBlockTx(block)
-
 	serial.SyncBlockTxContract(block)
+
+	// Pika更新addr tx历史，需要依赖txout、txin执行完毕
+	serial.SaveAddressTxHistoryIntoPika(block)
 
 	block.ParseData = nil
 	block.Txs = nil
@@ -104,6 +110,14 @@ func RemoveBlocksForReorg(startBlockHeight int) bool {
 		model.CleanConfirmedTxMap(true)
 
 		logger.Log.Info("ck done")
+	}()
+
+	// pika addr history
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		serial.RemoveAddressTxHistoryFromPikaForReorg(startBlockHeight, utxoToRestore, utxoToRemove)
+		logger.Log.Info("pika address done")
 	}()
 
 	// pika
