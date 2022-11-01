@@ -103,8 +103,6 @@ func SaveAddressTxHistoryIntoPika(block *model.Block) {
 		logger.Log.Error("pika exec failed", zap.Error(err))
 		model.NeedStop = true
 	}
-
-	logger.Log.Info("pika address done")
 }
 
 // RemoveAddressTxHistoryFromPikaForReorg 清理被重组区块内的address tx历史
