@@ -95,9 +95,9 @@ func UpdateUtxoInPika(pikaPipe redis.Pipeliner, utxoToRestore, utxoToRemove map[
 		length := data.Marshal(buf)
 		// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
 		pikaPipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
-		logger.Log.Info("save new utxo",
-			zap.String("outpoint", hex.EncodeToString([]byte(outpointKey))),
-			zap.Int("size", length))
+		// logger.Log.Info("save new utxo",
+		// 	zap.String("outpoint", hex.EncodeToString([]byte(outpointKey))),
+		// 	zap.Int("size", length))
 	}
 
 	logger.Log.Info("UpdateUtxoInPika finished")
