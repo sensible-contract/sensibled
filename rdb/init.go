@@ -34,15 +34,19 @@ func Init(filename string) (rds redis.UniversalClient) {
 	dialTimeout := viper.GetDuration("dialTimeout")
 	readTimeout := viper.GetDuration("readTimeout")
 	writeTimeout := viper.GetDuration("writeTimeout")
+	idleTimeout := viper.GetDuration("idleTimeout")
+	idleCheckFrequency := viper.GetDuration("idleCheckFrequency")
 	poolSize := viper.GetInt("poolSize")
 	rds = redis.NewUniversalClient(&redis.UniversalOptions{
-		Addrs:        addrs,
-		Password:     password,
-		DB:           database,
-		DialTimeout:  dialTimeout,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		PoolSize:     poolSize,
+		Addrs:              addrs,
+		Password:           password,
+		DB:                 database,
+		DialTimeout:        dialTimeout,
+		ReadTimeout:        readTimeout,
+		WriteTimeout:       writeTimeout,
+		PoolSize:           poolSize,
+		IdleTimeout:        idleTimeout,
+		IdleCheckFrequency: idleCheckFrequency,
 	})
 
 	if len(addrs) > 1 {

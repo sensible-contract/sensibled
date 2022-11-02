@@ -11,5 +11,7 @@ password: ""
 dialTimeout: "10s"
 readTimeout: "30m"
 writeTimeout: "30m"
+idleTimeout: "60s"
+idleCheckFrequency: "23s"
 
 poolSize: 32
