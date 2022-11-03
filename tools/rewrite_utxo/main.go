@@ -75,11 +75,10 @@ func main() {
 		startFixHeight = endFixHeight
 
 		// 更新redis
-		pikaPipe := rdb.PikaClient.Pipeline()
-		serial.UpdateUtxoInPika(pikaPipe, utxoToRestore, utxoToRemove)
-		if _, err = pikaPipe.Exec(ctx); err != nil {
-			logger.Log.Error("restore/remove utxo from pika failed", zap.Error(err))
-			panic(err)
+
+		if ok := serial.UpdateUtxoInPika(utxoToRestore, utxoToRemove); !ok {
+			logger.Log.Error("restore/remove utxo from pika failed")
+			break
 		}
 
 		if model.NeedStop {
