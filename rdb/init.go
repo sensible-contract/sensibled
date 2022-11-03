@@ -11,13 +11,13 @@ import (
 )
 
 var (
-	useCluster  bool
-	RedisClient redis.UniversalClient
-	PikaClient  redis.UniversalClient
-	ctx         = context.Background()
+	useCluster       bool
+	RdbBalanceClient redis.UniversalClient
+	RdbUtxoClient    redis.UniversalClient
+	RdbAddrTxClient  redis.UniversalClient
+	ctx              = context.Background()
 )
 
-// "conf/redis.yaml"
 func Init(filename string) (rds redis.UniversalClient) {
 	viper.SetConfigFile(filename)
 	if err := viper.ReadInConfig(); err != nil {
@@ -60,14 +60,15 @@ func FlushdbInRedis() {
 
 	var err error
 	if useCluster {
-		rdbc := RedisClient.(*redis.ClusterClient)
+		rdbc := RdbBalanceClient.(*redis.ClusterClient)
 		err = rdbc.ForEachMaster(ctx, func(ctx context.Context, master *redis.Client) error {
 			return master.FlushDB(ctx).Err()
 		})
 		// todo: pika cluster flushdb
 	} else {
-		err = RedisClient.FlushDB(ctx).Err()
-		err = PikaClient.FlushDB(ctx).Err()
+		err = RdbBalanceClient.FlushDB(ctx).Err()
+		err = RdbUtxoClient.FlushDB(ctx).Err()
+		err = RdbAddrTxClient.FlushDB(ctx).Err()
 	}
 
 	if err != nil {

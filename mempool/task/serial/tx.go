@@ -24,7 +24,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(
 	spentUtxoKeysMap map[string]struct{},
 	newUtxoDataMap, removeUtxoDataMap, spentUtxoDataMap map[string]*model.TxoData) {
 
-	pipe := rdb.PikaClient.Pipeline()
+	pipe := rdb.RdbUtxoClient.Pipeline()
 	m := map[string]*redis.StringCmd{}
 	needExec := false
 	for outpointKey := range spentUtxoKeysMap {
@@ -103,8 +103,8 @@ func UpdateUtxoInLocalMapSerial(spentUtxoKeysMap map[string]struct{},
 // UpdateUtxoInPika 批量更新redis utxo
 func UpdateUtxoInPika(utxoToRestore, utxoToRemove map[string]*model.TxoData) bool {
 	logger.Log.Info("UpdateUtxoInPika",
-		zap.Int("nStore", len(utxoToRestore)),
-		zap.Int("nRemove", len(utxoToRemove)))
+		zap.Int("add", len(utxoToRestore)),
+		zap.Int("del", len(utxoToRemove)))
 
 	// delete batch
 	outpointKeys := make([]string, len(utxoToRemove))
@@ -117,7 +117,7 @@ func UpdateUtxoInPika(utxoToRestore, utxoToRemove map[string]*model.TxoData) boo
 		sliceLen := 2500000
 		for idx := 0; idx < (len(outpointKeys)-1)/sliceLen+1; idx++ {
 
-			pikaPipe := rdb.PikaClient.Pipeline()
+			pikaPipe := rdb.RdbUtxoClient.Pipeline()
 			n := 0
 			for _, outpointKey := range outpointKeys[idx*sliceLen:] {
 				if n == sliceLen {
@@ -145,12 +145,11 @@ func UpdateUtxoInPika(utxoToRestore, utxoToRemove map[string]*model.TxoData) boo
 		utxoBufToRestore[idx] = buf[:length+36]
 		idx++
 	}
-
 	if len(utxoToRestore) > 0 {
 		sliceLen := 10000
 		for idx := 0; idx < (len(utxoBufToRestore)-1)/sliceLen+1; idx++ {
 
-			pikaPipe := rdb.PikaClient.Pipeline()
+			pikaPipe := rdb.RdbUtxoClient.Pipeline()
 			n := 0
 			for _, utxoBuf := range utxoBufToRestore[idx*sliceLen:] {
 				if n == sliceLen {
@@ -187,7 +186,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	// 清除内存池数据
 	if needReset {
 		logger.Log.Info("reset redis mempool start")
-		keys, err := rdb.RedisClient.SMembers(ctx, "mp:keys").Result()
+		keys, err := rdb.RdbBalanceClient.SMembers(ctx, "mp:keys").Result()
 		if err != nil {
 			logger.Log.Info("reset redis mempool failed", zap.Error(err))
 			panic(err)

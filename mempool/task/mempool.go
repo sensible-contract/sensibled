@@ -310,7 +310,7 @@ func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool) {
 	go func() {
 		defer wg.Done()
 
-		rdsPipe := rdb.RedisClient.TxPipeline()
+		rdsPipe := rdb.RdbBalanceClient.TxPipeline()
 		// for txin dump
 		// 6 dep 2 4
 		serial.UpdateUtxoInRedis(rdsPipe, initSyncMempool,

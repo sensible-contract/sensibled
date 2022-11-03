@@ -9,6 +9,7 @@ import (
 	"sensibled/loader"
 	"sensibled/loader/clickhouse"
 	"sensibled/logger"
+	memSerial "sensibled/mempool/task/serial"
 	"sensibled/model"
 	"sensibled/rdb"
 	"sensibled/task/serial"
@@ -23,8 +24,8 @@ var (
 )
 
 func init() {
-	rdb.RedisClient = rdb.Init("conf/redis.yaml")
-	rdb.PikaClient = rdb.Init("conf/pika.yaml")
+	rdb.RdbBalanceClient = rdb.Init("conf/rdb_balance.yaml")
+	rdb.RdbUtxoClient = rdb.Init("conf/rdb_utxo.yaml")
 
 	clickhouse.Init()
 }
@@ -77,7 +78,7 @@ func main() {
 		startFixHeight = endFixHeight
 
 		// 更新redis
-		rdsPipe := rdb.RedisClient.Pipeline()
+		rdsPipe := rdb.RdbBalanceClient.Pipeline()
 		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 		serial.UpdateUtxoInRedis(rdsPipe, endFixHeight-1, addressBalanceCmds, utxoToRestore, utxoToRemove, true)
 		if _, err = rdsPipe.Exec(ctx); err != nil {
@@ -90,7 +91,7 @@ func main() {
 			}
 		}
 
-		if ok := serial.UpdateUtxoInPika(utxoToRestore, utxoToRemove); !ok {
+		if ok := memSerial.UpdateUtxoInPika(utxoToRestore, utxoToRemove); !ok {
 			logger.Log.Error("restore/remove utxo from pika failed")
 			break
 		}

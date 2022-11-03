@@ -38,8 +38,8 @@ func init() {
 	flag.BoolVar(&query, "query", false, "qeury FT only, not remove utxo")
 	flag.Parse()
 
-	rdb.RedisClient = rdb.Init("conf/redis.yaml")
-	rdb.PikaClient = rdb.Init("conf/pika.yaml")
+	rdb.RdbBalanceClient = rdb.Init("conf/rdb_balance.yaml")
+	rdb.RdbUtxoClient = rdb.Init("conf/rdb_utxo.yaml")
 }
 
 func main() {
@@ -53,7 +53,7 @@ func main() {
 	strAddressPkh := string(addressPkh)
 	strOutpointKey := string(outpointKey)
 
-	pipe := rdb.RedisClient.Pipeline()
+	pipe := rdb.RdbBalanceClient.Pipeline()
 	balanceCmd := pipe.ZScore(ctx, "{fb"+strGenesisId+strCodeHash+"}", strAddressPkh)
 	summaryCmd := pipe.ZScore(ctx, "{fs"+strAddressPkh+"}", strCodeHash+strGenesisId)
 	_, err := pipe.Exec(ctx)
@@ -76,7 +76,7 @@ func main() {
 		zap.Float64("summary", summary),
 	)
 
-	utxoOutpoints, err := rdb.RedisClient.ZRevRange(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, 0, -1).Result()
+	utxoOutpoints, err := rdb.RdbBalanceClient.ZRevRange(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, 0, -1).Result()
 	if err == redis.Nil {
 		utxoOutpoints = nil
 	} else if err != nil {
@@ -84,7 +84,7 @@ func main() {
 		return
 	}
 
-	pipeUtxo := rdb.PikaClient.Pipeline()
+	pipeUtxo := rdb.RdbUtxoClient.Pipeline()
 	m := map[string]*redis.IntCmd{}
 	for _, utxo := range utxoOutpoints {
 		m[utxo] = pipeUtxo.Exists(ctx, "u"+utxo)
@@ -104,7 +104,7 @@ func main() {
 	if query {
 		return
 	}
-	pipe = rdb.RedisClient.Pipeline()
+	pipe = rdb.RdbBalanceClient.Pipeline()
 	pipe.ZRem(ctx, "{fu"+strAddressPkh+"}"+strCodeHash+strGenesisId, strOutpointKey)
 	if amount > 0 {
 		pipe.ZIncrBy(ctx, "{fb"+strGenesisId+strCodeHash+"}", -float64(amount), strAddressPkh)

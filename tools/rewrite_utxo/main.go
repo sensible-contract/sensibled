@@ -10,9 +10,9 @@ import (
 	"sensibled/loader"
 	"sensibled/loader/clickhouse"
 	"sensibled/logger"
+	memSerial "sensibled/mempool/task/serial"
 	"sensibled/model"
 	"sensibled/rdb"
-	"sensibled/task/serial"
 
 	"go.uber.org/zap"
 )
@@ -26,7 +26,7 @@ func init() {
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
 	flag.Parse()
 
-	rdb.PikaClient = rdb.Init("conf/pika.yaml")
+	rdb.RdbUtxoClient = rdb.Init("conf/rdb_utxo.yaml")
 
 	clickhouse.Init()
 }
@@ -76,7 +76,7 @@ func main() {
 
 		// 更新redis
 
-		if ok := serial.UpdateUtxoInPika(utxoToRestore, utxoToRemove); !ok {
+		if ok := memSerial.UpdateUtxoInPika(utxoToRestore, utxoToRemove); !ok {
 			logger.Log.Error("restore/remove utxo from pika failed")
 			break
 		}

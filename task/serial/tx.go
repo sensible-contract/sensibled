@@ -24,7 +24,7 @@ var (
 // 部分utxo信息在程序内存，missing的utxo将从redis查询
 // 区块同步结束时会批量更新缓存的utxo到redis
 func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
-	pipe := rdb.PikaClient.Pipeline()
+	pipe := rdb.RdbUtxoClient.Pipeline()
 	m := map[string]*redis.StringCmd{}
 	needExec := false
 	for outpointKey := range block.SpentUtxoKeysMap {
@@ -84,7 +84,7 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 
 // SaveAddressTxHistoryIntoPika Pika更新addr tx历史
 func SaveAddressTxHistoryIntoPika(block *model.Block) {
-	pipe := rdb.PikaClient.Pipeline()
+	pipe := rdb.RdbAddrTxClient.Pipeline()
 
 	for txIdx, addrPkhInTxMap := range block.ParseData.AddrPkhInTxMap {
 		if len(addrPkhInTxMap) == 0 {
@@ -109,7 +109,7 @@ func SaveAddressTxHistoryIntoPika(block *model.Block) {
 
 // RemoveAddressTxHistoryFromPikaForReorg 清理被重组区块内的address tx历史
 func RemoveAddressTxHistoryFromPikaForReorg(height int, utxoToRestore, utxoToRemove map[string]*model.TxoData) {
-	pipe := rdb.PikaClient.Pipeline()
+	pipe := rdb.RdbAddrTxClient.Pipeline()
 
 	addressMap := make(map[string]struct{})
 	for _, data := range utxoToRemove {
@@ -193,78 +193,6 @@ func WriteDownUtxoToFile(utxoToRestore, utxoToRemove map[string]*model.TxoData) 
 		logger.Log.Error("save utxoBufToRestore failed", zap.Error(err))
 	}
 	logger.Log.Info("save utxoBufToRestore ok")
-}
-
-// UpdateUtxoInPika 批量更新redis utxo
-func UpdateUtxoInPika(utxoToRestore, utxoToRemove map[string]*model.TxoData) bool {
-	logger.Log.Info("UpdateUtxoInPika",
-		zap.Int("add", len(utxoToRestore)),
-		zap.Int("del", len(utxoToRemove)))
-
-	// delete batch
-	outpointKeys := make([]string, len(utxoToRemove))
-	idx := 0
-	for outpointKey := range utxoToRemove {
-		outpointKeys[idx] = outpointKey
-		idx++
-	}
-	if len(utxoToRemove) > 0 {
-		sliceLen := 2500000
-		for idx := 0; idx < (len(outpointKeys)-1)/sliceLen+1; idx++ {
-
-			pikaPipe := rdb.PikaClient.Pipeline()
-			n := 0
-			for _, outpointKey := range outpointKeys[idx*sliceLen:] {
-				if n == sliceLen {
-					break
-				}
-				// redis全局utxo数据清除
-				pikaPipe.Del(ctx, "u"+outpointKey)
-				n++
-			}
-			if _, err := pikaPipe.Exec(ctx); err != nil && err != redis.Nil {
-				logger.Log.Error("pika delete exec failed", zap.Error(err))
-				return false
-			}
-		}
-	}
-
-	// add batch
-	idx = 0
-	utxoBufToRestore := make([][]byte, len(utxoToRestore))
-	for outpointKey, data := range utxoToRestore {
-		buf := make([]byte, 36+20+len(data.PkScript))
-		length := data.Marshal(buf)
-
-		buf = append(buf[:length], []byte(outpointKey)...)
-		utxoBufToRestore[idx] = buf[:length+36]
-		idx++
-	}
-
-	if len(utxoToRestore) > 0 {
-		sliceLen := 10000
-		for idx := 0; idx < (len(utxoBufToRestore)-1)/sliceLen+1; idx++ {
-
-			pikaPipe := rdb.PikaClient.Pipeline()
-			n := 0
-			for _, utxoBuf := range utxoBufToRestore[idx*sliceLen:] {
-				if n == sliceLen {
-					break
-				}
-				length := len(utxoBuf)
-				// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
-				pikaPipe.Set(ctx, "u"+string(utxoBuf[length-36:]), utxoBuf[:length-36], 0)
-				n++
-			}
-			if _, err := pikaPipe.Exec(ctx); err != nil && err != redis.Nil {
-				logger.Log.Error("pika store exec failed", zap.Error(err))
-				return false
-			}
-		}
-	}
-
-	logger.Log.Info("UpdateUtxoInPika finished")
-	return true
 }
 
 // UpdateUtxoInRedis 批量更新redis utxo
@@ -459,7 +387,7 @@ func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.Int
 	if len(addressBalanceCmds) == 0 {
 		return true
 	}
-	pipe := rdb.RedisClient.TxPipeline()
+	pipe := rdb.RdbBalanceClient.TxPipeline()
 	// 删除balance为0的记录
 	// 要求整个函数单线程处理，否则可能删除非0数据
 	for keyString, cmd := range addressBalanceCmds {

@@ -124,7 +124,7 @@ func RemoveBlocksForReorg(startBlockHeight int) bool {
 	go func() {
 		defer wg.Done()
 
-		if ok := serial.UpdateUtxoInPika(utxoToRestore, utxoToRemove); !ok {
+		if ok := memSerial.UpdateUtxoInPika(utxoToRestore, utxoToRemove); !ok {
 			model.NeedStop = true
 			return
 		}
@@ -137,7 +137,7 @@ func RemoveBlocksForReorg(startBlockHeight int) bool {
 		defer wg.Done()
 
 		// 更新redis
-		rdsPipe := rdb.RedisClient.TxPipeline()
+		rdsPipe := rdb.RdbBalanceClient.TxPipeline()
 		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 		serial.UpdateUtxoInRedis(rdsPipe, startBlockHeight, addressBalanceCmds, utxoToRestore, utxoToRemove, true)
 		if _, err = rdsPipe.Exec(ctx); err != nil {
@@ -176,7 +176,7 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 	go func() {
 		defer wg.Done()
 
-		if ok := serial.UpdateUtxoInPika(model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap); !ok {
+		if ok := memSerial.UpdateUtxoInPika(model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap); !ok {
 			model.NeedStop = true
 			return
 		}
@@ -187,7 +187,7 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		rdsPipe := rdb.RedisClient.TxPipeline()
+		rdsPipe := rdb.RdbBalanceClient.TxPipeline()
 		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 		// 批量更新redis utxo
 		serial.UpdateUtxoInRedis(rdsPipe, stageBlockHeight, addressBalanceCmds,
@@ -236,7 +236,7 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 
 		// 批量更新redis utxo
 		if needSaveBlock {
-			if ok := serial.UpdateUtxoInPika(model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap); !ok {
+			if ok := memSerial.UpdateUtxoInPika(model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap); !ok {
 				model.NeedStop = true
 				return
 			}
@@ -255,8 +255,7 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
-		rdsPipe := rdb.RedisClient.TxPipeline()
+		rdsPipe := rdb.RdbBalanceClient.TxPipeline()
 		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 		if needSaveBlock {
 			// 批量更新redis utxo

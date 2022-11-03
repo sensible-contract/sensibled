@@ -119,8 +119,9 @@ func init() {
 	blocksPath = viper.GetString("blocks")
 	blockMagic = viper.GetString("magic")
 
-	rdb.RedisClient = rdb.Init("conf/redis.yaml")
-	rdb.PikaClient = rdb.Init("conf/pika.yaml")
+	rdb.RdbBalanceClient = rdb.Init("conf/rdb_balance.yaml")
+	rdb.RdbUtxoClient = rdb.Init("conf/rdb_utxo.yaml")
+	rdb.RdbAddrTxClient = rdb.Init("conf/rdb_address.yaml")
 	clickhouse.Init()
 	serial.Init()
 }
@@ -129,12 +130,12 @@ func logProcessInfo(info processInfo) {
 	content := fmt.Sprintf("%s", info.String())
 	member := &redis.Z{Score: float64(info.Start), Member: content}
 
-	rdb.RedisClient.ZRemRangeByScore(ctx, "s:log"+selfLabel, strconv.Itoa(int(info.Start)), strconv.Itoa(int(info.Start)))
-	rdb.RedisClient.ZAdd(ctx, "s:log"+selfLabel, member)
+	rdb.RdbBalanceClient.ZRemRangeByScore(ctx, "s:log"+selfLabel, strconv.Itoa(int(info.Start)), strconv.Itoa(int(info.Start)))
+	rdb.RdbBalanceClient.ZAdd(ctx, "s:log"+selfLabel, member)
 }
 
 func isPrimary() bool {
-	label, err := rdb.RedisClient.Get(ctx, "s:primary").Result()
+	label, err := rdb.RdbBalanceClient.Get(ctx, "s:primary").Result()
 	if err != nil {
 		return false
 	}
@@ -142,12 +143,12 @@ func isPrimary() bool {
 }
 
 func switchToSecondary() {
-	rdb.RedisClient.Set(ctx, "s:switch", "false", 0)
-	rdb.RedisClient.Set(ctx, "s:primary", otherLabel, 0)
+	rdb.RdbBalanceClient.Set(ctx, "s:switch", "false", 0)
+	rdb.RdbBalanceClient.Set(ctx, "s:primary", otherLabel, 0)
 }
 
 func needToSwitchToSecondary() bool {
-	label, err := rdb.RedisClient.Get(ctx, "s:switch").Result()
+	label, err := rdb.RdbBalanceClient.Get(ctx, "s:switch").Result()
 	if err != nil {
 		return false
 	}

@@ -45,7 +45,7 @@ func GetLatestBlockFromDB() (blkRsp *model.BlockDO, err error) {
 func GetBestBlockHeightFromRedis() (height int, err error) {
 	// get decimal from f info
 	ctx := context.Background()
-	height, err = rdb.RedisClient.HGet(ctx, "info", "blocks_total").Int()
+	height, err = rdb.RdbBalanceClient.HGet(ctx, "info", "blocks_total").Int()
 	if err == redis.Nil {
 		height = 0
 		logger.Log.Info("GetBestBlockHeightFromRedis, but info missing")

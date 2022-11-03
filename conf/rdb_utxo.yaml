@@ -1,0 +1,17 @@
+# 地址
+# 目前同时兼容redis cluster和single-node。addrs配置单个地址将视为single-node。
+addrs: ["192.168.31.236:6390", "192.168.31.236:6391", "192.168.31.236:6392"]
+
+# DB名字(仅single node需要)
+database: 0
+
+# 密码(可选)
+password: ""
+
+dialTimeout: "10s"
+readTimeout: "30m"
+writeTimeout: "30m"
+idleTimeout: "30s"
+idleCheckFrequency: "10s"
+
+poolSize: 32
