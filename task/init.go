@@ -12,7 +12,6 @@ import (
 	"sensibled/task/parallel"
 	"sensibled/task/serial"
 	"sync"
-	"time"
 
 	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
@@ -125,13 +124,10 @@ func RemoveBlocksForReorg(startBlockHeight int) bool {
 	go func() {
 		defer wg.Done()
 
-		pikaPipe := rdb.PikaClient.Pipeline()
-		serial.UpdateUtxoInPika(pikaPipe, utxoToRestore, utxoToRemove)
-		if _, err = pikaPipe.Exec(ctx); err != nil {
-			logger.Log.Error("pika exec failed", zap.Error(err))
+		if ok := serial.UpdateUtxoInPika(utxoToRestore, utxoToRemove); !ok {
 			model.NeedStop = true
+			return
 		}
-
 		logger.Log.Info("pika done")
 	}()
 
@@ -180,19 +176,11 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 	go func() {
 		defer wg.Done()
 
-		for idx := 0; idx < 3; idx++ {
-			pikaPipe := rdb.PikaClient.Pipeline()
-			serial.UpdateUtxoInPika(pikaPipe,
-				model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap)
-			if _, err := pikaPipe.Exec(ctx); err != nil {
-				logger.Log.Error("pika exec failed", zap.Error(err))
-				time.Sleep(1 * time.Second)
-				continue
-			}
-			logger.Log.Info("pika done")
+		if ok := serial.UpdateUtxoInPika(model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap); !ok {
+			model.NeedStop = true
 			return
 		}
-		model.NeedStop = true
+		logger.Log.Info("pika done")
 	}()
 
 	// redis
@@ -247,18 +235,19 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 		defer wg.Done()
 
 		// 批量更新redis utxo
-		pikaPipe := rdb.PikaClient.Pipeline()
 		if needSaveBlock {
-			serial.UpdateUtxoInPika(pikaPipe, model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap)
+			if ok := serial.UpdateUtxoInPika(model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap); !ok {
+				model.NeedStop = true
+				return
+			}
 		}
 		// for txin dump
 		// 6 dep 2 4
 		if needSaveMempool {
-			memSerial.UpdateUtxoInPika(pikaPipe, mempool.NewUtxoDataMap, mempool.RemoveUtxoDataMap)
-		}
-		if _, err := pikaPipe.Exec(ctx); err != nil {
-			logger.Log.Error("pika exec failed", zap.Error(err))
-			model.NeedStop = true
+			if ok := memSerial.UpdateUtxoInPika(mempool.NewUtxoDataMap, mempool.RemoveUtxoDataMap); !ok {
+				model.NeedStop = true
+				return
+			}
 		}
 	}()
 

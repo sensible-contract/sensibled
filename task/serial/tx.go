@@ -2,8 +2,10 @@ package serial
 
 import (
 	"context"
+	"encoding/gob"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"sensibled/logger"
 	"sensibled/model"
 	"sensibled/rdb"
@@ -139,28 +141,130 @@ func RemoveAddressTxHistoryFromPikaForReorg(height int, utxoToRestore, utxoToRem
 	}
 }
 
+// WriteDownUtxoToFile 批量更新redis utxo
+func WriteDownUtxoToFile(utxoToRestore, utxoToRemove map[string]*model.TxoData) {
+	logger.Log.Info("WriteDownUtxoToFile",
+		zap.Int("add", len(utxoToRestore)),
+		zap.Int("del", len(utxoToRemove)))
+
+	outpointKeyToDel := make([]string, len(utxoToRemove))
+
+	idx := 0
+	for outpointKey := range utxoToRemove {
+		outpointKeyToDel[idx] = outpointKey
+		idx++
+	}
+
+	gobFile, err := os.OpenFile("./cmd/utxoToRemove.gob", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
+	if err != nil {
+		logger.Log.Error("open outpointKeyToDel file failed", zap.Error(err))
+		return
+	}
+	defer gobFile.Close()
+
+	enc := gob.NewEncoder(gobFile)
+	if err := enc.Encode(outpointKeyToDel); err != nil {
+		logger.Log.Error("save outpointKeyToDel failed", zap.Error(err))
+	}
+	logger.Log.Info("save outpointKeyToDel ok")
+
+	/////////////////////////////////////////////////////////////////
+
+	idx = 0
+	utxoBufToRestore := make([][]byte, len(utxoToRestore))
+	for outpointKey, data := range utxoToRestore {
+		buf := make([]byte, 36+20+len(data.PkScript))
+		length := data.Marshal(buf)
+
+		buf = append(buf[:length], []byte(outpointKey)...)
+		utxoBufToRestore[idx] = buf[:length+36]
+		idx++
+	}
+
+	gobFile1, err := os.OpenFile("./cmd/utxoToRestore.gob", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
+	if err != nil {
+		logger.Log.Error("open utxoBufToRestore file failed", zap.Error(err))
+		return
+	}
+	defer gobFile1.Close()
+
+	enc1 := gob.NewEncoder(gobFile1)
+	if err := enc1.Encode(utxoBufToRestore); err != nil {
+		logger.Log.Error("save utxoBufToRestore failed", zap.Error(err))
+	}
+	logger.Log.Info("save utxoBufToRestore ok")
+}
+
 // UpdateUtxoInPika 批量更新redis utxo
-func UpdateUtxoInPika(pikaPipe redis.Pipeliner, utxoToRestore, utxoToRemove map[string]*model.TxoData) {
+func UpdateUtxoInPika(utxoToRestore, utxoToRemove map[string]*model.TxoData) bool {
 	logger.Log.Info("UpdateUtxoInPika",
 		zap.Int("add", len(utxoToRestore)),
 		zap.Int("del", len(utxoToRemove)))
 
+	// delete batch
+	outpointKeys := make([]string, len(utxoToRemove))
+	idx := 0
 	for outpointKey := range utxoToRemove {
-		// redis全局utxo数据清除
-		pikaPipe.Del(ctx, "u"+outpointKey)
+		outpointKeys[idx] = outpointKey
+		idx++
+	}
+	if len(utxoToRemove) > 0 {
+		sliceLen := 2500000
+		for idx := 0; idx < (len(outpointKeys)-1)/sliceLen+1; idx++ {
+
+			pikaPipe := rdb.PikaClient.Pipeline()
+			n := 0
+			for _, outpointKey := range outpointKeys[idx*sliceLen:] {
+				if n == sliceLen {
+					break
+				}
+				// redis全局utxo数据清除
+				pikaPipe.Del(ctx, "u"+outpointKey)
+				n++
+			}
+			if _, err := pikaPipe.Exec(ctx); err != nil && err != redis.Nil {
+				logger.Log.Error("pika delete exec failed", zap.Error(err))
+				return false
+			}
+		}
 	}
 
+	// add batch
+	idx = 0
+	utxoBufToRestore := make([][]byte, len(utxoToRestore))
 	for outpointKey, data := range utxoToRestore {
-		buf := make([]byte, 20+len(data.PkScript))
+		buf := make([]byte, 36+20+len(data.PkScript))
 		length := data.Marshal(buf)
-		// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
-		pikaPipe.Set(ctx, "u"+outpointKey, buf[:length], 0)
-		// logger.Log.Info("save new utxo",
-		// 	zap.String("outpoint", hex.EncodeToString([]byte(outpointKey))),
-		// 	zap.Int("size", length))
+
+		buf = append(buf[:length], []byte(outpointKey)...)
+		utxoBufToRestore[idx] = buf[:length+36]
+		idx++
+	}
+
+	if len(utxoToRestore) > 0 {
+		sliceLen := 10000
+		for idx := 0; idx < (len(utxoBufToRestore)-1)/sliceLen+1; idx++ {
+
+			pikaPipe := rdb.PikaClient.Pipeline()
+			n := 0
+			for _, utxoBuf := range utxoBufToRestore[idx*sliceLen:] {
+				if n == sliceLen {
+					break
+				}
+				length := len(utxoBuf)
+				// redis全局utxo数据添加，以便关联后续花费的input，无论是否识别地址都需要记录
+				pikaPipe.Set(ctx, "u"+string(utxoBuf[length-36:]), utxoBuf[:length-36], 0)
+				n++
+			}
+			if _, err := pikaPipe.Exec(ctx); err != nil && err != redis.Nil {
+				logger.Log.Error("pika store exec failed", zap.Error(err))
+				return false
+			}
+		}
 	}
 
 	logger.Log.Info("UpdateUtxoInPika finished")
+	return true
 }
 
 // UpdateUtxoInRedis 批量更新redis utxo

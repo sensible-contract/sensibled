@@ -295,14 +295,11 @@ func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool) {
 			defer wg.Done()
 
 			// 批量更新redis utxo
-			pikaPipe := rdb.PikaClient.Pipeline()
 			// for txin dump
 			// 6 dep 2 4
-			serial.UpdateUtxoInPika(pikaPipe, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap)
-			ctx := context.Background()
-			if _, err := pikaPipe.Exec(ctx); err != nil {
-				logger.Log.Error("pika exec failed", zap.Error(err))
+			if ok := serial.UpdateUtxoInPika(mp.NewUtxoDataMap, mp.RemoveUtxoDataMap); !ok {
 				model.NeedStop = true
+				return
 			}
 			logger.Log.Info("pika done")
 		}()
