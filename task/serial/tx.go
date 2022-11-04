@@ -91,10 +91,10 @@ func SaveAddressTxHistoryIntoPika(block *model.Block) {
 			continue
 		}
 
-		txid := string(block.Txs[txIdx].TxId)
+		key := fmt.Sprintf("%d:%d", block.Height, txIdx)
 		score := float64(block.Height)*1000000000 + float64(txIdx)
 		// redis有序utxo数据成员
-		member := &redis.Z{Score: score, Member: txid}
+		member := &redis.Z{Score: score, Member: key}
 
 		for strAddressPkh := range addrPkhInTxMap {
 			pipe.ZAdd(ctx, "{ah"+strAddressPkh+"}", member) // 有序address tx history数据添加
@@ -102,7 +102,7 @@ func SaveAddressTxHistoryIntoPika(block *model.Block) {
 	}
 
 	if _, err := pipe.Exec(ctx); err != nil {
-		logger.Log.Error("pika exec failed", zap.Error(err))
+		logger.Log.Error("pika address exec failed", zap.Error(err))
 		model.NeedStop = true
 	}
 }
