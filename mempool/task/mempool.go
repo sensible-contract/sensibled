@@ -23,7 +23,8 @@ type Mempool struct {
 	Txs     map[string]struct{} // 所有Tx
 	SkipTxs map[string]struct{} // 需要跳过的Tx
 
-	BatchTxs          []*model.Tx               // 当前同步批次的Tx
+	BatchTxs          []*model.Tx // 当前同步批次的Tx
+	AddrPkhInTxMap    []map[string]struct{}
 	SpentUtxoKeysMap  map[string]struct{}       // 在当前同步批次中被花费的所有utxo集合
 	SpentUtxoDataMap  map[string]*model.TxoData // 当前同步批次中花费的已确认的utxo集合
 	NewUtxoDataMap    map[string]*model.TxoData // 当前同步批次中新产生的utxo集合
@@ -201,8 +202,10 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 	}
 }
 
-// ParseMempool 先并行分析区块，不同区块并行，同区块内串行
+// ParseMempool 开始串行同步mempool
 func (mp *Mempool) ParseMempool(startIdx int) {
+
+	mp.AddrPkhInTxMap = make([]map[string]struct{}, len(mp.BatchTxs))
 	// first
 	for txIdx, tx := range mp.BatchTxs {
 		// no dep, 准备utxo花费关系数据
@@ -214,6 +217,10 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 		// 1 dep 0
 		// NewUtxoDataMap w
 		parallel.ParseUpdateNewUtxoInTxParallel(startIdx+txIdx, tx, mp.NewUtxoDataMap)
+
+		// 按address追踪tx历史
+		mp.AddrPkhInTxMap[txIdx] = make(map[string]struct{}, len(tx.TxIns)+len(tx.TxOuts))
+		parallel.ParseUpdateAddressInTxParallel(tx, mp.AddrPkhInTxMap[txIdx])
 	}
 
 	// 2 dep 0
@@ -225,7 +232,7 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 
 	// 4 dep 3
 	// SpentUtxoDataMap r
-	serial.SyncBlockTxInputDetail(startIdx, mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
+	serial.SyncBlockTxInputDetail(startIdx, mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap, mp.AddrPkhInTxMap)
 
 	// 8 dep 3
 	// SpentUtxoDataMap r
@@ -233,6 +240,9 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 
 	// 5 dep 2 4
 	serial.SyncBlockTx(startIdx, mp.BatchTxs)
+
+	// Pika更新addr tx历史，需要依赖txout、txin执行完毕
+	serial.SaveAddressTxHistoryIntoPika(startIdx, mp.AddrPkhInTxMap)
 }
 
 // ParseEnd 最后分析执行

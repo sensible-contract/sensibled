@@ -8,7 +8,7 @@ import (
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 )
 
-// ParseTx 先并行分析交易tx，不同区块并行，同区块内串行
+// ParseTx 同区块内串行
 func ParseTxFirst(tx *model.Tx) {
 	for idx, input := range tx.TxIns {
 		key := make([]byte, 36)
@@ -59,5 +59,14 @@ func ParseUpdateNewUtxoInTxParallel(txIdx int, tx *model.Tx, mpNewUtxo map[strin
 		d.Data = output.Data
 
 		mpNewUtxo[output.OutpointKey] = d
+	}
+}
+
+// ParseUpdateAddressInTxParallel address tx历史记录
+func ParseUpdateAddressInTxParallel(tx *model.Tx, addrPkhInTxMap map[string]struct{}) {
+	for _, output := range tx.TxOuts {
+		if output.Data.HasAddress {
+			addrPkhInTxMap[string(output.Data.AddressPkh[:])] = struct{}{}
+		}
 	}
 }

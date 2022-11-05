@@ -10,7 +10,7 @@ import (
 )
 
 // SyncBlockTxInputDetail all tx input info
-func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) {
+func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData, listAddrPkhInTxMap []map[string]struct{}) {
 	var commonObjData *model.TxoData = &model.TxoData{
 		Data: &scriptDecoder.TxoData{},
 	}
@@ -35,6 +35,11 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				)
 			}
 			tx.InputsValue += objData.Satoshi
+
+			// address tx历史记录
+			if objData.Data.HasAddress {
+				listAddrPkhInTxMap[txIdx][string(objData.Data.AddressPkh[:])] = struct{}{}
+			}
 
 			address := ""
 			codehash := ""
