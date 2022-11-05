@@ -109,8 +109,6 @@ func SaveAddressTxHistoryIntoPika(block *model.Block) {
 
 // RemoveAddressTxHistoryFromPikaForReorg 清理被重组区块内的address tx历史
 func RemoveAddressTxHistoryFromPikaForReorg(height int, utxoToRestore, utxoToRemove map[string]*model.TxoData) {
-	pipe := rdb.RdbAddrTxClient.Pipeline()
-
 	addressMap := make(map[string]struct{})
 	for _, data := range utxoToRemove {
 		scriptType := scriptDecoder.GetLockingScriptType(data.PkScript)
@@ -131,6 +129,8 @@ func RemoveAddressTxHistoryFromPikaForReorg(height int, utxoToRestore, utxoToRem
 		zap.Int("nAddr", len(addressMap)))
 
 	strHeight := fmt.Sprintf("%d000000000", height)
+
+	pipe := rdb.RdbAddrTxClient.Pipeline()
 	for strAddressPkh := range addressMap {
 		pipe.ZRemRangeByScore(ctx, "{ah"+strAddressPkh+"}", strHeight, "+inf") // 有序address tx history数据添加
 	}

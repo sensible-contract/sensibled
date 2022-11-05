@@ -63,11 +63,12 @@ func ParseBlockParallelEnd(block *model.Block) {
 	serial.SyncBlockTx(block)
 	serial.SyncBlockTxContract(block)
 
+	block.Txs = nil
+
 	// Pika更新addr tx历史，需要依赖txout、txin执行完毕
 	serial.SaveAddressTxHistoryIntoPika(block)
 
 	block.ParseData = nil
-	block.Txs = nil
 }
 
 // ParseEnd 最后分析执行

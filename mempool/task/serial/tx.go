@@ -204,7 +204,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 			"utxo_total_mempool", 0,
 		)
 
-		logger.Log.Info("FlushdbInRedis finish")
+		logger.Log.Info("mempool FlushdbInRedis finish")
 	}
 
 	pipe.HIncrBy(ctx, "info",
