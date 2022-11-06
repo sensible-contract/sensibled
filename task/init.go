@@ -72,16 +72,17 @@ func ParseBlockParallelEnd(block *model.Block) {
 }
 
 // ParseEnd 最后分析执行
-func ParseEnd(isFull bool) {
+func ParseEnd(isFull bool) bool {
 	// 提交DB
-	store.CommitSyncCk()
+	if ok := store.CommitSyncCk(); !ok {
+		return false
+	}
 
 	// 执行DB数据额外更新
 	if isFull {
-		store.ProcessAllSyncCk()
-	} else {
-		store.ProcessPartSyncCk()
+		return store.ProcessAllSyncCk()
 	}
+	return store.ProcessPartSyncCk()
 }
 
 // RemoveBlocksForReorg
@@ -168,7 +169,10 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 	go func() {
 		defer wg.Done()
 		// 最后分析执行
-		ParseEnd(isFull)
+		if ok := ParseEnd(isFull); !ok {
+			model.NeedStop = true
+			return
+		}
 		logger.Log.Info("ck done")
 	}()
 
@@ -222,12 +226,19 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 		defer wg.Done()
 		// ParseEnd 最后分析执行
 		if needSaveBlock {
-			ParseEnd(isFull)
+			if ok := ParseEnd(isFull); !ok {
+				model.NeedStop = true
+				return
+			}
 		}
 		// 7 dep 5
 		if needSaveMempool {
-			memTask.ParseEnd()
+			if ok := memTask.ParseEnd(); !ok {
+				model.NeedStop = true
+				return
+			}
 		}
+		logger.Log.Info("ck done")
 	}()
 
 	// pika
@@ -250,6 +261,7 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 				return
 			}
 		}
+		logger.Log.Info("pika done")
 	}()
 
 	// redis
@@ -280,6 +292,7 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 				model.NeedStop = true
 			}
 		}
+		logger.Log.Info("redis done")
 	}()
 	wg.Wait()
 

@@ -246,10 +246,12 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 }
 
 // ParseEnd 最后分析执行
-func ParseEnd() {
+func ParseEnd() bool {
 	// 7 dep 5
-	store.CommitSyncCk()
-	store.ProcessPartSyncCk()
+	if ok := store.CommitSyncCk(); !ok {
+		return false
+	}
+	return store.ProcessPartSyncCk()
 }
 
 func (mp *Mempool) Process(initSyncMempool bool, stageBlockHeight, startIdx int) bool {
@@ -294,7 +296,10 @@ func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool) {
 		defer wg.Done()
 		// ParseEnd 最后分析执行
 		// 7 dep 5
-		ParseEnd()
+		if ok := ParseEnd(); !ok {
+			model.NeedStop = true
+			return
+		}
 		logger.Log.Info("ck done")
 	}()
 

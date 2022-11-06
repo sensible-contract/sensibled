@@ -127,7 +127,7 @@ func PreparePartSyncCk() bool {
 	return prepareSyncCk(false)
 }
 
-func CommitSyncCk() {
+func CommitSyncCk() bool {
 	logger.Log.Info("sync commit...")
 	defer SyncStmtBlk.Close()
 	defer SyncStmtTx.Close()
@@ -136,28 +136,30 @@ func CommitSyncCk() {
 	defer SyncStmtBlkCodeHash.Close()
 	defer SyncStmtTxContract.Close()
 
-	// logger.Log.Info("sync-commit-blk...")
+	isOK := true
 	if err := syncBlk.Commit(); err != nil {
 		logger.Log.Error("sync-commit-blk", zap.Error(err))
+		isOK = false
 	}
-	// logger.Log.Info("sync-commit-tx...")
 	if err := syncTx.Commit(); err != nil {
 		logger.Log.Error("sync-commit-tx", zap.Error(err))
+		isOK = false
 	}
-	// logger.Log.Info("sync-commit-txout...")
 	if err := syncTxOut.Commit(); err != nil {
 		logger.Log.Error("sync-commit-txout", zap.Error(err))
+		isOK = false
 	}
-	// logger.Log.Info("sync-commit-txin...")
 	if err := syncTxIn.Commit(); err != nil {
 		logger.Log.Error("sync-commit-txin", zap.Error(err))
+		isOK = false
 	}
-	// logger.Log.Info("sync-commit-blk-codehash...")
 	if err := syncBlkCodeHash.Commit(); err != nil {
 		logger.Log.Error("sync-commit-blk-codehash", zap.Error(err))
+		isOK = false
 	}
-	// logger.Log.Info("sync-commit-tx-contract...")
 	if err := syncTxContract.Commit(); err != nil {
 		logger.Log.Error("sync-commit-tx-contract", zap.Error(err))
+		isOK = false
 	}
+	return isOK
 }
