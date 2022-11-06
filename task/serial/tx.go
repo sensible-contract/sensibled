@@ -84,8 +84,11 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 
 // SaveAddressTxHistoryIntoPika Pika更新addr tx历史
 func SaveAddressTxHistoryIntoPika(block *model.Block) {
-	pipe := rdb.RdbAddrTxClient.Pipeline()
-
+	type Item struct {
+		Member *redis.Z
+		Addr   string
+	}
+	items := make([]*Item, 0)
 	for txIdx, addrPkhInTxMap := range block.ParseData.AddrPkhInTxMap {
 		if len(addrPkhInTxMap) == 0 {
 			continue
@@ -93,17 +96,38 @@ func SaveAddressTxHistoryIntoPika(block *model.Block) {
 
 		key := fmt.Sprintf("%d:%d", block.Height, txIdx)
 		score := float64(block.Height)*1000000000 + float64(txIdx)
-		// redis有序utxo数据成员
 		member := &redis.Z{Score: score, Member: key}
-
 		for strAddressPkh := range addrPkhInTxMap {
-			pipe.ZAdd(ctx, "{ah"+strAddressPkh+"}", member) // 有序address tx history数据添加
+			items = append(items, &Item{
+				Member: member,
+				Addr:   strAddressPkh,
+			})
 		}
 	}
 
-	if _, err := pipe.Exec(ctx); err != nil {
-		logger.Log.Error("pika address exec failed", zap.Error(err))
-		model.NeedStop = true
+	if len(items) == 0 {
+		return
+	}
+
+	sliceLen := 100000
+	for idx := 0; idx < (len(items)-1)/sliceLen+1; idx++ {
+
+		pikaPipe := rdb.RdbAddrTxClient.Pipeline()
+		n := 0
+		for _, item := range items[idx*sliceLen:] {
+			if n == sliceLen {
+				break
+			}
+
+			// 有序address tx history数据添加
+			pikaPipe.ZAdd(ctx, "{ah"+item.Addr+"}", item.Member)
+			n++
+		}
+		if _, err := pikaPipe.Exec(ctx); err != nil && err != redis.Nil {
+			logger.Log.Error("pika address exec failed", zap.Error(err))
+			model.NeedStop = true
+			return
+		}
 	}
 }
 
