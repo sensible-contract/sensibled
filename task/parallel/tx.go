@@ -92,7 +92,7 @@ func ParseUpdateTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model
 }
 
 // ParseUpdateNewUtxoInTxParallel utxo 信息
-func ParseUpdateNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock) {
+func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, block *model.ProcessBlock) {
 	for _, output := range tx.TxOuts {
 		if output.LockingScriptUnspendable {
 			continue
@@ -101,7 +101,7 @@ func ParseUpdateNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.Proces
 		// 从tx output提取utxo，以备程序使用
 		d := &model.TxoData{}
 		d.BlockHeight = block.Height
-		d.TxIdx = uint64(txIdx)
+		d.TxIdx = txIdx
 		d.Satoshi = output.Satoshi
 		d.ScriptType = output.ScriptType
 		d.PkScript = output.PkScript
@@ -113,7 +113,7 @@ func ParseUpdateNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.Proces
 }
 
 // ParseUpdateAddressInTxParallel address tx历史记录
-func ParseUpdateAddressInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock) {
+func ParseUpdateAddressInTxParallel(txIdx uint64, tx *model.Tx, block *model.ProcessBlock) {
 	for _, output := range tx.TxOuts {
 		if output.Data.HasAddress {
 			address := string(output.Data.AddressPkh[:])

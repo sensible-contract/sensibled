@@ -44,7 +44,7 @@ func ParseUpdateTxoSpendByTxParallel(tx *model.Tx, spentUtxoKeysMap map[string]s
 }
 
 // ParseUpdateNewUtxoInTxParallel utxo 信息
-func ParseUpdateNewUtxoInTxParallel(txIdx int, tx *model.Tx, mpNewUtxo map[string]*model.TxoData) {
+func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, mpNewUtxo map[string]*model.TxoData) {
 	for _, output := range tx.TxOuts {
 		if output.LockingScriptUnspendable {
 			continue
@@ -52,7 +52,7 @@ func ParseUpdateNewUtxoInTxParallel(txIdx int, tx *model.Tx, mpNewUtxo map[strin
 
 		d := &model.TxoData{}
 		d.BlockHeight = model.MEMPOOL_HEIGHT
-		d.TxIdx = uint64(txIdx)
+		d.TxIdx = txIdx
 		d.Satoshi = output.Satoshi
 		d.PkScript = output.PkScript
 		d.ScriptType = output.ScriptType
@@ -63,7 +63,7 @@ func ParseUpdateNewUtxoInTxParallel(txIdx int, tx *model.Tx, mpNewUtxo map[strin
 }
 
 // ParseUpdateAddressInTxParallel address tx历史记录
-func ParseUpdateAddressInTxParallel(txIdx int, tx *model.Tx, addrPkhInTxMap map[string][]int) {
+func ParseUpdateAddressInTxParallel(txIdx uint64, tx *model.Tx, addrPkhInTxMap map[string][]uint64) {
 	for _, output := range tx.TxOuts {
 		if output.Data.HasAddress {
 			address := string(output.Data.AddressPkh[:])

@@ -29,10 +29,10 @@ func ParseBlockParallel(block *model.Block) {
 		// 所有txin使用的utxo记录
 		parallel.ParseUpdateTxoSpendByTxParallel(tx, isCoinbase, block.ParseData)
 		// 所有txout产生的utxo记录
-		parallel.ParseUpdateNewUtxoInTxParallel(txIdx, tx, block.ParseData)
+		parallel.ParseUpdateNewUtxoInTxParallel(uint64(txIdx), tx, block.ParseData)
 
 		// 按address追踪tx历史
-		parallel.ParseUpdateAddressInTxParallel(txIdx, tx, block.ParseData)
+		parallel.ParseUpdateAddressInTxParallel(uint64(txIdx), tx, block.ParseData)
 	}
 
 	// DB更新txout，比较独立，可以并行更新

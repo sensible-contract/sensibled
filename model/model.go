@@ -119,7 +119,7 @@ type BlockCache struct {
 ////////////////
 type ProcessBlock struct {
 	Height           uint32
-	AddrPkhInTxMap   map[string][]int
+	AddrPkhInTxMap   map[string][]uint64
 	SpentUtxoKeysMap map[string]struct{}
 	SpentUtxoDataMap map[string]*TxoData
 	NewUtxoDataMap   map[string]*TxoData

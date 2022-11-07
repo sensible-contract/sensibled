@@ -102,7 +102,7 @@ func UpdateUtxoInLocalMapSerial(spentUtxoKeysMap map[string]struct{},
 }
 
 // SaveAddressTxHistoryIntoPika Pika更新addr tx历史
-func SaveAddressTxHistoryIntoPika(startIdx int, addrPkhInTxMap map[string][]int) {
+func SaveAddressTxHistoryIntoPika(startIdx uint64, addrPkhInTxMap map[string][]uint64) {
 	// 清除内存池数据
 	needReset := startIdx == 0
 	if needReset {

@@ -120,7 +120,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 
 			processBlock := &model.ProcessBlock{
 				Height:           uint32(block.Height),
-				AddrPkhInTxMap:   make(map[string][]int, block.TxCnt),
+				AddrPkhInTxMap:   make(map[string][]uint64, block.TxCnt),
 				NewUtxoDataMap:   make(map[string]*model.TxoData, block.TxCnt),
 				SpentUtxoDataMap: make(map[string]*model.TxoData, block.TxCnt),
 				SpentUtxoKeysMap: make(map[string]struct{}, block.TxCnt),

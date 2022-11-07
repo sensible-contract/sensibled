@@ -47,7 +47,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 
 			// address tx历史记录
 			if objData.Data.HasAddress {
-				block.ParseData.AddrPkhInTxMap[address] = append(block.ParseData.AddrPkhInTxMap[address], txIdx)
+				block.ParseData.AddrPkhInTxMap[address] = append(block.ParseData.AddrPkhInTxMap[address], uint64(txIdx))
 			}
 
 			// set sensible flag
