@@ -10,7 +10,7 @@ import (
 )
 
 // SyncBlockTxInputDetail all tx input info
-func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData, listAddrPkhInTxMap []map[string]struct{}) {
+func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData, addrPkhInTxMap map[string][]int) {
 	var commonObjData *model.TxoData = &model.TxoData{
 		Data: &scriptDecoder.TxoData{},
 	}
@@ -36,17 +36,18 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 			}
 			tx.InputsValue += objData.Satoshi
 
-			// address tx历史记录
-			if objData.Data.HasAddress {
-				listAddrPkhInTxMap[txIdx][string(objData.Data.AddressPkh[:])] = struct{}{}
-			}
-
 			address := ""
-			codehash := ""
-			genesis := ""
 			if objData.Data.HasAddress {
 				address = string(objData.Data.AddressPkh[:]) // 20 bytes
 			}
+
+			// address tx历史记录
+			if objData.Data.HasAddress {
+				addrPkhInTxMap[address] = append(addrPkhInTxMap[address], txIdx)
+			}
+
+			codehash := ""
+			genesis := ""
 			if objData.Data.CodeType != scriptDecoder.CodeType_NONE && objData.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
 				codehash = string(objData.Data.CodeHash[:])                          // 20 bytes
 				genesis = string(objData.Data.GenesisId[:objData.Data.GenesisIdLen]) // 20/36/40 bytes

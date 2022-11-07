@@ -116,7 +116,8 @@ func ParseUpdateNewUtxoInTxParallel(txIdx int, tx *model.Tx, block *model.Proces
 func ParseUpdateAddressInTxParallel(txIdx int, tx *model.Tx, block *model.ProcessBlock) {
 	for _, output := range tx.TxOuts {
 		if output.Data.HasAddress {
-			block.AddrPkhInTxMap[txIdx][string(output.Data.AddressPkh[:])] = struct{}{}
+			address := string(output.Data.AddressPkh[:])
+			block.AddrPkhInTxMap[address] = append(block.AddrPkhInTxMap[address], txIdx)
 		}
 	}
 }

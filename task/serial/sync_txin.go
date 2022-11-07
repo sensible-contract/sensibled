@@ -40,9 +40,14 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			}
 			tx.InputsValue += objData.Satoshi
 
+			address := ""
+			if objData.Data.HasAddress {
+				address = string(objData.Data.AddressPkh[:]) // 20 bytes
+			}
+
 			// address tx历史记录
 			if objData.Data.HasAddress {
-				block.ParseData.AddrPkhInTxMap[txIdx][string(objData.Data.AddressPkh[:])] = struct{}{}
+				block.ParseData.AddrPkhInTxMap[address] = append(block.ParseData.AddrPkhInTxMap[address], txIdx)
 			}
 
 			// set sensible flag
@@ -62,12 +67,8 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				pkscript = string(objData.PkScript)
 			}
 
-			address := ""
 			codehash := ""
 			genesis := ""
-			if objData.Data.HasAddress {
-				address = string(objData.Data.AddressPkh[:]) // 20 bytes
-			}
 			if objData.Data.CodeType != scriptDecoder.CodeType_NONE && objData.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
 				codehash = string(objData.Data.CodeHash[:])                          // 20 bytes
 				genesis = string(objData.Data.GenesisId[:objData.Data.GenesisIdLen]) // 20/36/40 bytes

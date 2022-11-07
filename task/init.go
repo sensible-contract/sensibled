@@ -32,7 +32,6 @@ func ParseBlockParallel(block *model.Block) {
 		parallel.ParseUpdateNewUtxoInTxParallel(txIdx, tx, block.ParseData)
 
 		// 按address追踪tx历史
-		block.ParseData.AddrPkhInTxMap[txIdx] = make(map[string]struct{}, len(tx.TxIns)+len(tx.TxOuts))
 		parallel.ParseUpdateAddressInTxParallel(txIdx, tx, block.ParseData)
 	}
 

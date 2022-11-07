@@ -102,7 +102,7 @@ func UpdateUtxoInLocalMapSerial(spentUtxoKeysMap map[string]struct{},
 }
 
 // SaveAddressTxHistoryIntoPika Pika更新addr tx历史
-func SaveAddressTxHistoryIntoPika(startIdx int, listAddrPkhInTxMap []map[string]struct{}) {
+func SaveAddressTxHistoryIntoPika(startIdx int, addrPkhInTxMap map[string][]int) {
 	// 清除内存池数据
 	needReset := startIdx == 0
 	if needReset {
@@ -132,21 +132,18 @@ func SaveAddressTxHistoryIntoPika(startIdx int, listAddrPkhInTxMap []map[string]
 		logger.Log.Info("mempool FlushdbInPika address finish")
 	}
 
+	if len(addrPkhInTxMap) == 0 {
+		return
+	}
+
 	// 写入地址的交易历史
-	addressMap := make(map[string]struct{}, len(listAddrPkhInTxMap))
 	pipe := rdb.RdbAddrTxClient.Pipeline()
-	for txIdx, addrPkhInTxMap := range listAddrPkhInTxMap {
-		if len(addrPkhInTxMap) == 0 {
-			continue
-		}
-
-		key := fmt.Sprintf("%d:%d", model.MEMPOOL_HEIGHT, startIdx+txIdx)
-		score := float64(model.MEMPOOL_HEIGHT)*1000000000 + float64(startIdx+txIdx)
-		// redis有序utxo数据成员
-		member := &redis.Z{Score: score, Member: key}
-
-		for strAddressPkh := range addrPkhInTxMap {
-			addressMap[strAddressPkh] = struct{}{}
+	for strAddressPkh, listTxid := range addrPkhInTxMap {
+		for _, txIdx := range listTxid {
+			key := fmt.Sprintf("%d:%d", model.MEMPOOL_HEIGHT, startIdx+txIdx)
+			score := float64(model.MEMPOOL_HEIGHT)*1000000000 + float64(startIdx+txIdx)
+			// redis有序utxo数据成员
+			member := &redis.Z{Score: score, Member: key}
 			pipe.ZAdd(ctx, "{ah"+strAddressPkh+"}", member) // 有序address tx history数据添加
 		}
 	}
@@ -157,7 +154,7 @@ func SaveAddressTxHistoryIntoPika(startIdx int, listAddrPkhInTxMap []map[string]
 
 	// 记录哪些地址在内存池中更新了交易历史
 	rdsPipe := rdb.RdbBalanceClient.TxPipeline()
-	for strAddressPkh := range addressMap {
+	for strAddressPkh := range addrPkhInTxMap {
 		rdsPipe.SAdd(ctx, "mp:addresses", strAddressPkh)
 	}
 	if _, err := rdsPipe.Exec(ctx); err != nil {

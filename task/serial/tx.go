@@ -89,15 +89,12 @@ func SaveAddressTxHistoryIntoPika(block *model.Block) {
 		Addr   string
 	}
 	items := make([]*Item, 0)
-	for txIdx, addrPkhInTxMap := range block.ParseData.AddrPkhInTxMap {
-		if len(addrPkhInTxMap) == 0 {
-			continue
-		}
 
-		key := fmt.Sprintf("%d:%d", block.Height, txIdx)
-		score := float64(block.Height)*1000000000 + float64(txIdx)
-		member := &redis.Z{Score: score, Member: key}
-		for strAddressPkh := range addrPkhInTxMap {
+	for strAddressPkh, listTxid := range block.ParseData.AddrPkhInTxMap {
+		for _, txIdx := range listTxid {
+			key := fmt.Sprintf("%d:%d", block.Height, txIdx)
+			score := float64(block.Height)*1000000000 + float64(txIdx)
+			member := &redis.Z{Score: score, Member: key}
 			items = append(items, &Item{
 				Member: member,
 				Addr:   strAddressPkh,
