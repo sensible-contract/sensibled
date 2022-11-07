@@ -102,7 +102,7 @@ func UpdateUtxoInLocalMapSerial(spentUtxoKeysMap map[string]struct{},
 }
 
 // SaveAddressTxHistoryIntoPika Pika更新addr tx历史
-func SaveAddressTxHistoryIntoPika(startIdx uint64, addrPkhInTxMap map[string][]uint64) {
+func SaveAddressTxHistoryIntoPika(startIdx uint64, addrPkhInTxMap map[string][]uint64) bool {
 	// 清除内存池数据
 	needReset := startIdx == 0
 	if needReset {
@@ -111,7 +111,7 @@ func SaveAddressTxHistoryIntoPika(startIdx uint64, addrPkhInTxMap map[string][]u
 		if err != nil {
 			logger.Log.Error("redis get mempool reset addresses failed", zap.Error(err))
 			model.NeedStop = true
-			return
+			return false
 		}
 		logger.Log.Info("reset pika mempool done", zap.Int("nAddrs", len(addrs)))
 
@@ -124,7 +124,7 @@ func SaveAddressTxHistoryIntoPika(startIdx uint64, addrPkhInTxMap map[string][]u
 		if _, err := pipe.Exec(ctx); err != nil {
 			logger.Log.Error("pika remove mempool address exec failed", zap.Error(err))
 			model.NeedStop = true
-			return
+			return false
 		}
 
 		// 清除地址追踪
@@ -133,7 +133,7 @@ func SaveAddressTxHistoryIntoPika(startIdx uint64, addrPkhInTxMap map[string][]u
 	}
 
 	if len(addrPkhInTxMap) == 0 {
-		return
+		return true
 	}
 
 	// 写入地址的交易历史
@@ -160,8 +160,9 @@ func SaveAddressTxHistoryIntoPika(startIdx uint64, addrPkhInTxMap map[string][]u
 	if _, err := rdsPipe.Exec(ctx); err != nil {
 		logger.Log.Error("mempool add address in redis exec failed", zap.Error(err))
 		model.NeedStop = true
-		return
+		return false
 	}
+	return true
 }
 
 // UpdateUtxoInPika 批量更新redis utxo

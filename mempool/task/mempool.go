@@ -239,9 +239,6 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 
 	// 5 dep 2 4
 	serial.SyncBlockTx(startIdx, mp.BatchTxs)
-
-	// Pika更新addr tx历史，需要依赖txout、txin执行完毕
-	serial.SaveAddressTxHistoryIntoPika(uint64(startIdx), mp.AddrPkhInTxMap)
 }
 
 // ParseEnd 最后分析执行
@@ -287,8 +284,21 @@ func (mp *Mempool) Process(initSyncMempool bool, stageBlockHeight, startIdx int)
 }
 
 // SubmitMempoolWithoutBlocks
-func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool) {
+func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool, startIdx int) {
 	var wg sync.WaitGroup
+
+	// address history
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// Pika更新addr tx历史
+		if ok := serial.SaveAddressTxHistoryIntoPika(uint64(startIdx), mp.AddrPkhInTxMap); !ok {
+			model.NeedStop = true
+			return
+		}
+		logger.Log.Info("history done")
+	}()
+
 	// ck
 	wg.Add(1)
 	go func() {

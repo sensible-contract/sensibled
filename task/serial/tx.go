@@ -82,18 +82,31 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	}
 }
 
-// SaveAddressTxHistoryIntoPika Pika更新addr tx历史
-func SaveAddressTxHistoryIntoPika(block *model.Block) {
+// UpdateAddrPkhInTxMapSerial 顺序更新当前区块的address tx history信息变化到程序全局缓存
+func UpdateAddrPkhInTxMapSerial(block *model.ProcessBlock) {
+	for strAddressPkh, listTxid := range block.AddrPkhInTxMap {
+		for _, txidx := range listTxid {
+			model.GlobalAddrPkhInTxMap[strAddressPkh] = append(model.GlobalAddrPkhInTxMap[strAddressPkh],
+				model.TxLocation{
+					BlockHeight: block.Height,
+					TxIdx:       txidx,
+				})
+		}
+	}
+}
+
+// SaveGlobalAddressTxHistoryIntoPika Pika更新address tx历史
+func SaveGlobalAddressTxHistoryIntoPika() bool {
 	type Item struct {
 		Member *redis.Z
 		Addr   string
 	}
 	items := make([]*Item, 0)
 
-	for strAddressPkh, listTxid := range block.ParseData.AddrPkhInTxMap {
-		for _, txIdx := range listTxid {
-			key := fmt.Sprintf("%d:%d", block.Height, txIdx)
-			score := float64(block.Height)*1000000000 + float64(txIdx)
+	for strAddressPkh, listTxPosition := range model.GlobalAddrPkhInTxMap {
+		for _, txPosition := range listTxPosition {
+			key := fmt.Sprintf("%d:%d", txPosition.BlockHeight, txPosition.TxIdx)
+			score := float64(txPosition.BlockHeight)*1000000000 + float64(txPosition.TxIdx)
 			member := &redis.Z{Score: score, Member: key}
 			items = append(items, &Item{
 				Member: member,
@@ -103,7 +116,7 @@ func SaveAddressTxHistoryIntoPika(block *model.Block) {
 	}
 
 	if len(items) == 0 {
-		return
+		return true
 	}
 
 	sliceLen := 100000
@@ -123,9 +136,11 @@ func SaveAddressTxHistoryIntoPika(block *model.Block) {
 		if _, err := pikaPipe.Exec(ctx); err != nil && err != redis.Nil {
 			logger.Log.Error("pika address exec failed", zap.Error(err))
 			model.NeedStop = true
-			return
+			return false
 		}
 	}
+
+	return true
 }
 
 // RemoveAddressTxHistoryFromPikaForReorg 清理被重组区块内的address tx历史

@@ -52,6 +52,9 @@ func ParseBlockSerialStart(withMempool bool, block *model.Block) {
 
 	// 需要串行，更新当前区块的utxo信息变化到程序内存缓存
 	serial.UpdateUtxoInMapSerial(block.ParseData)
+
+	// UpdateAddrPkhInTxMapSerial 顺序更新当前区块的address tx history信息变化到程序全局缓存，需要依赖txout、txin执行完毕
+	serial.UpdateAddrPkhInTxMapSerial(block.ParseData)
 }
 
 // ParseBlockParallelEnd 再并行处理区块
@@ -63,10 +66,6 @@ func ParseBlockParallelEnd(block *model.Block) {
 	serial.SyncBlockTxContract(block)
 
 	block.Txs = nil
-
-	// Pika更新addr tx历史，需要依赖txout、txin执行完毕
-	serial.SaveAddressTxHistoryIntoPika(block)
-
 	block.ParseData = nil
 }
 
@@ -163,6 +162,19 @@ func RemoveBlocksForReorg(startBlockHeight int) bool {
 // SubmitBlocksWithoutMempool
 func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 	var wg sync.WaitGroup
+
+	// address history
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		if ok := serial.SaveGlobalAddressTxHistoryIntoPika(); !ok {
+			model.NeedStop = true
+			return
+		}
+		logger.Log.Info("history done")
+	}()
+
 	// ck
 	wg.Add(1)
 	go func() {
@@ -214,11 +226,36 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 }
 
 // SubmitBlocksWithMempool
-func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask.Mempool, initSyncMempool bool) {
+func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask.Mempool) {
 	needSaveBlock := true
 	needSaveMempool := true
 
 	var wg sync.WaitGroup
+
+	// address history
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		// Pika更新addr tx历史
+		if needSaveBlock {
+			if ok := serial.SaveGlobalAddressTxHistoryIntoPika(); !ok {
+				model.NeedStop = true
+				return
+			}
+		}
+
+		if needSaveMempool {
+			startIdx := 0
+			if ok := memSerial.SaveAddressTxHistoryIntoPika(uint64(startIdx), mempool.AddrPkhInTxMap); !ok {
+				model.NeedStop = true
+				return
+			}
+		}
+
+		logger.Log.Info("history done")
+	}()
+
 	// ck
 	wg.Add(1)
 	go func() {
@@ -277,6 +314,7 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 		}
 		// for txin dump
 		// 6 dep 2 4
+		initSyncMempool := true
 		if needSaveMempool {
 			memSerial.UpdateUtxoInRedis(rdsPipe, initSyncMempool,
 				mempool.NewUtxoDataMap, mempool.RemoveUtxoDataMap, mempool.SpentUtxoDataMap)

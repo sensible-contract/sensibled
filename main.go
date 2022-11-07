@@ -310,11 +310,11 @@ func syncBlock() {
 				mempool.RemoveUtxoDataMap)
 
 			if needSaveBlock {
-				task.SubmitBlocksWithMempool(isFull, stageBlockHeight, mempool, initSyncMempool)
+				task.SubmitBlocksWithMempool(isFull, stageBlockHeight, mempool)
 				needSaveBlock = false
 				logger.Log.Info("block finished")
 			} else {
-				mempool.SubmitMempoolWithoutBlocks(initSyncMempool)
+				mempool.SubmitMempoolWithoutBlocks(initSyncMempool, startIdx)
 			}
 
 			initSyncMempool = false
