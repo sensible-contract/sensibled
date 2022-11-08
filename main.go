@@ -50,21 +50,23 @@ type processInfo struct {
 func (info *processInfo) String() string {
 	stopType := ""
 	if info.NeedStop {
-		stopType = "!ABNORMAL!"
+		stopType = "!TRIGGER!"
 	}
-	return fmt.Sprintf("%d StartH:%d nTxInBlk:%d nTxInMempool:%d-%d=%d | idx:%d hdr:%d blk:%d mem:%d zmq:%d %s stop:%d",
+	return fmt.Sprintf("%d StartH:%d idx:%d hdr:%d blk:%d mem:%d zmq:%d nTxInMempool:%d-%d=%d nTxInBlk:%d %s stop:%d",
 		info.Start,
 		info.Height,
-		info.ConfirmedTx,
-		info.MempoolLastIdx,
-		info.MempoolFirstIdx,
-		info.MempoolLastIdx-info.MempoolFirstIdx,
 
 		info.Header,
 		info.Block,
 		info.Mempool,
 		info.ZmqFirst,
 		info.ZmqLast,
+
+		info.MempoolLastIdx,
+		info.MempoolFirstIdx,
+		info.MempoolLastIdx-info.MempoolFirstIdx,
+		info.ConfirmedTx,
+
 		stopType,
 		info.Stop,
 	)
