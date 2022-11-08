@@ -117,7 +117,7 @@ func ParseUpdateAddressInTxParallel(txIdx uint64, tx *model.Tx, block *model.Pro
 	for _, output := range tx.TxOuts {
 		if output.Data.HasAddress {
 			address := string(output.Data.AddressPkh[:])
-			block.AddrPkhInTxMap[address] = append(block.AddrPkhInTxMap[address], txIdx)
+			block.AddrPkhInTxMap[address] = append(block.AddrPkhInTxMap[address], int(txIdx))
 		}
 	}
 }

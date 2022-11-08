@@ -63,11 +63,11 @@ func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, mpNewUtxo map[st
 }
 
 // ParseUpdateAddressInTxParallel address tx历史记录
-func ParseUpdateAddressInTxParallel(txIdx uint64, tx *model.Tx, addrPkhInTxMap map[string][]uint64) {
+func ParseUpdateAddressInTxParallel(txIdx uint64, tx *model.Tx, addrPkhInTxMap map[string][]int) {
 	for _, output := range tx.TxOuts {
 		if output.Data.HasAddress {
 			address := string(output.Data.AddressPkh[:])
-			addrPkhInTxMap[address] = append(addrPkhInTxMap[address], txIdx)
+			addrPkhInTxMap[address] = append(addrPkhInTxMap[address], int(txIdx))
 		}
 	}
 }

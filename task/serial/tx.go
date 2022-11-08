@@ -89,7 +89,7 @@ func UpdateAddrPkhInTxMapSerial(block *model.ProcessBlock) {
 			model.GlobalAddrPkhInTxMap[strAddressPkh] = append(model.GlobalAddrPkhInTxMap[strAddressPkh],
 				model.TxLocation{
 					BlockHeight: block.Height,
-					TxIdx:       txidx,
+					TxIdx:       uint64(txIdx),
 				})
 		}
 	}
@@ -106,7 +106,7 @@ func SaveGlobalAddressTxHistoryIntoPika() bool {
 	for strAddressPkh, listTxPosition := range model.GlobalAddrPkhInTxMap {
 		for _, txPosition := range listTxPosition {
 			key := fmt.Sprintf("%d:%d", txPosition.BlockHeight, txPosition.TxIdx)
-			score := float64(txPosition.BlockHeight)*1000000000 + float64(txPosition.TxIdx)
+			score := float64(uint64(txPosition.BlockHeight)*1000000000 + txPosition.TxIdx)
 			member := &redis.Z{Score: score, Member: key}
 			items = append(items, &Item{
 				Member: member,
