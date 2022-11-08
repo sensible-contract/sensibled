@@ -7,6 +7,7 @@ import (
 	"sensibled/logger"
 	"sensibled/model"
 	"sensibled/rdb"
+	"sort"
 	"strconv"
 
 	redis "github.com/go-redis/redis/v8"
@@ -138,7 +139,14 @@ func SaveAddressTxHistoryIntoPika(needReset bool, addrPkhInTxMap map[string][]in
 	// 写入地址的交易历史
 	pipe := rdb.RdbAddrTxClient.Pipeline()
 	for strAddressPkh, listTxid := range addrPkhInTxMap {
+		sort.Ints(listTxid)
+		lastTxIdx := -1
 		for _, txIdx := range listTxid {
+			if lastTxIdx == txIdx {
+				continue
+			}
+			lastTxIdx = txIdx
+
 			key := fmt.Sprintf("%d:%d", model.MEMPOOL_HEIGHT, txIdx)
 			score := float64(model.MEMPOOL_HEIGHT)*1000000000 + float64(txIdx)
 			// redis有序utxo数据成员

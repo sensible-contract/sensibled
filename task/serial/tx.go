@@ -9,6 +9,7 @@ import (
 	"sensibled/logger"
 	"sensibled/model"
 	"sensibled/rdb"
+	"sort"
 	"strconv"
 
 	redis "github.com/go-redis/redis/v8"
@@ -85,7 +86,15 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 // UpdateAddrPkhInTxMapSerial 顺序更新当前区块的address tx history信息变化到程序全局缓存
 func UpdateAddrPkhInTxMapSerial(block *model.ProcessBlock) {
 	for strAddressPkh, listTxid := range block.AddrPkhInTxMap {
-		for _, txidx := range listTxid {
+
+		sort.Ints(listTxid)
+		lastTxIdx := -1
+		for _, txIdx := range listTxid {
+			if lastTxIdx == txIdx {
+				continue
+			}
+			lastTxIdx = txIdx
+
 			model.GlobalAddrPkhInTxMap[strAddressPkh] = append(model.GlobalAddrPkhInTxMap[strAddressPkh],
 				model.TxLocation{
 					BlockHeight: block.Height,
