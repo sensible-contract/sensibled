@@ -314,7 +314,7 @@ func syncBlock() {
 				needSaveBlock = false
 				logger.Log.Info("block finished")
 			} else {
-				mempool.SubmitMempoolWithoutBlocks(initSyncMempool, startIdx)
+				mempool.SubmitMempoolWithoutBlocks(initSyncMempool)
 			}
 
 			initSyncMempool = false

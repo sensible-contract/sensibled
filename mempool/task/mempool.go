@@ -284,7 +284,7 @@ func (mp *Mempool) Process(initSyncMempool bool, stageBlockHeight, startIdx int)
 }
 
 // SubmitMempoolWithoutBlocks
-func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool, startIdx int) {
+func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool) {
 	var wg sync.WaitGroup
 
 	// address history
@@ -292,7 +292,7 @@ func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool, startIdx int
 	go func() {
 		defer wg.Done()
 		// Pika更新addr tx历史
-		if ok := serial.SaveAddressTxHistoryIntoPika(uint64(startIdx), mp.AddrPkhInTxMap); !ok {
+		if ok := serial.SaveAddressTxHistoryIntoPika(initSyncMempool, mp.AddrPkhInTxMap); !ok {
 			model.NeedStop = true
 			return
 		}

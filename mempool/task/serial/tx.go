@@ -102,9 +102,8 @@ func UpdateUtxoInLocalMapSerial(spentUtxoKeysMap map[string]struct{},
 }
 
 // SaveAddressTxHistoryIntoPika Pika更新addr tx历史
-func SaveAddressTxHistoryIntoPika(startIdx uint64, addrPkhInTxMap map[string][]uint64) bool {
+func SaveAddressTxHistoryIntoPika(needReset bool, addrPkhInTxMap map[string][]uint64) bool {
 	// 清除内存池数据
-	needReset := startIdx == 0
 	if needReset {
 		logger.Log.Info("reset pika mempool start")
 		addrs, err := rdb.RdbBalanceClient.SMembers(ctx, "mp:addresses").Result()
@@ -140,8 +139,8 @@ func SaveAddressTxHistoryIntoPika(startIdx uint64, addrPkhInTxMap map[string][]u
 	pipe := rdb.RdbAddrTxClient.Pipeline()
 	for strAddressPkh, listTxid := range addrPkhInTxMap {
 		for _, txIdx := range listTxid {
-			key := fmt.Sprintf("%d:%d", model.MEMPOOL_HEIGHT, startIdx+txIdx)
-			score := float64(model.MEMPOOL_HEIGHT)*1000000000 + float64(startIdx+txIdx)
+			key := fmt.Sprintf("%d:%d", model.MEMPOOL_HEIGHT, txIdx)
+			score := float64(model.MEMPOOL_HEIGHT)*1000000000 + float64(txIdx)
 			// redis有序utxo数据成员
 			member := &redis.Z{Score: score, Member: key}
 			pipe.ZAdd(ctx, "{ah"+strAddressPkh+"}", member) // 有序address tx history数据添加

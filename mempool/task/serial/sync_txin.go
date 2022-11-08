@@ -43,7 +43,7 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 
 			// address tx历史记录
 			if objData.Data.HasAddress {
-				addrPkhInTxMap[address] = append(addrPkhInTxMap[address], uint64(txIdx))
+				addrPkhInTxMap[address] = append(addrPkhInTxMap[address], uint64(startIdx+txIdx))
 			}
 
 			codehash := ""

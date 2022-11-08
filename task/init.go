@@ -246,8 +246,8 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 		}
 
 		if needSaveMempool {
-			startIdx := 0
-			if ok := memSerial.SaveAddressTxHistoryIntoPika(uint64(startIdx), mempool.AddrPkhInTxMap); !ok {
+			needReset := true
+			if ok := memSerial.SaveAddressTxHistoryIntoPika(needReset, mempool.AddrPkhInTxMap); !ok {
 				model.NeedStop = true
 				return
 			}
