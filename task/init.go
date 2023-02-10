@@ -63,7 +63,6 @@ func ParseBlockParallelEnd(block *model.Block) {
 	serial.SyncBlock(block)
 	// DB更新tx, 需要依赖txout、txin执行完毕，以统计Tx Fee
 	serial.SyncBlockTx(block)
-	serial.SyncBlockTxContract(block)
 
 	block.Txs = nil
 	block.ParseData = nil

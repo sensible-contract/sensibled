@@ -39,44 +39,44 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		}
 
 		// update token summary
-		buf := make([]byte, 12, 12+20+40)
-		binary.LittleEndian.PutUint32(buf, output.Data.CodeType)
-		if output.Data.CodeType == scriptDecoder.CodeType_NFT {
-			binary.LittleEndian.PutUint64(buf[4:], output.Data.NFT.TokenIndex)
-		} else if output.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
-			binary.LittleEndian.PutUint64(buf[4:], output.Data.NFTSell.TokenIndex)
-		}
+		// buf := make([]byte, 12, 12+20+40)
+		// binary.LittleEndian.PutUint32(buf, output.Data.CodeType)
+		// if output.Data.CodeType == scriptDecoder.CodeType_NFT {
+		// 	binary.LittleEndian.PutUint64(buf[4:], output.Data.NFT.TokenIndex)
+		// } else if output.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
+		// 	binary.LittleEndian.PutUint64(buf[4:], output.Data.NFTSell.TokenIndex)
+		// }
 
-		buf = append(buf, output.Data.CodeHash[:]...)
-		buf = append(buf, output.Data.GenesisId[:output.Data.GenesisIdLen]...)
+		// buf = append(buf, output.Data.CodeHash[:]...)
+		// buf = append(buf, output.Data.GenesisId[:output.Data.GenesisIdLen]...)
 
-		var tokenIndex uint64
-		var decimal uint8
-		switch output.Data.CodeType {
-		case scriptDecoder.CodeType_NFT:
-			tokenIndex = output.Data.NFT.TokenIndex
-		case scriptDecoder.CodeType_NFT_SELL:
-			tokenIndex = output.Data.NFTSell.TokenIndex
-		case scriptDecoder.CodeType_FT:
-			decimal = output.Data.FT.Decimal
-		}
+		// var tokenIndex uint64
+		// var decimal uint8
+		// switch output.Data.CodeType {
+		// case scriptDecoder.CodeType_NFT:
+		// 	tokenIndex = output.Data.NFT.TokenIndex
+		// case scriptDecoder.CodeType_NFT_SELL:
+		// 	tokenIndex = output.Data.NFTSell.TokenIndex
+		// case scriptDecoder.CodeType_FT:
+		// 	decimal = output.Data.FT.Decimal
+		// }
 
-		tokenKey := string(buf)
+		// tokenKey := string(buf)
 
-		tokenSummary, ok := block.TokenSummaryMap[tokenKey]
-		if !ok {
-			tokenSummary = &model.TokenData{
-				CodeType:  output.Data.CodeType,
-				NFTIdx:    tokenIndex,
-				Decimal:   decimal,
-				CodeHash:  output.Data.CodeHash[:],
-				GenesisId: output.Data.GenesisId[:output.Data.GenesisIdLen],
-			}
-			block.TokenSummaryMap[tokenKey] = tokenSummary
-		}
+		// tokenSummary, ok := block.TokenSummaryMap[tokenKey]
+		// if !ok {
+		// 	tokenSummary = &model.TokenData{
+		// 		CodeType:  output.Data.CodeType,
+		// 		NFTIdx:    tokenIndex,
+		// 		Decimal:   decimal,
+		// 		CodeHash:  output.Data.CodeHash[:],
+		// 		GenesisId: output.Data.GenesisId[:output.Data.GenesisIdLen],
+		// 	}
+		// 	block.TokenSummaryMap[tokenKey] = tokenSummary
+		// }
 
-		tokenSummary.OutSatoshi += output.Satoshi
-		tokenSummary.OutDataValue += 1
+		// tokenSummary.OutSatoshi += output.Satoshi
+		// tokenSummary.OutDataValue += 1
 	}
 }
 

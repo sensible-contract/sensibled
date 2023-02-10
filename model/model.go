@@ -109,7 +109,7 @@ type ProcessBlock struct {
 	SpentUtxoKeysMap map[string]struct{}
 	SpentUtxoDataMap map[string]*TxoData
 	NewUtxoDataMap   map[string]*TxoData
-	TokenSummaryMap  map[string]*TokenData // key: CodeHash+GenesisId;  nft: CodeHash+GenesisId+tokenIndex
+	// TokenSummaryMap  map[string]*TokenData // key: CodeHash+GenesisId;  nft: CodeHash+GenesisId+tokenIndex
 }
 
 type TokenData struct {

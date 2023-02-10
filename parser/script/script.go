@@ -1,7 +1,5 @@
 package script
 
-import "encoding/binary"
-
 // asSmallInt returns the passed opcode, which must be true according to
 // isSmallInt(), as an integer.
 func asSmallInt(op byte) int {
@@ -116,52 +114,4 @@ func IsLockingScriptOnlyEqual(pkScript []byte) bool {
 		return true
 	}
 	return false
-}
-
-func GetLockingScriptPushDropPosition(pkScript []byte) (pc int, ok bool) {
-	// test locking script
-	// "0b 3c4b616e7965323032303e 75"
-
-	length := len(pkScript)
-	if length == 0 {
-		return 0, false
-	}
-
-	if pkScript[0] > OP_16 {
-		return 0, false
-	}
-
-	cnt, cntsize := SafeDecodeVarIntForScript(pkScript)
-	pc = int(cnt + cntsize)
-	if length < pc+1 {
-		return 0, false
-	}
-
-	if pkScript[pc] != OP_DROP {
-		return 0, false
-	}
-	return pc + 1, true
-}
-
-func GetLockingScriptStatePosition(pkScript []byte) (pc int, ok bool) {
-	// test locking script
-	// "6a 3c4b616e7965323032303e 0b000000 00"
-
-	length := len(pkScript)
-	// opreturn + state + stateLen + version
-	if length < 1+0+4+1 {
-		return 0, false
-	}
-
-	stateLen := binary.LittleEndian.Uint32(pkScript[length-1-4 : length-1])
-	pc = length - int(1+stateLen+4+1) // postion opreturn
-	if pc < 0 {
-		return 0, false
-	}
-
-	if pkScript[pc] != OP_RETURN {
-		return 0, false
-	}
-
-	return pc + 1, true
 }

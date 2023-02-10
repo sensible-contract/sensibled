@@ -21,25 +21,8 @@ func SyncBlock(block *model.Block) {
 		txOutputsValue += tx.OutputsValue
 	}
 
-	for _, tokenSummary := range block.ParseData.TokenSummaryMap {
-		if _, err := store.SyncStmtBlkCodeHash.Exec(
-			uint32(block.Height),
-			string(tokenSummary.CodeHash),
-			string(tokenSummary.GenesisId),
-			uint32(tokenSummary.CodeType),
-			tokenSummary.NFTIdx,
-			tokenSummary.InDataValue,
-			tokenSummary.OutDataValue,
-			tokenSummary.InSatoshi,
-			tokenSummary.OutSatoshi,
-			string(block.Hash),
-		); err != nil {
-			logger.Log.Info("sync-block-codehash-err",
-				zap.String("blkid", block.HashHex),
-				zap.String("err", err.Error()),
-			)
-		}
-	}
+	// for _, tokenSummary := range block.ParseData.TokenSummaryMap {
+	// }
 
 	if _, err := store.SyncStmtBlk.Exec(
 		uint32(block.Height),

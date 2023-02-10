@@ -1,7 +1,6 @@
 package serial
 
 import (
-	"encoding/binary"
 	"sensibled/logger"
 	"sensibled/model"
 	scriptDecoder "sensibled/parser/script"
@@ -75,46 +74,45 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			}
 
 			var dataValue uint64
-			var tokenIndex uint64
-			var decimal uint8
-			// token summary
-			if objData.Data.CodeType != scriptDecoder.CodeType_NONE && objData.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
-				buf := make([]byte, 12, 12+20+40)
-				binary.LittleEndian.PutUint32(buf, objData.Data.CodeType)
+			// var tokenIndex uint64
+			// var decimal uint8
+			// // token summary
+			// if objData.Data.CodeType != scriptDecoder.CodeType_NONE && objData.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
+			// 	buf := make([]byte, 12, 12+20+40)
+			// 	binary.LittleEndian.PutUint32(buf, objData.Data.CodeType)
 
-				if objData.Data.CodeType == scriptDecoder.CodeType_NFT {
-					binary.LittleEndian.PutUint64(buf[4:], objData.Data.NFT.TokenIndex)
-					tokenIndex = objData.Data.NFT.TokenIndex
-					dataValue = tokenIndex
-				} else if objData.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
-					binary.LittleEndian.PutUint64(buf[4:], objData.Data.NFTSell.TokenIndex)
-					tokenIndex = objData.Data.NFTSell.TokenIndex
-					dataValue = tokenIndex
-				} else if objData.Data.CodeType == scriptDecoder.CodeType_FT {
-					decimal = objData.Data.FT.Decimal
-					dataValue = objData.Data.FT.Amount
-				}
+			// 	if objData.Data.CodeType == scriptDecoder.CodeType_NFT {
+			// 		binary.LittleEndian.PutUint64(buf[4:], objData.Data.NFT.TokenIndex)
+			// 		tokenIndex = objData.Data.NFT.TokenIndex
+			// 		dataValue = tokenIndex
+			// 	} else if objData.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
+			// 		binary.LittleEndian.PutUint64(buf[4:], objData.Data.NFTSell.TokenIndex)
+			// 		tokenIndex = objData.Data.NFTSell.TokenIndex
+			// 		dataValue = tokenIndex
+			// 	} else if objData.Data.CodeType == scriptDecoder.CodeType_FT {
+			// 		decimal = objData.Data.FT.Decimal
+			// 		dataValue = objData.Data.FT.Amount
+			// 	}
 
-				buf = append(buf, objData.Data.CodeHash[:]...)
-				buf = append(buf, objData.Data.GenesisId[:objData.Data.GenesisIdLen]...)
+			// 	buf = append(buf, objData.Data.CodeHash[:]...)
+			// 	buf = append(buf, objData.Data.GenesisId[:objData.Data.GenesisIdLen]...)
 
-				tokenKey := string(buf)
+			// 	tokenKey := string(buf)
+			// 	tokenSummary, ok := block.ParseData.TokenSummaryMap[tokenKey]
+			// 	if !ok {
+			// 		tokenSummary = &model.TokenData{
+			// 			CodeType:  objData.Data.CodeType,
+			// 			NFTIdx:    tokenIndex,
+			// 			Decimal:   decimal,
+			// 			CodeHash:  objData.Data.CodeHash[:],
+			// 			GenesisId: objData.Data.GenesisId[:objData.Data.GenesisIdLen],
+			// 		}
+			// 		block.ParseData.TokenSummaryMap[tokenKey] = tokenSummary
+			// 	}
 
-				tokenSummary, ok := block.ParseData.TokenSummaryMap[tokenKey]
-				if !ok {
-					tokenSummary = &model.TokenData{
-						CodeType:  objData.Data.CodeType,
-						NFTIdx:    tokenIndex,
-						Decimal:   decimal,
-						CodeHash:  objData.Data.CodeHash[:],
-						GenesisId: objData.Data.GenesisId[:objData.Data.GenesisIdLen],
-					}
-					block.ParseData.TokenSummaryMap[tokenKey] = tokenSummary
-				}
-
-				tokenSummary.InSatoshi += objData.Satoshi
-				tokenSummary.InDataValue += 1
-			}
+			// 	tokenSummary.InSatoshi += objData.Satoshi
+			// 	tokenSummary.InDataValue += 1
+			// }
 
 			if _, err := store.SyncStmtTxIn.Exec(
 				uint32(block.Height),

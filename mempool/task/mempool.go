@@ -241,10 +241,6 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 	// SpentUtxoDataMap r
 	serial.SyncBlockTxInputDetail(startIdx, mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap, mp.AddrPkhInTxMap)
 
-	// 8 dep 3
-	// SpentUtxoDataMap r
-	serial.SyncBlockTxContract(startIdx, mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
-
 	// 5 dep 2 4
 	serial.SyncBlockTx(startIdx, mp.BatchTxs)
 }
