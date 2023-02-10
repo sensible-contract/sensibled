@@ -34,7 +34,7 @@ type TxIn struct {
 	ScriptSig    []byte
 	Sequence     uint32
 
-	Wits []*TxWit
+	ScriptWitness []byte
 
 	// other:
 	InputOutpointKey string // 32 + 4
@@ -63,7 +63,7 @@ type TxOut struct {
 }
 
 type TxWit struct {
-	ScriptWitness []byte
+	Script []byte
 }
 
 type Block struct {

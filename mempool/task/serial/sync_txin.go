@@ -58,6 +58,7 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				string(tx.TxId),
 				uint32(vin),
 				string(input.ScriptSig),
+				string(input.ScriptWitness),
 				uint32(input.Sequence),
 
 				uint32(objData.BlockHeight),

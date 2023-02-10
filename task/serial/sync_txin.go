@@ -59,6 +59,10 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			if !isScriptSigPrune {
 				scriptsig = string(input.ScriptSig)
 			}
+			scriptwits := ""
+			if !isScriptSigPrune {
+				scriptwits = string(input.ScriptWitness)
+			}
 
 			// 清理非sensible且无地址的锁定脚本
 			pkscript := ""
@@ -113,6 +117,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				string(tx.TxId),
 				uint32(vin),
 				scriptsig, // prune string(input.ScriptSig),
+				scriptwits,
 				uint32(input.Sequence),
 
 				uint32(objData.BlockHeight),

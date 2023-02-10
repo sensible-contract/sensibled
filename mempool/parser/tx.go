@@ -64,7 +64,7 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 	if isWit {
 		tx.WitOffset = uint32(offset)
 		for i := range tx.TxIns {
-			tx.TxIns[i].Wits, txoffset = NewTxWit(rawtx[offset:])
+			tx.TxIns[i].ScriptWitness, txoffset = NewTxWits(rawtx[offset:])
 			// failed
 			if txoffset == 0 {
 				return nil, 0
@@ -162,10 +162,34 @@ func NewTxWit(txwitraw []byte) (wits []*model.TxWit, offset uint) {
 		}
 
 		txwit := new(model.TxWit)
-		txwit.ScriptWitness = txwitraw[offset : offset+txWitScriptcnt]
+		txwit.Script = txwitraw[offset : offset+txWitScriptcnt]
 
 		wits[witIndex] = txwit
 		offset += txWitScriptcnt
 	}
+	return
+}
+
+func NewTxWits(txwitraw []byte) (wits []byte, offset uint) {
+	witLen := len(txwitraw)
+	if witLen < 1 {
+		return nil, 0
+	}
+
+	txWitcnt, txWitcntsize := utils.DecodeVarIntForBlock(txwitraw[0:])
+	offset = txWitcntsize
+
+	for witIndex := uint(0); witIndex < txWitcnt; witIndex++ {
+		txWitScriptcnt, txWitScriptcntsize := utils.DecodeVarIntForBlock(txwitraw[offset:])
+		offset += txWitScriptcntsize
+
+		// invalid
+		if offset+txWitScriptcnt >= uint(witLen) {
+			return nil, 0
+		}
+		offset += txWitScriptcnt
+	}
+
+	wits = txwitraw[:offset]
 	return
 }

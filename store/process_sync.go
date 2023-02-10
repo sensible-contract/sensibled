@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS txin (
 	txid         FixedString(32),
 	idx          UInt32,
 	script_sig   String,
+	script_wits  String,
 	nsequence    UInt32,
 
 	height_txo   UInt32,
