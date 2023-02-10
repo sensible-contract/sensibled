@@ -167,6 +167,7 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 	go func() {
 		defer wg.Done()
 
+		return
 		if ok := serial.SaveGlobalAddressTxHistoryIntoPika(); !ok {
 			model.NeedStop = true
 			return
@@ -235,6 +236,8 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+
+		return
 
 		// Pika更新addr tx历史
 		if needSaveBlock {
