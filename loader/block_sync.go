@@ -41,7 +41,6 @@ func GetLatestBlockFromDB() (blkRsp *model.BlockDO, err error) {
 	return blkRsp, nil
 }
 
-////////////////
 func GetBestBlockHeightFromRedis() (height int, err error) {
 	// get decimal from f info
 	ctx := context.Background()

@@ -61,7 +61,6 @@ type TxOut struct {
 
 }
 
-////////////////
 type Block struct {
 	Raw        []byte
 	Hash       []byte // 32 bytes
