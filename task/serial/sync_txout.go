@@ -3,9 +3,9 @@ package serial
 import (
 	"sensibled/logger"
 	"sensibled/model"
+	scriptDecoder "sensibled/parser/script"
 	"sensibled/store"
 
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
 )
 

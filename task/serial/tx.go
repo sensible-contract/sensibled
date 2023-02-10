@@ -8,12 +8,12 @@ import (
 	"os"
 	"sensibled/logger"
 	"sensibled/model"
+	scriptDecoder "sensibled/parser/script"
 	"sensibled/rdb"
 	"sort"
 	"strconv"
 
 	redis "github.com/go-redis/redis/v8"
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
 )
 

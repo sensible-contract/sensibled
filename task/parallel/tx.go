@@ -4,8 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"sensibled/model"
-
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
+	scriptDecoder "sensibled/parser/script"
 )
 
 // ParseTx 先并行分析交易tx，不同区块并行，同区块内串行

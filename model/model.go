@@ -2,9 +2,9 @@ package model
 
 import (
 	"encoding/binary"
+	scriptDecoder "sensibled/parser/script"
 	"sync"
 
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 )
