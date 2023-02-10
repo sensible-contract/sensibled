@@ -5,7 +5,6 @@ import (
 	scriptDecoder "sensibled/parser/script"
 	"sync"
 
-	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -22,8 +21,8 @@ type Tx struct {
 	TxOutCnt     uint32
 	InputsValue  uint64
 	OutputsValue uint64
-	TxIns        TxIns
-	TxOuts       TxOuts
+	TxIns        []*TxIn
+	TxOuts       []*TxOut
 	IsSensible   bool
 }
 
@@ -60,29 +59,6 @@ type TxOut struct {
 	LockingScriptUnspendable bool
 }
 
-func (t *TxOut) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	enc.AddUint64("v", t.Satoshi)
-	return nil
-}
-
-type TxIns []*TxIn
-
-func (tt TxIns) MarshalLogArray(arr zapcore.ArrayEncoder) error {
-	var err error
-	for i := range tt {
-		err = multierr.Append(err, arr.AppendObject(tt[i]))
-	}
-	return err
-}
-
-type TxOuts []*TxOut
-
-func (tt TxOuts) MarshalLogArray(arr zapcore.ArrayEncoder) error {
-	var err error
-	for i := range tt {
-		err = multierr.Append(err, arr.AppendObject(tt[i]))
-	}
-	return err
 }
 
 ////////////////
