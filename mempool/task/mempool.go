@@ -81,7 +81,11 @@ func (mp *Mempool) LoadFromMempool() bool {
 		}
 		tx.Raw = rawtx
 		tx.Size = uint32(txoffset)
-		tx.TxId = utils.GetHash256(tx.Raw)
+		if tx.WitOffset > 0 {
+			tx.TxId = utils.GetWitnessHash256(tx.Raw, tx.WitOffset)
+		} else {
+			tx.TxId = utils.GetHash256(tx.Raw)
+		}
 		tx.TxIdHex = utils.HashString(tx.TxId)
 
 		// maybe impossible dup here
@@ -153,7 +157,11 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 		}
 		tx.Raw = rawtx
 		tx.Size = uint32(txoffset)
-		tx.TxId = utils.GetHash256(tx.Raw)
+		if tx.WitOffset > 0 {
+			tx.TxId = utils.GetWitnessHash256(tx.Raw, tx.WitOffset)
+		} else {
+			tx.TxId = utils.GetHash256(tx.Raw)
+		}
 		tx.TxIdHex = utils.HashString(tx.TxId)
 
 		// ignore non final tx

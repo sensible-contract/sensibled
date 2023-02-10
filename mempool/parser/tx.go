@@ -16,6 +16,13 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 	tx.Version = binary.LittleEndian.Uint32(rawtx[0:4])
 	offset = 4
 
+	// check witness
+	isWit := false
+	if rawtx[4] == 0 && rawtx[5] == 1 {
+		isWit = true
+		offset += 2
+	}
+
 	txincnt, txincntsize := utils.DecodeVarIntForBlock(rawtx[offset:])
 	offset += txincntsize
 
@@ -51,6 +58,23 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 		// invalid
 		if offset >= uint(txLen) {
 			return nil, 0
+		}
+	}
+
+	if isWit {
+		tx.WitOffset = uint32(offset)
+		for i := range tx.TxIns {
+			tx.TxIns[i].Wits, txoffset = NewTxWit(rawtx[offset:])
+			// failed
+			if txoffset == 0 {
+				return nil, 0
+			}
+
+			offset += txoffset
+			// invalid
+			if offset >= uint(txLen) {
+				return nil, 0
+			}
 		}
 	}
 
@@ -115,5 +139,33 @@ func NewTxOut(txoutraw []byte) (txout *model.TxOut, offset uint) {
 	copy(txout.PkScript, txoutraw[offset:offset+pkscript])
 	offset += pkscript
 
+	return
+}
+
+func NewTxWit(txwitraw []byte) (wits []*model.TxWit, offset uint) {
+	witLen := len(txwitraw)
+	if witLen < 1 {
+		return nil, 0
+	}
+
+	txWitcnt, txWitcntsize := utils.DecodeVarIntForBlock(txwitraw[0:])
+	offset = txWitcntsize
+
+	wits = make([]*model.TxWit, txWitcnt)
+	for witIndex := uint(0); witIndex < txWitcnt; witIndex++ {
+		txWitScriptcnt, txWitScriptcntsize := utils.DecodeVarIntForBlock(txwitraw[offset:])
+		offset += txWitScriptcntsize
+
+		// invalid
+		if offset+txWitScriptcnt >= uint(witLen) {
+			return nil, 0
+		}
+
+		txwit := new(model.TxWit)
+		txwit.ScriptWitness = txwitraw[offset : offset+txWitScriptcnt]
+
+		wits[witIndex] = txwit
+		offset += txWitScriptcnt
+	}
 	return
 }

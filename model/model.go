@@ -15,6 +15,7 @@ type Tx struct {
 	TxIdHex      string // 64
 	TxId         []byte // 32
 	Size         uint32
+	WitOffset    uint32
 	LockTime     uint32
 	Version      uint32
 	TxInCnt      uint32
@@ -32,6 +33,8 @@ type TxIn struct {
 	InputVout    uint32
 	ScriptSig    []byte
 	Sequence     uint32
+
+	Wits []*TxWit
 
 	// other:
 	InputOutpointKey string // 32 + 4
@@ -59,6 +62,8 @@ type TxOut struct {
 	LockingScriptUnspendable bool
 }
 
+type TxWit struct {
+	ScriptWitness []byte
 }
 
 type Block struct {
