@@ -108,6 +108,7 @@ func NewTxOut(txoutraw []byte) (txout *model.TxOut, offset uint) {
 	return
 }
 
+// striped tx
 func NewRawTx(tx *model.Tx, rawtx []byte) (offset int) {
 	binary.LittleEndian.PutUint32(rawtx[0:4], tx.Version)
 	offset = 4
