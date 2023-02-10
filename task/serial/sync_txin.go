@@ -66,13 +66,6 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				pkscript = string(objData.PkScript)
 			}
 
-			codehash := ""
-			genesis := ""
-			if objData.Data.CodeType != scriptDecoder.CodeType_NONE && objData.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
-				codehash = string(objData.Data.CodeHash[:])                          // 20 bytes
-				genesis = string(objData.Data.GenesisId[:objData.Data.GenesisIdLen]) // 20/36/40 bytes
-			}
-
 			var dataValue uint64
 			// var tokenIndex uint64
 			// var decimal uint8
@@ -127,8 +120,6 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				string(input.InputHash),
 				input.InputVout,
 				address,
-				codehash,
-				genesis,
 				uint32(objData.Data.CodeType),
 				dataValue,
 				objData.Satoshi,

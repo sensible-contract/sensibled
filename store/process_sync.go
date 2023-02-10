@@ -81,8 +81,6 @@ CREATE TABLE IF NOT EXISTS txout (
 	utxid        FixedString(32),
 	vout         UInt32,
 	address      String,
-	codehash     String,
-	genesis      String,
 	code_type    UInt32,      -- 0: none, 1: ft, 2: unique, 3: nft
 	data_value   UInt64,
 	satoshi      UInt64,
@@ -129,8 +127,6 @@ CREATE TABLE IF NOT EXISTS txin (
 	utxid        FixedString(32),
 	vout         UInt32,
 	address      String,
-	codehash     String,
-	genesis      String,
 	code_type    UInt32,      -- 0: none, 1: ft, 2: unique, 3: nft
 	data_value   UInt64,
 	satoshi      UInt64,
@@ -170,44 +166,6 @@ CREATE TABLE IF NOT EXISTS txout_spent_height (
 ORDER BY (utxid, vout)
 PARTITION BY substring(utxid, 1, 1)
 `,
-
-		// genesis在哪些高度的tx中出现，按genesis首字节分区，分区内按genesis+address+height排序，按genesis索引。按genesis查询时可确定分区 (快)
-		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
-		// 主要用于从genesis确定所在区块height。配合txin源表查询
-		"DROP TABLE IF EXISTS txin_genesis_height",
-		`
-CREATE TABLE IF NOT EXISTS txin_genesis_height (
-	height       UInt32,
-	txidx        UInt64,
-	txid         FixedString(12),
-	idx          UInt32,
-	address      String,
-	codehash     String,
-	genesis      String
-) engine=MergeTree()
-PRIMARY KEY address
-ORDER BY (address, codehash, genesis, height, txidx)
-PARTITION BY substring(address, 1, 1)
-`,
-
-		// genesis在哪些高度的tx中出现，按genesis首字节分区，分区内按genesis+address+height排序，按genesis索引。按genesis查询时可确定分区 (快)
-		// 此数据表不能保证和最长链一致，而是包括所有已打包tx的height信息，其中可能存在已被孤立的块高度
-		// 主要用于从genesis确定所在区块height。配合txout源表查询
-		"DROP TABLE IF EXISTS txout_genesis_height",
-		`
-CREATE TABLE IF NOT EXISTS txout_genesis_height (
-height       UInt32,
-	utxidx       UInt64,
-	utxid        FixedString(12),
-	vout         UInt32,
-	address      String,
-	codehash     String,
-	genesis      String
-) engine=MergeTree()
-PRIMARY KEY address
-ORDER BY (address, codehash, genesis, height, utxidx)
-PARTITION BY substring(address, 1, 1)
- `,
 	}
 
 	processAllSQLs = []string{
@@ -221,11 +179,6 @@ PARTITION BY substring(address, 1, 1)
 		"INSERT INTO txin_spent SELECT height, txid, idx, substring(utxid, 1, 12), vout FROM txin",
 		// 生成txo被花费的tx区块高度索引
 		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_spent",
-
-		// 生成溯源ID参与的输出索引
-		"INSERT INTO txout_genesis_height SELECT height, utxidx, substring(utxid, 1, 12), vout, address, codehash, genesis FROM txout WHERE codehash != ''",
-		// 生成溯源ID参与输入的相关tx区块高度索引
-		"INSERT INTO txin_genesis_height SELECT height, txidx, substring(txid, 1, 12), idx, address, codehash, genesis FROM txin WHERE codehash != ''",
 	}
 
 	removeOrphanPartSQLs = []string{
@@ -261,16 +214,10 @@ PARTITION BY substring(address, 1, 1)
 		// 更新txo被花费的tx区块高度索引，注意这里并未清除孤立区块的数据
 		"INSERT INTO txout_spent_height SELECT height, substring(utxid, 1, 12), vout FROM txin_new ORDER BY utxid",
 
-		// 更新溯源ID参与输入的相关tx区块高度索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txin_genesis_height SELECT height, txidx, substring(txid, 1, 12), idx, address, codehash, genesis FROM txin_new WHERE codehash != '' ORDER BY codehash",
-
 		"DROP TABLE IF EXISTS txin_new",
 	}
 	processPartSQLsForTxOut = []string{
 		"INSERT INTO txout SELECT * FROM txout_new;",
-
-		// 更新溯源ID参与的输出索引，注意这里并未清除孤立区块的数据
-		"INSERT INTO txout_genesis_height SELECT height, utxidx, substring(utxid, 1, 12), vout, address, codehash, genesis FROM txout_new WHERE codehash != '' ORDER BY codehash",
 
 		"DROP TABLE IF EXISTS txout_new",
 	}

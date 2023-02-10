@@ -114,8 +114,6 @@ type ProcessBlock struct {
 
 type TokenData struct {
 	CodeType     uint32
-	CodeHash     []byte
-	GenesisId    []byte
 	NFTIdx       uint64 // nft tokenIndex
 	Decimal      uint8  // ft decimal
 	InDataValue  uint64 // ft / nft count

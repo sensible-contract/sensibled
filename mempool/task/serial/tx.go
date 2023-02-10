@@ -9,7 +9,6 @@ import (
 	scriptDecoder "sensibled/parser/script"
 	"sensibled/rdb"
 	"sort"
-	"strconv"
 
 	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
@@ -287,8 +286,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	mpkeys := make([]string, 5*(len(utxoToRestore)+len(utxoToRemove)+len(utxoToSpend)))
 	for outpointKey, data := range utxoToRestore {
 		strAddressPkh := string(data.Data.AddressPkh[:])
-		strCodeHash := string(data.Data.CodeHash[:])
-		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
 
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
@@ -332,108 +329,37 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		// redis有序genesis utxo数据添加
 		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
-			mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			mpkeyND := "mp:nd" + strCodeHash + strGenesisId
-			mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
-			mpkeyNS := "mp:{ns" + strAddressPkh + "}"
-			mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
+			// mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
+			// mpkeyND := "mp:nd" + strCodeHash + strGenesisId
+			// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
+			// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
+			// mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
 
-			member.Score = float64(data.Data.NFT.TokenIndex)
-			pipe.ZAdd(ctx, mpkeyNU, member)                         // nft:utxo
-			pipe.ZAdd(ctx, mpkeyND, member)                         // nft:utxo-detail
-			pipe.ZIncrBy(ctx, mpkeyNO, 1, strAddressPkh)            // nft:owners
-			pipe.ZIncrBy(ctx, mpkeyNS, 1, strCodeHash+strGenesisId) // nft:summary
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_AUCTION {
-			mpkeyNAU := "mp:{nau" + strAddressPkh + "}" + strCodeHash
-			mpkeyNAD := "mp:nad" + strCodeHash + strGenesisId
-			mpkeyNAS := "mp:{nas" + strAddressPkh + "}"
-			mpkeys = append(mpkeys, mpkeyNAU, mpkeyNAD, mpkeyNAS)
-
-			pipe.ZAdd(ctx, mpkeyNAU, member)            // nft:auction:utxo
-			pipe.ZAdd(ctx, mpkeyNAD, member)            // nft:auction:utxo-detail
-			pipe.ZIncrBy(ctx, mpkeyNAS, 1, strCodeHash) // nft:auction:sender-summary
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
-			mpkeySUT := "mp:{sut}"
-			mpkeySUTA := "mp:{suta" + strAddressPkh + "}"
-			mpkeySUTC := "mp:{sutc" + strGenesisId + strCodeHash + "}"
-			mpkeySUP := "mp:{sup}"
-			mpkeySUPA := "mp:{supa" + strAddressPkh + "}"
-			mpkeySUPC := "mp:{supc" + strGenesisId + strCodeHash + "}"
-			mpkeySUI := "mp:{sui}"
-			mpkeySUIA := "mp:{suia" + strAddressPkh + "}"
-			mpkeySUIC := "mp:{suic" + strGenesisId + strCodeHash + "}"
-
-			mpkeys = append(mpkeys, mpkeySUT, mpkeySUTA, mpkeySUTC, mpkeySUP, mpkeySUPA, mpkeySUPC, mpkeySUI, mpkeySUIA, mpkeySUIC)
-
-			pipe.ZAdd(ctx, mpkeySUT, member)  // nft:sell:all:utxo, sort by time
-			pipe.ZAdd(ctx, mpkeySUTA, member) // nft:sell:seller-address:utxo
-			pipe.ZAdd(ctx, mpkeySUTC, member) // nft:sell
-
-			member.Score = float64(data.Data.NFTSell.Price)
-			pipe.ZAdd(ctx, mpkeySUP, member)  // nft:sell:all:utxo, sort by price
-			pipe.ZAdd(ctx, mpkeySUPA, member) // nft:sell:seller-address:utxo
-			pipe.ZAdd(ctx, mpkeySUPC, member) // nft:sell
-
-			member.Score = float64(data.Data.NFTSell.TokenIndex)
-			pipe.ZAdd(ctx, mpkeySUI, member)  // nft:sell:all:utxo, sort by token index
-			pipe.ZAdd(ctx, mpkeySUIA, member) // nft:sell:seller-address:utxo
-			pipe.ZAdd(ctx, mpkeySUIC, member) // nft:sell
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_FT {
-			mpkeyFU := "mp:{fu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			mpkeyFB := "mp:{fb" + strGenesisId + strCodeHash + "}"
-			mpkeyFS := "mp:{fs" + strAddressPkh + "}"
-			mpkeys = append(mpkeys, mpkeyFU, mpkeyFB, mpkeyFS)
-
-			pipe.ZAdd(ctx, mpkeyFU, member)                                                    // ft:utxo
-			pipe.ZIncrBy(ctx, mpkeyFB, float64(data.Data.FT.Amount), strAddressPkh)            // ft:balance
-			pipe.ZIncrBy(ctx, mpkeyFS, float64(data.Data.FT.Amount), strCodeHash+strGenesisId) // ft:summary
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_UNIQUE {
-			mpkeyFU := "mp:{fu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			mpkeys = append(mpkeys, mpkeyFU)
-
-			pipe.ZAdd(ctx, mpkeyFU, member) // ft:utxo
-
+			// member.Score = float64(data.Data.NFT.TokenIndex)
+			// pipe.ZAdd(ctx, mpkeyNU, member)                         // nft:utxo
+			// pipe.ZAdd(ctx, mpkeyND, member)                         // nft:utxo-detail
+			// pipe.ZIncrBy(ctx, mpkeyNO, 1, strAddressPkh)            // nft:owners
+			// pipe.ZIncrBy(ctx, mpkeyNS, 1, strCodeHash+strGenesisId) // nft:summary
 		}
 
 		// update token info
-		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
-			pipe.HSet(ctx, "nI"+strCodeHash+strGenesisId+strconv.Itoa(int(data.Data.NFT.TokenIndex)),
-				"metatxid", data.Data.NFT.MetaTxId[:],
-				"metavout", data.Data.NFT.MetaOutputIndex,
-				"supply", data.Data.NFT.TokenSupply,
-				"sensibleid", data.Data.NFT.SensibleId,
-			)
-			pipe.HSet(ctx, "ni"+strCodeHash+strGenesisId,
-				"supply", data.Data.NFT.TokenSupply,
-				"sensibleid", data.Data.NFT.SensibleId,
-			)
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_FT {
-			pipe.HSet(ctx, "fi"+strCodeHash+strGenesisId,
-				"decimal", data.Data.FT.Decimal,
-				"name", data.Data.FT.Name,
-				"symbol", data.Data.FT.Symbol,
-				"sensibleid", data.Data.FT.SensibleId,
-			)
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_UNIQUE {
-			pipe.HSet(ctx, "fi"+strCodeHash+strGenesisId,
-				"sensibleid", data.Data.Uniq.SensibleId,
-			)
-		}
-
+		// if data.Data.CodeType == scriptDecoder.CodeType_NFT {
+		// 	pipe.HSet(ctx, "nI"+strCodeHash+strGenesisId+strconv.Itoa(int(data.Data.NFT.TokenIndex)),
+		// 		"metatxid", data.Data.NFT.MetaTxId[:],
+		// 		"metavout", data.Data.NFT.MetaOutputIndex,
+		// 		"supply", data.Data.NFT.TokenSupply,
+		// 		"sensibleid", data.Data.NFT.SensibleId,
+		// 	)
+		// 	pipe.HSet(ctx, "ni"+strCodeHash+strGenesisId,
+		// 		"supply", data.Data.NFT.TokenSupply,
+		// 		"sensibleid", data.Data.NFT.SensibleId,
+		// 	)
+		// }
 	}
 
-	addrToRemove := make(map[string]struct{}, 1)
-	tokenToRemove := make(map[string]struct{}, 1)
+	// addrToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
 		strAddressPkh := string(data.Data.AddressPkh[:])
-		strCodeHash := string(data.Data.CodeHash[:])
-		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
 
 		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
 			// redis有序utxo数据清除
@@ -460,71 +386,24 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		// redis有序genesis utxo数据清除
 		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
-			mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			mpkeyND := "mp:nd" + strCodeHash + strGenesisId
-			mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
-			mpkeyNS := "mp:{ns" + strAddressPkh + "}"
+			// mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
+			// mpkeyND := "mp:nd" + strCodeHash + strGenesisId
+			// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
+			// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
 
-			pipe.ZRem(ctx, mpkeyNU, outpointKey)                     // nft:utxo
-			pipe.ZRem(ctx, mpkeyND, outpointKey)                     // nft:utxo-detail
-			pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
-			pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
+			// pipe.ZRem(ctx, mpkeyNU, outpointKey)                     // nft:utxo
+			// pipe.ZRem(ctx, mpkeyND, outpointKey)                     // nft:utxo-detail
+			// pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
+			// pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
 
-		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_AUCTION {
-			mpkeyNAU := "mp:{nau" + strAddressPkh + "}" + strCodeHash
-			mpkeyNAD := "mp:nad" + strCodeHash + strGenesisId
-			mpkeyNAS := "mp:{nas" + strAddressPkh + "}"
-
-			pipe.ZRem(ctx, mpkeyNAU, outpointKey)        // nft:auction:utxo
-			pipe.ZRem(ctx, mpkeyNAD, outpointKey)        // nft:auction:utxo-detail
-			pipe.ZIncrBy(ctx, mpkeyNAS, -1, strCodeHash) // nft:auction:sender-summary
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
-			mpkeySUT := "mp:{sut}"
-			mpkeySUTA := "mp:{suta" + strAddressPkh + "}"
-			mpkeySUTC := "mp:{sutc" + strGenesisId + strCodeHash + "}"
-			mpkeySUP := "mp:{sup}"
-			mpkeySUPA := "mp:{supa" + strAddressPkh + "}"
-			mpkeySUPC := "mp:{supc" + strGenesisId + strCodeHash + "}"
-			mpkeySUI := "mp:{sui}"
-			mpkeySUIA := "mp:{suia" + strAddressPkh + "}"
-			mpkeySUIC := "mp:{suic" + strGenesisId + strCodeHash + "}"
-
-			pipe.ZRem(ctx, mpkeySUT, outpointKey)  // nft:sell:all:utxo, sort by time
-			pipe.ZRem(ctx, mpkeySUTA, outpointKey) // nft:sell:seller-address:utxo
-			pipe.ZRem(ctx, mpkeySUTC, outpointKey) // nft:sell
-
-			pipe.ZRem(ctx, mpkeySUP, outpointKey)  // nft:sell:all:utxo, sort by price
-			pipe.ZRem(ctx, mpkeySUPA, outpointKey) // nft:sell:seller-address:utxo
-			pipe.ZRem(ctx, mpkeySUPC, outpointKey) // nft:sell
-
-			pipe.ZRem(ctx, mpkeySUI, outpointKey)  // nft:sell:all:utxo, sort by token index
-			pipe.ZRem(ctx, mpkeySUIA, outpointKey) // nft:sell:seller-address:utxo
-			pipe.ZRem(ctx, mpkeySUIC, outpointKey) // nft:sell
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_FT {
-			mpkeyFU := "mp:{fu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			mpkeyFB := "mp:{fb" + strGenesisId + strCodeHash + "}"
-			mpkeyFS := "mp:{fs" + strAddressPkh + "}"
-
-			pipe.ZRem(ctx, mpkeyFU, outpointKey)                                                // ft:utxo
-			pipe.ZIncrBy(ctx, mpkeyFB, -float64(data.Data.FT.Amount), strAddressPkh)            // ft:balance
-			pipe.ZIncrBy(ctx, mpkeyFS, -float64(data.Data.FT.Amount), strCodeHash+strGenesisId) // ft:summary
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_UNIQUE {
-			mpkeyFU := "mp:{fu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			pipe.ZRem(ctx, mpkeyFU, outpointKey) // ft:utxo
 		}
 
 		// 记录key以备删除
-		tokenToRemove[strGenesisId+strCodeHash] = struct{}{}
-		addrToRemove[strAddressPkh] = struct{}{}
+		// addrToRemove[strAddressPkh] = struct{}{}
 	}
 
 	for outpointKey, data := range utxoToSpend {
 		strAddressPkh := string(data.Data.AddressPkh[:])
-		strCodeHash := string(data.Data.CodeHash[:])
-		strGenesisId := string(data.Data.GenesisId[:data.Data.GenesisIdLen])
 
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
@@ -556,92 +435,32 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		// redis有序genesis utxo数据添加
 		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
-			member.Score = float64(data.Data.NFT.TokenIndex)
+			// member.Score = float64(data.Data.NFT.TokenIndex)
 
-			mpkeyNU := "mp:s:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			mpkeyND := "mp:s:nd" + strCodeHash + strGenesisId
-			mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
-			mpkeyNS := "mp:{ns" + strAddressPkh + "}"
+			// mpkeyNU := "mp:s:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
+			// mpkeyND := "mp:s:nd" + strCodeHash + strGenesisId
+			// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
+			// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
 
-			mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
+			// mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
 
-			pipe.ZAdd(ctx, mpkeyNU, member)                          // nft:utxo
-			pipe.ZAdd(ctx, mpkeyND, member)                          // nft:utxo-detail
-			pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
-			pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
+			// pipe.ZAdd(ctx, mpkeyNU, member)                          // nft:utxo
+			// pipe.ZAdd(ctx, mpkeyND, member)                          // nft:utxo-detail
+			// pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
+			// pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
 
-		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_AUCTION {
-			mpkeyNAU := "mp:s:{nau" + strAddressPkh + "}" + strCodeHash
-			mpkeyNAD := "mp:s:nad" + strCodeHash + strGenesisId
-			mpkeyNAS := "mp:{nas" + strAddressPkh + "}"
-
-			mpkeys = append(mpkeys, mpkeyNAU, mpkeyNAD, mpkeyNAS)
-
-			pipe.ZAdd(ctx, mpkeyNAU, member)             // nft:auction:utxo
-			pipe.ZAdd(ctx, mpkeyNAD, member)             // nft:auction:utxo-detail
-			pipe.ZIncrBy(ctx, mpkeyNAS, -1, strCodeHash) // nft:auction:sender-summary
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
-			mpkeySUT := "mp:s:{sut}"
-			mpkeySUTA := "mp:s:{suta" + strAddressPkh + "}"
-			mpkeySUTC := "mp:s:{sutc" + strGenesisId + strCodeHash + "}"
-			mpkeySUP := "mp:s:{sup}"
-			mpkeySUPA := "mp:s:{supa" + strAddressPkh + "}"
-			mpkeySUPC := "mp:s:{supc" + strGenesisId + strCodeHash + "}"
-			mpkeySUI := "mp:s:{sui}"
-			mpkeySUIA := "mp:s:{suia" + strAddressPkh + "}"
-			mpkeySUIC := "mp:s:{suic" + strGenesisId + strCodeHash + "}"
-
-			mpkeys = append(mpkeys, mpkeySUT, mpkeySUTA, mpkeySUTC, mpkeySUP, mpkeySUPA, mpkeySUPC, mpkeySUI, mpkeySUIA, mpkeySUIC)
-
-			pipe.ZAdd(ctx, mpkeySUT, member)  // nft:sell:all:utxo, sort by time
-			pipe.ZAdd(ctx, mpkeySUTA, member) // nft:sell:seller-address:utxo
-			pipe.ZAdd(ctx, mpkeySUTC, member) // nft:sell
-
-			member.Score = float64(data.Data.NFTSell.Price)
-			pipe.ZAdd(ctx, mpkeySUP, member)  // nft:sell:all:utxo, sort by price
-			pipe.ZAdd(ctx, mpkeySUPA, member) // nft:sell:seller-address:utxo
-			pipe.ZAdd(ctx, mpkeySUPC, member) // nft:sell
-
-			member.Score = float64(data.Data.NFTSell.TokenIndex)
-			pipe.ZAdd(ctx, mpkeySUI, member)  // nft:sell:all:utxo, sort by token index
-			pipe.ZAdd(ctx, mpkeySUIA, member) // nft:sell:seller-address:utxo
-			pipe.ZAdd(ctx, mpkeySUIC, member) // nft:sell
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_FT {
-			mpkeyFU := "mp:s:{fu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			mpkeyFB := "mp:{fb" + strGenesisId + strCodeHash + "}"
-			mpkeyFS := "mp:{fs" + strAddressPkh + "}"
-
-			mpkeys = append(mpkeys, mpkeyFU, mpkeyFB, mpkeyFS)
-
-			pipe.ZAdd(ctx, mpkeyFU, member)                                                     // ft:utxo
-			pipe.ZIncrBy(ctx, mpkeyFB, -float64(data.Data.FT.Amount), strAddressPkh)            // ft:balance
-			pipe.ZIncrBy(ctx, mpkeyFS, -float64(data.Data.FT.Amount), strCodeHash+strGenesisId) // ft:summary
-
-		} else if data.Data.CodeType == scriptDecoder.CodeType_UNIQUE {
-			mpkeyFU := "mp:s:{fu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			pipe.ZAdd(ctx, mpkeyFU, member) // ft:utxo
-
-			mpkeys = append(mpkeys, mpkeyFU)
 		}
 
 		// 记录key以备删除
-		tokenToRemove[strGenesisId+strCodeHash] = struct{}{}
-		addrToRemove[strAddressPkh] = struct{}{}
+		// addrToRemove[strAddressPkh] = struct{}{}
 	}
 
 	// 删除summary 为0的记录
-	for codeKey := range tokenToRemove {
-		pipe.ZRemRangeByScore(ctx, "mp:{no"+codeKey+"}", "0", "0")
-		pipe.ZRemRangeByScore(ctx, "mp:{fb"+codeKey+"}", "0", "0")
-	}
-	// 删除balance 为0的记录
-	for addr := range addrToRemove {
-		pipe.ZRemRangeByScore(ctx, "mp:{ns"+addr+"}", "0", "0")
-		pipe.ZRemRangeByScore(ctx, "mp:{fs"+addr+"}", "0", "0")
-		pipe.ZRemRangeByScore(ctx, "mp:{nas"+addr+"}", "0", "0")
-	}
+	// for addr := range addrToRemove {
+	// 	pipe.ZRemRangeByScore(ctx, "mp:{ns"+addr+"}", "0", "0")
+	// 	pipe.ZRemRangeByScore(ctx, "mp:{fs"+addr+"}", "0", "0")
+	// 	pipe.ZRemRangeByScore(ctx, "mp:{nas"+addr+"}", "0", "0")
+	// }
 
 	// 记录所有的mp:keys，以备区块确认后直接删除重来
 	for _, mpkey := range mpkeys {

@@ -47,20 +47,9 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				addrPkhInTxMap[address] = append(addrPkhInTxMap[address], startIdx+txIdx)
 			}
 
-			codehash := ""
-			genesis := ""
-			if objData.Data.CodeType != scriptDecoder.CodeType_NONE && objData.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
-				codehash = string(objData.Data.CodeHash[:])                          // 20 bytes
-				genesis = string(objData.Data.GenesisId[:objData.Data.GenesisIdLen]) // 20/36/40 bytes
-			}
-
 			var dataValue uint64
 			if objData.Data.CodeType == scriptDecoder.CodeType_NFT {
 				dataValue = objData.Data.NFT.TokenIndex
-			} else if objData.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
-				dataValue = objData.Data.NFTSell.TokenIndex
-			} else if objData.Data.CodeType == scriptDecoder.CodeType_FT {
-				dataValue = objData.Data.FT.Amount
 			}
 
 			if _, err := store.SyncStmtTxIn.Exec(
@@ -76,8 +65,6 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				string(input.InputHash),
 				input.InputVout,
 				address,
-				codehash,
-				genesis,
 				uint32(objData.Data.CodeType),
 				dataValue,
 				objData.Satoshi,
