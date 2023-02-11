@@ -108,42 +108,51 @@ func (bf *BlockData) fetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
 	bf.LastOffset = bf.Offset
 
 	buf := [4]byte{}
-	_, err = bf.CurrentFile.Read(buf[:])
-	if err != nil {
-		// logger.Log.Info("fetchNextBlock done", zap.Error(err))
-		return
-	}
-	bf.Offset += 4
 
-	if !bytes.Equal(buf[:], bf.Magic) {
-		err = errors.New("Bad magic")
-		logger.Log.Info("fetchNextBlock done: Bad magic",
-			zap.Int("fid", bf.CurrentId),
-			zap.Int("offset", bf.Offset),
-			zap.String("buf", hex.EncodeToString(buf[:])),
-			zap.String("magic", hex.EncodeToString(bf.Magic[:])),
-		)
-		return
-	}
+	blocksize := 0
+	for {
+		if _, err := bf.CurrentFile.Read(buf[:]); err != nil {
+			return rawblock, err
+		}
+		bf.Offset += 4
 
-	_, err = bf.CurrentFile.Read(buf[:])
-	if err != nil {
-		return
-	}
-	bf.Offset += 4
+		if !bytes.Equal(buf[:], bf.Magic) {
+			err = errors.New("Bad magic")
+			logger.Log.Info("fetchNextBlock done: Bad magic",
+				zap.Int("fid", bf.CurrentId),
+				zap.Int("offset", bf.Offset),
+				zap.String("buf", hex.EncodeToString(buf[:])),
+				zap.String("magic", hex.EncodeToString(bf.Magic[:])),
+			)
 
-	blocksize := binary.LittleEndian.Uint32(buf[:])
-	readOffset := 0
+			if bf.CurrentId == 3232 { // fixme: use table
+				continue
+			}
+			return
+		}
+
+		if _, err := bf.CurrentFile.Read(buf[:]); err != nil {
+			return rawblock, err
+		}
+		bf.Offset += 4
+
+		blocksize = int(binary.LittleEndian.Uint32(buf[:]))
+
+		if bf.CurrentId == 953 && blocksize == 0x01a298 { // fixme: use table
+			continue
+		}
+		break
+	}
 	readSize := 0
-
 	if skipTxs {
 		rawblock = make([]byte, 80+9) // block header + txn
 		readSize = 89
 	} else {
 		rawblock = make([]byte, blocksize)
-		readSize = int(blocksize)
+		readSize = blocksize
 	}
 
+	readOffset := 0
 	// read until to readSize
 	for {
 		var n int
@@ -162,7 +171,7 @@ func (bf *BlockData) fetchNextBlock(skipTxs bool) (rawblock []byte, err error) {
 			return
 		}
 	}
-	bf.Offset += int(blocksize)
+	bf.Offset += blocksize
 	return
 }
 
