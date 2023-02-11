@@ -28,6 +28,17 @@ func isPubkey(scriptType []byte) bool {
 		scriptType[1] == OP_CHECKSIG
 }
 
+// isPubkeyHash returns true if the script passed is a pay-to-pubkey-hash
+// transaction, false otherwise.
+func isPubkeyHash(scriptType []byte) bool {
+	return len(scriptType) == 5 &&
+		scriptType[0] == OP_DUP &&
+		scriptType[1] == OP_HASH160 &&
+		scriptType[2] == OP_DATA_20 &&
+		scriptType[3] == OP_EQUALVERIFY &&
+		scriptType[4] == OP_CHECKSIG
+}
+
 // Recent output script type, pays to hash160(script)
 func isPayToScriptHash(scriptType []byte) bool {
 	return len(scriptType) == 3 &&
@@ -36,15 +47,28 @@ func isPayToScriptHash(scriptType []byte) bool {
 		scriptType[2] == OP_EQUAL
 }
 
-// isPubkeyHash returns true if the script passed is a pay-to-pubkey-hash
-// transaction, false otherwise.
-func isPubkeyHash(scriptType []byte) bool {
-	return len(scriptType) >= 5 &&
-		scriptType[0] == OP_DUP &&
-		scriptType[1] == OP_HASH160 &&
-		scriptType[2] == OP_DATA_20 &&
-		scriptType[3] == OP_EQUALVERIFY &&
-		scriptType[4] == OP_CHECKSIG
+// IsPayToWitnessScriptHash returns true if the is in the standard
+// pay-to-witness-script-hash (P2WSH) format, false otherwise.
+func isPayToWitnessScriptHash(scriptType []byte) bool {
+	return len(scriptType) == 2 &&
+		scriptType[0] == OP_0 &&
+		scriptType[1] == OP_DATA_32
+}
+
+// IsPayToWitnessPubKeyHash returns true if the is in the standard
+// pay-to-witness-pubkey-hash (P2WKH) format, false otherwise.
+func isPayToWitnessPubKeyHash(scriptType []byte) bool {
+	return len(scriptType) == 2 &&
+		scriptType[0] == OP_0 &&
+		scriptType[1] == OP_DATA_20
+}
+
+// IsPayToTaproot returns true if if the passed script is a standard
+// pay-to-taproot (PTTR) scripts, and false otherwise.
+func isPayToTaproot(scriptType []byte) bool {
+	return len(scriptType) == 2 &&
+		scriptType[0] == OP_1 &&
+		scriptType[1] == OP_DATA_32
 }
 
 // isMultiSig returns true if the passed script is a multisig transaction, false

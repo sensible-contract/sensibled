@@ -27,18 +27,42 @@ func ExtractPkScriptForTxo(pkScript, scriptType []byte) (txo *TxoData) {
 
 	if isPubkeyHash(scriptType) {
 		txo.HasAddress = true
+		txo.CodeType = CodeType_P2PKH
 		copy(txo.AddressPkh[:], pkScript[3:23])
+		return txo
+	}
+
+	if isPayToWitnessPubKeyHash(scriptType) {
+		txo.HasAddress = true
+		txo.CodeType = CodeType_P2WKH
+		copy(txo.AddressPkh[:], pkScript[2:22])
+		return txo
+	}
+
+	if isPayToWitnessScriptHash(scriptType) {
+		txo.HasAddress = true
+		txo.CodeType = CodeType_P2WSH
+		copy(txo.AddressPkh[:], GetHash160(pkScript[2:34]))
+		return txo
+	}
+
+	if isPayToTaproot(scriptType) {
+		txo.HasAddress = true
+		txo.CodeType = CodeType_P2TR
+		copy(txo.AddressPkh[:], GetHash160(pkScript[2:34]))
 		return txo
 	}
 
 	if isPayToScriptHash(scriptType) {
 		txo.HasAddress = true
-		copy(txo.AddressPkh[:], GetHash160(pkScript[2:len(pkScript)-1]))
+		txo.CodeType = CodeType_P2SH
+		copy(txo.AddressPkh[:], pkScript[2:22])
 		return txo
 	}
 
 	if isPubkey(scriptType) {
 		txo.HasAddress = true
+		txo.CodeType = CodeType_P2PK
 		copy(txo.AddressPkh[:], GetHash160(pkScript[1:len(pkScript)-1]))
 		return txo
 	}
