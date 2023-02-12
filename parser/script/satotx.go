@@ -99,6 +99,9 @@ func GetLockingScriptType(pkScript []byte) (scriptType []byte) {
 		if 0 < c && c < 0x4f {
 			cnt, cntsize := SafeDecodeVarIntForScript(pkScript[p:])
 			p += cnt + cntsize
+			if p > e {
+				break
+			}
 		} else {
 			p += 1
 		}
