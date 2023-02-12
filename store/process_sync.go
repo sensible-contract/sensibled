@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS blktx_height (
 	nin          UInt32,
 	nout         UInt32,
 	txsize       UInt32,
+	witoffset    UInt32,
 	locktime     UInt32,
 	invalue      UInt64,
 	outvalue     UInt64,

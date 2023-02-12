@@ -16,6 +16,7 @@ func SyncBlockTx(startIdx int, txs []*model.Tx) {
 			tx.TxInCnt,
 			tx.TxOutCnt,
 			tx.Size,
+			tx.WitOffset,
 			tx.LockTime,
 			tx.InputsValue,
 			tx.OutputsValue,
