@@ -35,38 +35,10 @@ var CodeTypeName []string = []string{
 	"P2TR",
 }
 
-// nft
-type NFTData struct {
-	SensibleId []byte // GenesisTx outpoint
-
-	MetaTxId        [32]byte // nft metatxid
-	MetaOutputIndex uint32
-	TokenIndex      uint64 // nft tokenIndex
-	TokenSupply     uint64 // nft tokenSupply
-}
-
-func (u *NFTData) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		SensibleId      string // GenesisTx outpoint
-		MetaTxId        string // nft metatxid
-		MetaOutputIndex uint32
-		TokenIndex      uint64 // nft tokenIndex
-		TokenSupply     uint64 // nft tokenSupply
-
-	}{
-		SensibleId:      hex.EncodeToString(u.SensibleId),
-		MetaTxId:        hex.EncodeToString(u.MetaTxId[:]),
-		MetaOutputIndex: u.MetaOutputIndex,
-		TokenIndex:      u.TokenIndex,
-		TokenSupply:     u.TokenSupply,
-	})
-}
-
 type AddressData struct {
 	HasAddress bool
 	CodeType   uint32
 	AddressPkh [20]byte
-	NFT        *NFTData
 }
 
 func (u *AddressData) MarshalJSON() ([]byte, error) {
@@ -74,11 +46,9 @@ func (u *AddressData) MarshalJSON() ([]byte, error) {
 		CodeType   uint32
 		HasAddress bool
 		AddressPkh string
-		NFT        *NFTData
 	}{
 		CodeType:   u.CodeType,
 		HasAddress: u.HasAddress,
 		AddressPkh: hex.EncodeToString(u.AddressPkh[:]),
-		NFT:        u.NFT,
 	})
 }
