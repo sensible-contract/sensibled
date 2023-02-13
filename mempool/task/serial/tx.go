@@ -290,57 +290,56 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
-		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
-			if !data.Data.HasAddress {
-				// 无法识别地址，暂不记录utxo
-				// logger.Log.Info("ignore mp:utxo", zap.String("key", hex.EncodeToString([]byte(outpointKey))),
-				// 	zap.Float64("score", member.Score))
-				// pipe.ZAdd(ctx, "mp:utxo", member)
-				continue
-			}
-
-			// 不是合约tx，则记录address utxo
-			// redis有序address utxo数据添加
-			// logger.Log.Info("ZAdd mp:au",
-			// 	zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
-			// 	zap.String("key", hex.EncodeToString([]byte(outpointKey))),
+		if !data.Data.HasAddress {
+			// 无法识别地址，暂不记录utxo
+			// logger.Log.Info("ignore mp:utxo", zap.String("key", hex.EncodeToString([]byte(outpointKey))),
 			// 	zap.Float64("score", member.Score))
-			mpkeyAU := "mp:{au" + strAddressPkh + "}"
-			pipe.ZAdd(ctx, mpkeyAU, member)
-
-			// balance of address
-			// logger.Log.Info("IncrBy mp:bl",
-			// 	zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
-			// 	zap.Uint64("satoshi", data.Satoshi))
-			mpkeyBL := "mp:bl" + strAddressPkh
-			pipe.IncrBy(ctx, mpkeyBL, int64(data.Satoshi))
-
-			mpkeys = append(mpkeys, mpkeyAU, mpkeyBL)
+			// pipe.ZAdd(ctx, "mp:utxo", member)
 			continue
 		}
+
+		// 不是合约tx，则记录address utxo
+		// redis有序address utxo数据添加
+		// logger.Log.Info("ZAdd mp:au",
+		// 	zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
+		// 	zap.String("key", hex.EncodeToString([]byte(outpointKey))),
+		// 	zap.Float64("score", member.Score))
+		mpkeyAU := "mp:{au" + strAddressPkh + "}"
+		pipe.ZAdd(ctx, mpkeyAU, member)
+
+		// balance of address
+		// logger.Log.Info("IncrBy mp:bl",
+		// 	zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
+		// 	zap.Uint64("satoshi", data.Satoshi))
+		mpkeyBL := "mp:bl" + strAddressPkh
+		pipe.IncrBy(ctx, mpkeyBL, int64(data.Satoshi))
+
+		mpkeys = append(mpkeys, mpkeyAU, mpkeyBL)
+		continue
 
 		// contract balance of address
 		// logger.Log.Info("IncrBy mp:cb",
 		// 	zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
 		// 	zap.Uint64("satoshi", data.Satoshi))
-		mpkeyCB := "mp:cb" + strAddressPkh
-		pipe.IncrBy(ctx, mpkeyCB, int64(data.Satoshi))
-		mpkeys = append(mpkeys, mpkeyCB)
+
+		// mpkeyCB := "mp:cb" + strAddressPkh
+		// pipe.IncrBy(ctx, mpkeyCB, int64(data.Satoshi))
+		// mpkeys = append(mpkeys, mpkeyCB)
 
 		// redis有序genesis utxo数据添加
-		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
-			// mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			// mpkeyND := "mp:nd" + strCodeHash + strGenesisId
-			// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
-			// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
-			// mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
+		// if data.Data.CodeType == scriptDecoder.CodeType_NFT {
+		// mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
+		// mpkeyND := "mp:nd" + strCodeHash + strGenesisId
+		// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
+		// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
+		// mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
 
-			// member.Score = float64(data.Data.NFT.TokenIndex)
-			// pipe.ZAdd(ctx, mpkeyNU, member)                         // nft:utxo
-			// pipe.ZAdd(ctx, mpkeyND, member)                         // nft:utxo-detail
-			// pipe.ZIncrBy(ctx, mpkeyNO, 1, strAddressPkh)            // nft:owners
-			// pipe.ZIncrBy(ctx, mpkeyNS, 1, strCodeHash+strGenesisId) // nft:summary
-		}
+		// member.Score = float64(data.Data.NFT.TokenIndex)
+		// pipe.ZAdd(ctx, mpkeyNU, member)                         // nft:utxo
+		// pipe.ZAdd(ctx, mpkeyND, member)                         // nft:utxo-detail
+		// pipe.ZIncrBy(ctx, mpkeyNO, 1, strAddressPkh)            // nft:owners
+		// pipe.ZIncrBy(ctx, mpkeyNS, 1, strCodeHash+strGenesisId) // nft:summary
+		// }
 
 		// update token info
 		// if data.Data.CodeType == scriptDecoder.CodeType_NFT {
@@ -361,42 +360,39 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	for outpointKey, data := range utxoToRemove {
 		strAddressPkh := string(data.Data.AddressPkh[:])
 
-		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
-			// redis有序utxo数据清除
-			if !data.Data.HasAddress {
-				// 无法识别地址，暂不记录utxo
-				// pipe.ZRem(ctx, "mp:utxo", outpointKey)
-				continue
-			}
-
-			// 不是合约tx，则记录address utxo
-			// redis有序address utxo数据清除
-			mpkeyAU := "mp:{au" + strAddressPkh + "}"
-			pipe.ZRem(ctx, mpkeyAU, outpointKey)
-
-			// balance of address
-			mpkeyBL := "mp:bl" + strAddressPkh
-			pipe.DecrBy(ctx, mpkeyBL, int64(data.Satoshi))
+		// redis有序utxo数据清除
+		if !data.Data.HasAddress {
+			// 无法识别地址，暂不记录utxo
+			// pipe.ZRem(ctx, "mp:utxo", outpointKey)
 			continue
 		}
 
+		// 不是合约tx，则记录address utxo
+		// redis有序address utxo数据清除
+		mpkeyAU := "mp:{au" + strAddressPkh + "}"
+		pipe.ZRem(ctx, mpkeyAU, outpointKey)
+
+		// balance of address
+		mpkeyBL := "mp:bl" + strAddressPkh
+		pipe.DecrBy(ctx, mpkeyBL, int64(data.Satoshi))
+
 		// contract balance of address
-		mpkeyCB := "mp:cb" + strAddressPkh
-		pipe.DecrBy(ctx, mpkeyCB, int64(data.Satoshi))
+		// mpkeyCB := "mp:cb" + strAddressPkh
+		// pipe.DecrBy(ctx, mpkeyCB, int64(data.Satoshi))
 
 		// redis有序genesis utxo数据清除
-		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
-			// mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			// mpkeyND := "mp:nd" + strCodeHash + strGenesisId
-			// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
-			// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
+		// if data.Data.CodeType == scriptDecoder.CodeType_NFT {
+		// mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
+		// mpkeyND := "mp:nd" + strCodeHash + strGenesisId
+		// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
+		// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
 
-			// pipe.ZRem(ctx, mpkeyNU, outpointKey)                     // nft:utxo
-			// pipe.ZRem(ctx, mpkeyND, outpointKey)                     // nft:utxo-detail
-			// pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
-			// pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
+		// pipe.ZRem(ctx, mpkeyNU, outpointKey)                     // nft:utxo
+		// pipe.ZRem(ctx, mpkeyND, outpointKey)                     // nft:utxo-detail
+		// pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
+		// pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
 
-		}
+		// }
 
 		// 记录key以备删除
 		// addrToRemove[strAddressPkh] = struct{}{}
@@ -408,48 +404,45 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
-		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
-			if !data.Data.HasAddress {
-				// 无法识别地址，暂不记录utxo
-				// pipe.ZAdd(ctx, "mp:s:utxo", member)
-				continue
-			}
-
-			// 不是合约tx，则记录address utxo
-			// redis有序address utxo数据添加
-			mpkeyAU := "mp:s:{au" + strAddressPkh + "}"
-			pipe.ZAdd(ctx, mpkeyAU, member)
-
-			// balance of address
-			mpkeyBL := "mp:bl" + strAddressPkh
-			pipe.DecrBy(ctx, mpkeyBL, int64(data.Satoshi))
-
-			mpkeys = append(mpkeys, mpkeyAU, mpkeyBL)
+		if !data.Data.HasAddress {
+			// 无法识别地址，暂不记录utxo
+			// pipe.ZAdd(ctx, "mp:s:utxo", member)
 			continue
 		}
 
+		// 不是合约tx，则记录address utxo
+		// redis有序address utxo数据添加
+		mpkeyAU := "mp:s:{au" + strAddressPkh + "}"
+		pipe.ZAdd(ctx, mpkeyAU, member)
+
+		// balance of address
+		mpkeyBL := "mp:bl" + strAddressPkh
+		pipe.DecrBy(ctx, mpkeyBL, int64(data.Satoshi))
+
+		mpkeys = append(mpkeys, mpkeyAU, mpkeyBL)
+
 		// contract balance of address
-		mpkeyCB := "mp:cb" + strAddressPkh
-		pipe.DecrBy(ctx, mpkeyCB, int64(data.Satoshi))
-		mpkeys = append(mpkeys, mpkeyCB)
+		// mpkeyCB := "mp:cb" + strAddressPkh
+		// pipe.DecrBy(ctx, mpkeyCB, int64(data.Satoshi))
+		// mpkeys = append(mpkeys, mpkeyCB)
 
 		// redis有序genesis utxo数据添加
-		if data.Data.CodeType == scriptDecoder.CodeType_NFT {
-			// member.Score = float64(data.Data.NFT.TokenIndex)
+		// if data.Data.CodeType == scriptDecoder.CodeType_NFT {
+		// member.Score = float64(data.Data.NFT.TokenIndex)
 
-			// mpkeyNU := "mp:s:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-			// mpkeyND := "mp:s:nd" + strCodeHash + strGenesisId
-			// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
-			// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
+		// mpkeyNU := "mp:s:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
+		// mpkeyND := "mp:s:nd" + strCodeHash + strGenesisId
+		// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
+		// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
 
-			// mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
+		// mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
 
-			// pipe.ZAdd(ctx, mpkeyNU, member)                          // nft:utxo
-			// pipe.ZAdd(ctx, mpkeyND, member)                          // nft:utxo-detail
-			// pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
-			// pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
+		// pipe.ZAdd(ctx, mpkeyNU, member)                          // nft:utxo
+		// pipe.ZAdd(ctx, mpkeyND, member)                          // nft:utxo-detail
+		// pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
+		// pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
 
-		}
+		// }
 
 		// 记录key以备删除
 		// addrToRemove[strAddressPkh] = struct{}{}

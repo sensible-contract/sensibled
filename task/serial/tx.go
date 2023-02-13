@@ -259,26 +259,24 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
 		// 非合约信息记录
-		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
-			if !data.Data.HasAddress {
-				// 无法识别地址，暂不记录utxo
-				// pipe.ZAdd(ctx, "utxo", member)
-				continue
-			}
-			// 识别地址，只记录utxo和balance
-			pipe.ZAdd(ctx, "{au"+strAddressPkh+"}", member)           // 有序address utxo数据添加
-			pipe.IncrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
+		if !data.Data.HasAddress {
+			// 无法识别地址，暂不记录utxo
+			// pipe.ZAdd(ctx, "utxo", member)
 			continue
 		}
+
+		// 识别地址，只记录utxo和balance
+		pipe.ZAdd(ctx, "{au"+strAddressPkh+"}", member)           // 有序address utxo数据添加
+		pipe.IncrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
 
 		// 合约信息记录
 		// contract satoshi balance of address
-		pipe.IncrBy(ctx, "cb"+strAddressPkh, int64(data.Satoshi))
+		// pipe.IncrBy(ctx, "cb"+strAddressPkh, int64(data.Satoshi))
 
 		// skip if reorg
-		if isReorg {
-			continue
-		}
+		// if isReorg {
+		// 	continue
+		// }
 
 		// update token info
 		// if data.Data.CodeType == scriptDecoder.CodeType_UNIQUE {
@@ -293,22 +291,19 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		strAddressPkh := string(data.Data.AddressPkh[:])
 
 		// 非合约信息清理
-		if data.Data.CodeType == scriptDecoder.CodeType_NONE {
-			// redis有序utxo数据清除
-			if !data.Data.HasAddress {
-				// 无法识别地址，暂不记录utxo
-				// pipe.ZRem(ctx, "utxo", outpointKey)
-				continue
-			}
-			// 识别地址，只记录utxo和balance
-			pipe.ZRem(ctx, "{au"+strAddressPkh+"}", outpointKey)                                               // 有序address utxo数据清除
-			addressBalanceCmds["bl"+strAddressPkh] = pipe.DecrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
+		// redis有序utxo数据清除
+		if !data.Data.HasAddress {
+			// 无法识别地址，暂不记录utxo
+			// pipe.ZRem(ctx, "utxo", outpointKey)
 			continue
 		}
+		// 识别地址，只记录utxo和balance
+		pipe.ZRem(ctx, "{au"+strAddressPkh+"}", outpointKey)                                               // 有序address utxo数据清除
+		addressBalanceCmds["bl"+strAddressPkh] = pipe.DecrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
 
 		// 非合约信息清理
 		// contract satoshi balance of address
-		addressBalanceCmds["cb"+strAddressPkh] = pipe.DecrBy(ctx, "cb"+strAddressPkh, int64(data.Satoshi))
+		// addressBalanceCmds["cb"+strAddressPkh] = pipe.DecrBy(ctx, "cb"+strAddressPkh, int64(data.Satoshi))
 
 		// redis有序genesis utxo数据清除
 
