@@ -127,6 +127,13 @@ type TxData struct {
 	TxId []byte // 32
 }
 
+// nft create point on create
+type NFTCreatePoint struct {
+	Height uint32 // Height of NFT show in block onCreate
+	Idx    uint64 // Index of NFT show in block onCreate
+	Offset uint64 // sat offset in utxo
+}
+
 type TxoData struct {
 	UTxid       []byte
 	Vout        uint32
@@ -135,6 +142,8 @@ type TxoData struct {
 	Satoshi     uint64
 	PkScript    []byte
 	ScriptType  []byte
+
+	CreateIdxNFTs []*NFTCreatePoint
 
 	AddressData *scriptDecoder.AddressData
 }
@@ -151,6 +160,12 @@ func (d *TxoData) Marshal(buf []byte) int {
 	offset += scriptDecoder.PutVLQ(buf[offset:], d.TxIdx)
 	offset += scriptDecoder.PutVLQ(buf[offset:], scriptDecoder.CompressTxOutAmount(d.Satoshi))
 	offset += scriptDecoder.PutCompressedScript(buf[offset:], d.PkScript)
+
+	for _, nft := range d.CreateIdxNFTs {
+		offset += scriptDecoder.PutVLQ(buf[offset:], uint64(nft.Height))
+		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Idx)
+		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Offset)
+	}
 
 	// binary.LittleEndian.PutUint32(buf, d.BlockHeight)  // 4
 	// binary.LittleEndian.PutUint64(buf[4:], d.TxIdx)    // 8
@@ -173,34 +188,62 @@ func (d *TxoData) Unmarshal(buf []byte) {
 
 	buf[3] = 0x00
 	d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
-
 	offset := 4
+
 	txidx, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
 	if bytesRead >= len(buf[offset:]) {
-		// errors.New("unexpected end of data after txidx")
 		return
 	}
 	d.TxIdx = txidx
-
 	offset += bytesRead
+
 	compressedAmount, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
 	if bytesRead >= len(buf[offset:]) {
-		// errors.New("unexpected end of data after compressed amount")
 		return
 	}
-
 	offset += bytesRead
+
 	// Decode the compressed script size and ensure there are enough bytes
 	// left in the slice for it.
 	scriptSize := scriptDecoder.DecodeCompressedScriptSize(buf[offset:])
 	if len(buf[offset:]) < scriptSize {
-		// errors.New("unexpected end of data after script size")
 		return
 	}
 
 	d.Satoshi = scriptDecoder.DecompressTxOutAmount(compressedAmount)
 	d.PkScript = scriptDecoder.DecompressScript(buf[offset : offset+scriptSize])
+	offset += scriptSize
 
+	// nft data
+	for {
+		if len(buf[offset:]) == 0 {
+			return
+		}
+
+		height, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
+		if bytesRead >= len(buf[offset:]) {
+			return
+		}
+		offset += bytesRead
+
+		nftIdx, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
+		if bytesRead >= len(buf[offset:]) {
+			return
+		}
+		offset += bytesRead
+
+		satOffset, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
+		if bytesRead > len(buf[offset:]) {
+			return
+		}
+		offset += bytesRead
+
+		d.CreateIdxNFTs = append(d.CreateIdxNFTs, &NFTCreatePoint{
+			Height: uint32(height),
+			Idx:    nftIdx,
+			Offset: satOffset,
+		})
+	}
 }
 
 var TxoDataPool = sync.Pool{
