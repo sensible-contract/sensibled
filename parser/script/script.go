@@ -56,7 +56,7 @@ func isPayToWitnessScriptHash(scriptType []byte) bool {
 }
 
 // IsPayToWitnessPubKeyHash returns true if the is in the standard
-// pay-to-witness-pubkey-hash (P2WKH) format, false otherwise.
+// pay-to-witness-pubkey-hash (P2WPKH) format, false otherwise.
 func isPayToWitnessPubKeyHash(scriptType []byte) bool {
 	return len(scriptType) == 2 &&
 		scriptType[0] == OP_0 &&

@@ -34,7 +34,7 @@ func ExtractPkScriptForTxo(pkScript, scriptType []byte) (txo *TxoData) {
 
 	if isPayToWitnessPubKeyHash(scriptType) {
 		txo.HasAddress = true
-		txo.CodeType = CodeType_P2WKH
+		txo.CodeType = CodeType_P2WPKH
 		copy(txo.AddressPkh[:], pkScript[2:22])
 		return txo
 	}

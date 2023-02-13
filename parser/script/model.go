@@ -11,19 +11,14 @@ const (
 	CodeType_UNIQUE uint32 = 2
 	CodeType_NFT    uint32 = 3
 
-	CodeType_P2PK  uint32 = 4
-	CodeType_P2PKH uint32 = 5
-	CodeType_P2SH  uint32 = 6
-	CodeType_P2WKH uint32 = 7
-	CodeType_P2WSH uint32 = 8
-	CodeType_P2TR  uint32 = 9
+	CodeType_P2PK   uint32 = 4
+	CodeType_P2PKH  uint32 = 5
+	CodeType_P2SH   uint32 = 6
+	CodeType_P2WPKH uint32 = 7
+	CodeType_P2WSH  uint32 = 8
+	CodeType_P2TR   uint32 = 9
 
 	CodeType_SENSIBLE uint32 = 65536
-	CodeType_NFT_SELL uint32 = 65536 + 1
-
-	CodeType_NFT_AUCTION uint32 = 65536 + 4
-
-	CodeType_NFT_SELL_V2 uint32 = 65536 + 6
 )
 
 var CodeTypeName []string = []string{
@@ -35,7 +30,7 @@ var CodeTypeName []string = []string{
 	"P2PK",
 	"P2PKH",
 	"P2SH",
-	"P2WKH",
+	"P2WPKH",
 	"P2WSH",
 	"P2TR",
 }
