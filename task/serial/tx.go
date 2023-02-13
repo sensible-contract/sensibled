@@ -67,7 +67,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 
 		// 从redis获取utxo的script，解码以备程序使用
 		d.ScriptType = scriptDecoder.GetLockingScriptType(d.PkScript)
-		d.Data = scriptDecoder.ExtractPkScriptForTxo(d.PkScript, d.ScriptType)
+		d.AddressData = scriptDecoder.ExtractPkScriptForTxo(d.PkScript, d.ScriptType)
 
 		block.SpentUtxoDataMap[outpointKey] = d
 		model.GlobalSpentUtxoDataMap[outpointKey] = d
@@ -253,13 +253,13 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 	)
 
 	for outpointKey, data := range utxoToRestore {
-		strAddressPkh := string(data.Data.AddressPkh[:])
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
 
 		// redis有序utxo数据成员
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
 		// 非合约信息记录
-		if !data.Data.HasAddress {
+		if !data.AddressData.HasAddress {
 			// 无法识别地址，暂不记录utxo
 			// pipe.ZAdd(ctx, "utxo", member)
 			continue
@@ -279,20 +279,20 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		// }
 
 		// update token info
-		// if data.Data.CodeType == scriptDecoder.CodeType_UNIQUE {
+		// if data.AddressData.CodeType == scriptDecoder.CodeType_UNIQUE {
 		// 	pipe.HSet(ctx, "fi"+strCodeHash+strGenesisId,
-		// 		"sensibleid", data.Data.Uniq.SensibleId,
+		// 		"sensibleid", data.AddressData.Uniq.SensibleId,
 		// 	)
 		// }
 	}
 
 	// addrToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
-		strAddressPkh := string(data.Data.AddressPkh[:])
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
 
 		// 非合约信息清理
 		// redis有序utxo数据清除
-		if !data.Data.HasAddress {
+		if !data.AddressData.HasAddress {
 			// 无法识别地址，暂不记录utxo
 			// pipe.ZRem(ctx, "utxo", outpointKey)
 			continue

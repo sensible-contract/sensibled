@@ -63,7 +63,7 @@ func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 		return nil, err
 	}
 
-	ret.Data = scriptDecoder.ExtractPkScriptForTxo(ret.PkScript, ret.ScriptType)
+	ret.AddressData = scriptDecoder.ExtractPkScriptForTxo(ret.PkScript, ret.ScriptType)
 	return &ret, nil
 }
 

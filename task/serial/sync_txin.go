@@ -13,8 +13,8 @@ import (
 // SyncBlockTxInputDetail all tx input info
 func SyncBlockTxInputDetail(block *model.Block) {
 	var commonObjData *model.TxoData = &model.TxoData{
-		Satoshi: utils.CalcBlockSubsidy(block.Height),
-		Data:    &scriptDecoder.TxoData{},
+		Satoshi:     utils.CalcBlockSubsidy(block.Height),
+		AddressData: &scriptDecoder.AddressData{},
 	}
 
 	for txIdx, tx := range block.Txs {
@@ -40,17 +40,17 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			tx.InputsValue += objData.Satoshi
 
 			address := ""
-			if objData.Data.HasAddress {
-				address = string(objData.Data.AddressPkh[:]) // 20 bytes
+			if objData.AddressData.HasAddress {
+				address = string(objData.AddressData.AddressPkh[:]) // 20 bytes
 			}
 
 			// address tx历史记录
-			if objData.Data.HasAddress {
+			if objData.AddressData.HasAddress {
 				block.ParseData.AddrPkhInTxMap[address] = append(block.ParseData.AddrPkhInTxMap[address], txIdx)
 			}
 
 			// set sensible flag
-			if objData.Data.CodeType != scriptDecoder.CodeType_NONE {
+			if objData.AddressData.CodeType != scriptDecoder.CodeType_NONE {
 				tx.IsSensible = true
 			}
 
@@ -66,7 +66,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 
 			// 清理非sensible且无地址的锁定脚本
 			pkscript := ""
-			if !isPkScriptPrune || tx.IsSensible || objData.Data.HasAddress {
+			if !isPkScriptPrune || tx.IsSensible || objData.AddressData.HasAddress {
 				pkscript = string(objData.PkScript)
 			}
 
@@ -74,35 +74,35 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			// var tokenIndex uint64
 			// var decimal uint8
 			// // token summary
-			// if objData.Data.CodeType != scriptDecoder.CodeType_NONE && objData.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
+			// if objData.AddressData.CodeType != scriptDecoder.CodeType_NONE && objData.AddressData.CodeType != scriptDecoder.CodeType_SENSIBLE {
 			// 	buf := make([]byte, 12, 12+20+40)
-			// 	binary.LittleEndian.PutUint32(buf, objData.Data.CodeType)
+			// 	binary.LittleEndian.PutUint32(buf, objData.AddressData.CodeType)
 
-			// 	if objData.Data.CodeType == scriptDecoder.CodeType_NFT {
-			// 		binary.LittleEndian.PutUint64(buf[4:], objData.Data.NFT.TokenIndex)
-			// 		tokenIndex = objData.Data.NFT.TokenIndex
+			// 	if objData.AddressData.CodeType == scriptDecoder.CodeType_NFT {
+			// 		binary.LittleEndian.PutUint64(buf[4:], objData.AddressData.NFT.TokenIndex)
+			// 		tokenIndex = objData.AddressData.NFT.TokenIndex
 			// 		dataValue = tokenIndex
-			// 	} else if objData.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
-			// 		binary.LittleEndian.PutUint64(buf[4:], objData.Data.NFTSell.TokenIndex)
-			// 		tokenIndex = objData.Data.NFTSell.TokenIndex
+			// 	} else if objData.AddressData.CodeType == scriptDecoder.CodeType_NFT_SELL {
+			// 		binary.LittleEndian.PutUint64(buf[4:], objData.AddressData.NFTSell.TokenIndex)
+			// 		tokenIndex = objData.AddressData.NFTSell.TokenIndex
 			// 		dataValue = tokenIndex
-			// 	} else if objData.Data.CodeType == scriptDecoder.CodeType_FT {
-			// 		decimal = objData.Data.FT.Decimal
-			// 		dataValue = objData.Data.FT.Amount
+			// 	} else if objData.AddressData.CodeType == scriptDecoder.CodeType_FT {
+			// 		decimal = objData.AddressData.FT.Decimal
+			// 		dataValue = objData.AddressData.FT.Amount
 			// 	}
 
-			// 	buf = append(buf, objData.Data.CodeHash[:]...)
-			// 	buf = append(buf, objData.Data.GenesisId[:objData.Data.GenesisIdLen]...)
+			// 	buf = append(buf, objData.AddressData.CodeHash[:]...)
+			// 	buf = append(buf, objData.AddressData.GenesisId[:objData.AddressData.GenesisIdLen]...)
 
 			// 	tokenKey := string(buf)
 			// 	tokenSummary, ok := block.ParseData.TokenSummaryMap[tokenKey]
 			// 	if !ok {
 			// 		tokenSummary = &model.TokenData{
-			// 			CodeType:  objData.Data.CodeType,
+			// 			CodeType:  objData.AddressData.CodeType,
 			// 			NFTIdx:    tokenIndex,
 			// 			Decimal:   decimal,
-			// 			CodeHash:  objData.Data.CodeHash[:],
-			// 			GenesisId: objData.Data.GenesisId[:objData.Data.GenesisIdLen],
+			// 			CodeHash:  objData.AddressData.CodeHash[:],
+			// 			GenesisId: objData.AddressData.GenesisId[:objData.AddressData.GenesisIdLen],
 			// 		}
 			// 		block.ParseData.TokenSummaryMap[tokenKey] = tokenSummary
 			// 	}
@@ -125,7 +125,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				string(input.InputHash),
 				input.InputVout,
 				address,
-				uint32(objData.Data.CodeType),
+				uint32(objData.AddressData.CodeType),
 				dataValue,
 				objData.Satoshi,
 				string(objData.ScriptType),

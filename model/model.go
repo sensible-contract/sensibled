@@ -57,7 +57,7 @@ type TxOut struct {
 	ScriptType    []byte
 	ScriptTypeHex string
 
-	Data *scriptDecoder.TxoData
+	AddressData *scriptDecoder.AddressData
 
 	LockingScriptUnspendable bool
 }
@@ -136,7 +136,7 @@ type TxoData struct {
 	PkScript    []byte
 	ScriptType  []byte
 
-	Data *scriptDecoder.TxoData
+	AddressData *scriptDecoder.AddressData
 }
 
 func (d *TxoData) Marshal(buf []byte) int {

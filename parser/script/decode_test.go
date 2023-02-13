@@ -29,7 +29,7 @@ func TestDecode(t *testing.T) {
 			continue
 		}
 
-		txo := &TxoData{}
+		txo := &AddressData{}
 
 		DecodeSensibleTxo(script, txo)
 

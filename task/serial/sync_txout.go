@@ -15,7 +15,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 		for _, output := range tx.TxOuts {
 			tx.OutputsValue += output.Satoshi
 			// set sensible flag
-			if output.Data.CodeType != scriptDecoder.CodeType_NONE {
+			if output.AddressData.CodeType != scriptDecoder.CodeType_NONE {
 				tx.IsSensible = true
 			}
 		}
@@ -28,24 +28,23 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 
 			// prune string(output.Pkscript),
 			pkscript := ""
-			if !isPkScriptPrune || tx.IsSensible || output.Data.HasAddress {
+			if !isPkScriptPrune || tx.IsSensible || output.AddressData.HasAddress {
 				pkscript = string(output.PkScript)
 			}
 
 			address := ""
-			if output.Data.HasAddress {
-				address = string(output.Data.AddressPkh[:]) // 20 bytes
+			if output.AddressData.HasAddress {
+				address = string(output.AddressData.AddressPkh[:]) // 20 bytes
 			}
 
 			var dataValue uint64
-			if output.Data.CodeType == scriptDecoder.CodeType_NFT {
-				dataValue = output.Data.NFT.TokenIndex
+			if output.AddressData.CodeType == scriptDecoder.CodeType_NFT {
 			}
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.TxId),
 				uint32(vout),
 				address,
-				uint32(output.Data.CodeType),
+				uint32(output.AddressData.CodeType),
 				dataValue,
 				output.Satoshi,
 				string(output.ScriptType),

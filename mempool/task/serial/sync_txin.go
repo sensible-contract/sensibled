@@ -13,7 +13,7 @@ import (
 // SyncBlockTxInputDetail all tx input info
 func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData, addrPkhInTxMap map[string][]int) {
 	var commonObjData *model.TxoData = &model.TxoData{
-		Data: &scriptDecoder.TxoData{},
+		AddressData: &scriptDecoder.AddressData{},
 	}
 
 	for txIdx, tx := range txs {
@@ -38,18 +38,17 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 			tx.InputsValue += objData.Satoshi
 
 			address := ""
-			if objData.Data.HasAddress {
-				address = string(objData.Data.AddressPkh[:]) // 20 bytes
+			if objData.AddressData.HasAddress {
+				address = string(objData.AddressData.AddressPkh[:]) // 20 bytes
 			}
 
 			// address tx历史记录
-			if objData.Data.HasAddress {
+			if objData.AddressData.HasAddress {
 				addrPkhInTxMap[address] = append(addrPkhInTxMap[address], startIdx+txIdx)
 			}
 
 			var dataValue uint64
-			if objData.Data.CodeType == scriptDecoder.CodeType_NFT {
-				dataValue = objData.Data.NFT.TokenIndex
+			if objData.AddressData.CodeType == scriptDecoder.CodeType_NFT {
 			}
 
 			if _, err := store.SyncStmtTxIn.Exec(
@@ -66,7 +65,7 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				string(input.InputHash),
 				input.InputVout,
 				address,
-				uint32(objData.Data.CodeType),
+				uint32(objData.AddressData.CodeType),
 				dataValue,
 				objData.Satoshi,
 				string(objData.ScriptType),

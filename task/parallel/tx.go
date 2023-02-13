@@ -31,34 +31,34 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 			output.LockingScriptUnspendable = true
 		}
 
-		output.Data = scriptDecoder.ExtractPkScriptForTxo(output.PkScript, output.ScriptType)
+		output.AddressData = scriptDecoder.ExtractPkScriptForTxo(output.PkScript, output.ScriptType)
 
-		if output.Data.CodeType == scriptDecoder.CodeType_NONE || output.Data.CodeType == scriptDecoder.CodeType_SENSIBLE {
+		if output.AddressData.CodeType == scriptDecoder.CodeType_NONE || output.AddressData.CodeType == scriptDecoder.CodeType_SENSIBLE {
 			// not token
 			continue
 		}
 
 		// update token summary
 		// buf := make([]byte, 12, 12+20+40)
-		// binary.LittleEndian.PutUint32(buf, output.Data.CodeType)
-		// if output.Data.CodeType == scriptDecoder.CodeType_NFT {
-		// 	binary.LittleEndian.PutUint64(buf[4:], output.Data.NFT.TokenIndex)
-		// } else if output.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
-		// 	binary.LittleEndian.PutUint64(buf[4:], output.Data.NFTSell.TokenIndex)
+		// binary.LittleEndian.PutUint32(buf, output.AddressData.CodeType)
+		// if output.AddressData.CodeType == scriptDecoder.CodeType_NFT {
+		// 	binary.LittleEndian.PutUint64(buf[4:], output.AddressData.NFT.TokenIndex)
+		// } else if output.AddressData.CodeType == scriptDecoder.CodeType_NFT_SELL {
+		// 	binary.LittleEndian.PutUint64(buf[4:], output.AddressData.NFTSell.TokenIndex)
 		// }
 
-		// buf = append(buf, output.Data.CodeHash[:]...)
-		// buf = append(buf, output.Data.GenesisId[:output.Data.GenesisIdLen]...)
+		// buf = append(buf, output.AddressData.CodeHash[:]...)
+		// buf = append(buf, output.AddressData.GenesisId[:output.AddressData.GenesisIdLen]...)
 
 		// var tokenIndex uint64
 		// var decimal uint8
-		// switch output.Data.CodeType {
+		// switch output.AddressData.CodeType {
 		// case scriptDecoder.CodeType_NFT:
-		// 	tokenIndex = output.Data.NFT.TokenIndex
+		// 	tokenIndex = output.AddressData.NFT.TokenIndex
 		// case scriptDecoder.CodeType_NFT_SELL:
-		// 	tokenIndex = output.Data.NFTSell.TokenIndex
+		// 	tokenIndex = output.AddressData.NFTSell.TokenIndex
 		// case scriptDecoder.CodeType_FT:
-		// 	decimal = output.Data.FT.Decimal
+		// 	decimal = output.AddressData.FT.Decimal
 		// }
 
 		// tokenKey := string(buf)
@@ -66,11 +66,11 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		// tokenSummary, ok := block.TokenSummaryMap[tokenKey]
 		// if !ok {
 		// 	tokenSummary = &model.TokenData{
-		// 		CodeType:  output.Data.CodeType,
+		// 		CodeType:  output.AddressData.CodeType,
 		// 		NFTIdx:    tokenIndex,
 		// 		Decimal:   decimal,
-		// 		CodeHash:  output.Data.CodeHash[:],
-		// 		GenesisId: output.Data.GenesisId[:output.Data.GenesisIdLen],
+		// 		CodeHash:  output.AddressData.CodeHash[:],
+		// 		GenesisId: output.AddressData.GenesisId[:output.AddressData.GenesisIdLen],
 		// 	}
 		// 	block.TokenSummaryMap[tokenKey] = tokenSummary
 		// }
@@ -105,7 +105,7 @@ func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, block *model.Pro
 		d.ScriptType = output.ScriptType
 		d.PkScript = output.PkScript
 
-		d.Data = output.Data
+		d.AddressData = output.AddressData
 
 		block.NewUtxoDataMap[output.OutpointKey] = d
 	}
@@ -114,8 +114,8 @@ func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, block *model.Pro
 // ParseUpdateAddressInTxParallel address tx历史记录
 func ParseUpdateAddressInTxParallel(txIdx uint64, tx *model.Tx, block *model.ProcessBlock) {
 	for _, output := range tx.TxOuts {
-		if output.Data.HasAddress {
-			address := string(output.Data.AddressPkh[:])
+		if output.AddressData.HasAddress {
+			address := string(output.AddressData.AddressPkh[:])
 			block.AddrPkhInTxMap[address] = append(block.AddrPkhInTxMap[address], int(txIdx))
 		}
 	}

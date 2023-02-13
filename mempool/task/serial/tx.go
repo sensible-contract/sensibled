@@ -71,7 +71,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(
 
 		// 补充数据
 		d.ScriptType = scriptDecoder.GetLockingScriptType(d.PkScript)
-		d.Data = scriptDecoder.ExtractPkScriptForTxo(d.PkScript, d.ScriptType)
+		d.AddressData = scriptDecoder.ExtractPkScriptForTxo(d.PkScript, d.ScriptType)
 
 		spentUtxoDataMap[outpointKey] = d
 	}
@@ -285,12 +285,12 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	// 更新内存池数据
 	mpkeys := make([]string, 5*(len(utxoToRestore)+len(utxoToRemove)+len(utxoToSpend)))
 	for outpointKey, data := range utxoToRestore {
-		strAddressPkh := string(data.Data.AddressPkh[:])
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
 
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
-		if !data.Data.HasAddress {
+		if !data.AddressData.HasAddress {
 			// 无法识别地址，暂不记录utxo
 			// logger.Log.Info("ignore mp:utxo", zap.String("key", hex.EncodeToString([]byte(outpointKey))),
 			// 	zap.Float64("score", member.Score))
@@ -301,7 +301,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		// 不是合约tx，则记录address utxo
 		// redis有序address utxo数据添加
 		// logger.Log.Info("ZAdd mp:au",
-		// 	zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
+		// 	zap.String("addrHex", hex.EncodeToString(data.AddressData.AddressPkh[:])),
 		// 	zap.String("key", hex.EncodeToString([]byte(outpointKey))),
 		// 	zap.Float64("score", member.Score))
 		mpkeyAU := "mp:{au" + strAddressPkh + "}"
@@ -309,7 +309,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		// balance of address
 		// logger.Log.Info("IncrBy mp:bl",
-		// 	zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
+		// 	zap.String("addrHex", hex.EncodeToString(data.AddressData.AddressPkh[:])),
 		// 	zap.Uint64("satoshi", data.Satoshi))
 		mpkeyBL := "mp:bl" + strAddressPkh
 		pipe.IncrBy(ctx, mpkeyBL, int64(data.Satoshi))
@@ -319,7 +319,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		// contract balance of address
 		// logger.Log.Info("IncrBy mp:cb",
-		// 	zap.String("addrHex", hex.EncodeToString(data.Data.AddressPkh[:])),
+		// 	zap.String("addrHex", hex.EncodeToString(data.AddressData.AddressPkh[:])),
 		// 	zap.Uint64("satoshi", data.Satoshi))
 
 		// mpkeyCB := "mp:cb" + strAddressPkh
@@ -327,14 +327,14 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		// mpkeys = append(mpkeys, mpkeyCB)
 
 		// redis有序genesis utxo数据添加
-		// if data.Data.CodeType == scriptDecoder.CodeType_NFT {
+		// if data.AddressData.CodeType == scriptDecoder.CodeType_NFT {
 		// mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
 		// mpkeyND := "mp:nd" + strCodeHash + strGenesisId
 		// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
 		// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
 		// mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
 
-		// member.Score = float64(data.Data.NFT.TokenIndex)
+		// member.Score = float64(data.AddressData.NFT.TokenIndex)
 		// pipe.ZAdd(ctx, mpkeyNU, member)                         // nft:utxo
 		// pipe.ZAdd(ctx, mpkeyND, member)                         // nft:utxo-detail
 		// pipe.ZIncrBy(ctx, mpkeyNO, 1, strAddressPkh)            // nft:owners
@@ -342,26 +342,26 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		// }
 
 		// update token info
-		// if data.Data.CodeType == scriptDecoder.CodeType_NFT {
-		// 	pipe.HSet(ctx, "nI"+strCodeHash+strGenesisId+strconv.Itoa(int(data.Data.NFT.TokenIndex)),
-		// 		"metatxid", data.Data.NFT.MetaTxId[:],
-		// 		"metavout", data.Data.NFT.MetaOutputIndex,
-		// 		"supply", data.Data.NFT.TokenSupply,
-		// 		"sensibleid", data.Data.NFT.SensibleId,
+		// if data.AddressData.CodeType == scriptDecoder.CodeType_NFT {
+		// 	pipe.HSet(ctx, "nI"+strCodeHash+strGenesisId+strconv.Itoa(int(data.AddressData.NFT.TokenIndex)),
+		// 		"metatxid", data.AddressData.NFT.MetaTxId[:],
+		// 		"metavout", data.AddressData.NFT.MetaOutputIndex,
+		// 		"supply", data.AddressData.NFT.TokenSupply,
+		// 		"sensibleid", data.AddressData.NFT.SensibleId,
 		// 	)
 		// 	pipe.HSet(ctx, "ni"+strCodeHash+strGenesisId,
-		// 		"supply", data.Data.NFT.TokenSupply,
-		// 		"sensibleid", data.Data.NFT.SensibleId,
+		// 		"supply", data.AddressData.NFT.TokenSupply,
+		// 		"sensibleid", data.AddressData.NFT.SensibleId,
 		// 	)
 		// }
 	}
 
 	// addrToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
-		strAddressPkh := string(data.Data.AddressPkh[:])
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
 
 		// redis有序utxo数据清除
-		if !data.Data.HasAddress {
+		if !data.AddressData.HasAddress {
 			// 无法识别地址，暂不记录utxo
 			// pipe.ZRem(ctx, "mp:utxo", outpointKey)
 			continue
@@ -381,7 +381,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		// pipe.DecrBy(ctx, mpkeyCB, int64(data.Satoshi))
 
 		// redis有序genesis utxo数据清除
-		// if data.Data.CodeType == scriptDecoder.CodeType_NFT {
+		// if data.AddressData.CodeType == scriptDecoder.CodeType_NFT {
 		// mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
 		// mpkeyND := "mp:nd" + strCodeHash + strGenesisId
 		// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
@@ -399,12 +399,12 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	}
 
 	for outpointKey, data := range utxoToSpend {
-		strAddressPkh := string(data.Data.AddressPkh[:])
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
 
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
-		if !data.Data.HasAddress {
+		if !data.AddressData.HasAddress {
 			// 无法识别地址，暂不记录utxo
 			// pipe.ZAdd(ctx, "mp:s:utxo", member)
 			continue
@@ -427,8 +427,8 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		// mpkeys = append(mpkeys, mpkeyCB)
 
 		// redis有序genesis utxo数据添加
-		// if data.Data.CodeType == scriptDecoder.CodeType_NFT {
-		// member.Score = float64(data.Data.NFT.TokenIndex)
+		// if data.AddressData.CodeType == scriptDecoder.CodeType_NFT {
+		// member.Score = float64(data.AddressData.NFT.TokenIndex)
 
 		// mpkeyNU := "mp:s:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
 		// mpkeyND := "mp:s:nd" + strCodeHash + strGenesisId

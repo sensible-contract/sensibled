@@ -8,7 +8,7 @@ func hasSensibleFlag(pkScript []byte) bool {
 	return bytes.HasSuffix(pkScript, []byte("sensible")) || bytes.HasSuffix(pkScript, []byte("oraclesv"))
 }
 
-func DecodeSensibleTxo(pkScript []byte, txo *TxoData) bool {
+func DecodeSensibleTxo(pkScript []byte, txo *AddressData) bool {
 	scriptLen := len(pkScript)
 	if scriptLen < 1024 {
 		return false
@@ -18,8 +18,8 @@ func DecodeSensibleTxo(pkScript []byte, txo *TxoData) bool {
 	return ret
 }
 
-func ExtractPkScriptForTxo(pkScript, scriptType []byte) (txo *TxoData) {
-	txo = &TxoData{}
+func ExtractPkScriptForTxo(pkScript, scriptType []byte) (txo *AddressData) {
+	txo = &AddressData{}
 
 	if len(pkScript) == 0 {
 		return txo

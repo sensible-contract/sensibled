@@ -62,14 +62,14 @@ func (u *NFTData) MarshalJSON() ([]byte, error) {
 	})
 }
 
-type TxoData struct {
+type AddressData struct {
+	HasAddress bool
 	CodeType   uint32
 	AddressPkh [20]byte
 	NFT        *NFTData
-	HasAddress bool
 }
 
-func (u *TxoData) MarshalJSON() ([]byte, error) {
+func (u *AddressData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		CodeType   uint32
 		HasAddress bool
