@@ -33,9 +33,6 @@ func SyncBlock(block *model.Block) {
 		nftOutputsCnt += tx.NFTOutputsCnt
 	}
 
-	// for _, tokenSummary := range block.ParseData.TokenSummaryMap {
-	// }
-
 	if _, err := store.SyncStmtBlk.Exec(
 		uint32(block.Height),
 		string(block.Hash),

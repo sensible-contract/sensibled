@@ -128,21 +128,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		pipe.ZAdd(ctx, "{au"+strAddressPkh+"}", member)           // 有序address utxo数据添加
 		pipe.IncrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
 
-		// 合约信息记录
-		// contract satoshi balance of address
-		// pipe.IncrBy(ctx, "cb"+strAddressPkh, int64(data.Satoshi))
-
-		// skip if reorg
-		// if isReorg {
-		// 	continue
-		// }
-
-		// update token info
-		// if data.AddressData.CodeType == scriptDecoder.CodeType_UNIQUE {
-		// 	pipe.HSet(ctx, "fi"+strCodeHash+strGenesisId,
-		// 		"sensibleid", data.AddressData.Uniq.SensibleId,
-		// 	)
-		// }
 	}
 
 	// addrToRemove := make(map[string]struct{}, 1)
@@ -160,23 +145,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		pipe.ZRem(ctx, "{au"+strAddressPkh+"}", outpointKey)                                               // 有序address utxo数据清除
 		addressBalanceCmds["bl"+strAddressPkh] = pipe.DecrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
 
-		// 非合约信息清理
-		// contract satoshi balance of address
-		// addressBalanceCmds["cb"+strAddressPkh] = pipe.DecrBy(ctx, "cb"+strAddressPkh, int64(data.Satoshi))
-
-		// redis有序genesis utxo数据清除
-
-		// 记录key以备删除
-		// tokenToRemove[strGenesisId+strCodeHash] = struct{}{}
-		// addrToRemove[strAddressPkh] = struct{}{}
 	}
-
-	// 删除summary 为0的记录
-	// for addr := range addrToRemove {
-	// 	pipe.ZRemRangeByScore(ctx, "{ns"+addr+"}", "0", "0")
-	// 	pipe.ZRemRangeByScore(ctx, "{fs"+addr+"}", "0", "0")
-	// 	pipe.ZRemRangeByScore(ctx, "{nas"+addr+"}", "0", "0")
-	// }
 
 	logger.Log.Info("UpdateUtxoInRedis finished")
 }
