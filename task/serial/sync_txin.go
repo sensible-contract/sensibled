@@ -167,6 +167,10 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 
 		// store utxo nft point
 		for vout, output := range tx.TxOuts {
+			if output.LockingScriptUnspendable {
+				continue
+			}
+
 			if objData, ok := block.ParseData.SpentUtxoDataMap[output.OutpointKey]; ok {
 				// not spent in self block
 				objData.CreatePointOfNFTs = output.CreatePointOfNFTs
@@ -210,6 +214,10 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 
 	// store utxo nft point
 	for vout, output := range coinbaseTx.TxOuts {
+		if output.LockingScriptUnspendable {
+			continue
+		}
+
 		if objData, ok := block.ParseData.NewUtxoDataMap[output.OutpointKey]; ok {
 			objData.CreatePointOfNFTs = output.CreatePointOfNFTs
 		} else {
