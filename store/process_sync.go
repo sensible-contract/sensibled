@@ -62,6 +62,10 @@ CREATE TABLE IF NOT EXISTS blktx_height (
 	txsize       UInt32,
 	witoffset    UInt32,
 	locktime     UInt32,
+	nftnew       UInt64,        -- 新创建nft个数, 包括无效创建
+	nftin        UInt64,        -- 输入nft个数
+	nftout       UInt64,        -- 输出nft个数, 创建nft个数 = out-in，无效创建不计数
+	nftlost      UInt64,        -- 随Fee丢失的nft个数，如果是在coinbase中丢弃，则真正丢失
 	invalue      UInt64,
 	outvalue     UInt64,
 	rawtx        String,

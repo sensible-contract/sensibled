@@ -91,6 +91,7 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 
 			// create nft may in fee
 			if inFee {
+				tx.NFTLostCnt += 1
 				coinbaseCreatePointOfNFTs = append(coinbaseCreatePointOfNFTs, &model.NFTCreatePoint{
 					Height: uint32(block.Height),
 					Idx:    nftIndexInBlock + uint64(createIdxInTx),
@@ -135,6 +136,7 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 
 				// create nft may in fee
 				if inFee {
+					tx.NFTLostCnt += 1
 					coinbaseCreatePointOfNFTs = append(coinbaseCreatePointOfNFTs, &model.NFTCreatePoint{
 						Height: nftpoint.Height,
 						Idx:    nftpoint.Idx,
@@ -170,6 +172,7 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 	// update coinbase input nft
 	coinbaseTx.TxIns[0].CreatePointOfNFTs = coinbaseCreatePointOfNFTs
 	for _, nftpoint := range coinbaseCreatePointOfNFTs {
+		inFee := true
 		sat := award + nftpoint.Offset
 		satOutputOffset := uint64(0)
 		for _, output := range coinbaseTx.TxOuts {
@@ -179,9 +182,13 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 					Idx:    nftpoint.Idx,
 					Offset: uint64(sat - satOutputOffset),
 				})
+				inFee = false
 				break
 			}
 			satOutputOffset += output.Satoshi
+		}
+		if inFee {
+			coinbaseTx.NFTLostCnt += 1
 		}
 	}
 
@@ -227,6 +234,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				}
 			}
 			tx.InputsValue += objData.Satoshi
+			tx.NFTInputsCnt += uint64(len(input.CreatePointOfNFTs))
 
 			address := ""
 			if objData.AddressData.HasAddress {

@@ -26,6 +26,9 @@ type Tx struct {
 	TxOuts       []*TxOut
 
 	CreateNFTData []*scriptDecoder.NFTData
+	NFTInputsCnt  uint64
+	NFTOutputsCnt uint64
+	NFTLostCnt    uint64
 
 	IsSensible bool
 }
