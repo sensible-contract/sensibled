@@ -115,13 +115,6 @@ func IsOpreturn(scriptType []byte) bool {
 	return false
 }
 
-func IsFalseOpreturn(scriptType []byte) bool {
-	if len(scriptType) > 1 && scriptType[0] == OP_FALSE && scriptType[1] == OP_RETURN {
-		return true
-	}
-	return false
-}
-
 func IsLockingScriptOnlyEqual(pkScript []byte) bool {
 	// test locking script
 	// "0b 3c4b616e7965323032303e 87"

@@ -204,11 +204,6 @@ func NewRawTxOut(txout *model.TxOut, txoutraw []byte) (offset int) {
 	if len(txout.PkScript) == 0 {
 		txoutraw[offset] = 0x00
 		offset += 1
-	} else if scriptDecoder.IsFalseOpreturn(txout.PkScript) {
-		txoutraw[offset] = 0x02
-		txoutraw[offset+1] = 0x00
-		txoutraw[offset+2] = 0x6a
-		offset += 3
 	} else if scriptDecoder.IsOpreturn(txout.PkScript) {
 		txoutraw[offset] = 0x01
 		txoutraw[offset+1] = 0x6a

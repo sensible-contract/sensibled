@@ -27,7 +27,7 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		output.ScriptType = scriptDecoder.GetLockingScriptType(output.PkScript)
 		output.ScriptTypeHex = hex.EncodeToString(output.ScriptType)
 
-		if scriptDecoder.IsFalseOpreturn(output.ScriptType) {
+		if scriptDecoder.IsOpreturn(output.ScriptType) {
 			output.LockingScriptUnspendable = true
 		}
 
