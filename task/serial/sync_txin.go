@@ -270,47 +270,6 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			nftPointsBuf := make([]byte, len(input.CreatePointOfNFTs)*3*8)
 			model.DumpNFTCreatePoints(nftPointsBuf, input.CreatePointOfNFTs)
 
-			var dataValue uint64
-			// var tokenIndex uint64
-			// var decimal uint8
-			// // token summary
-			// if objData.AddressData.CodeType != scriptDecoder.CodeType_NONE && objData.AddressData.CodeType != scriptDecoder.CodeType_SENSIBLE {
-			// 	buf := make([]byte, 12, 12+20+40)
-			// 	binary.LittleEndian.PutUint32(buf, objData.AddressData.CodeType)
-
-			// 	if objData.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-			// 		binary.LittleEndian.PutUint64(buf[4:], objData.AddressData.NFT.TokenIndex)
-			// 		tokenIndex = objData.AddressData.NFT.TokenIndex
-			// 		dataValue = tokenIndex
-			// 	} else if objData.AddressData.CodeType == scriptDecoder.CodeType_NFT_SELL {
-			// 		binary.LittleEndian.PutUint64(buf[4:], objData.AddressData.NFTSell.TokenIndex)
-			// 		tokenIndex = objData.AddressData.NFTSell.TokenIndex
-			// 		dataValue = tokenIndex
-			// 	} else if objData.AddressData.CodeType == scriptDecoder.CodeType_FT {
-			// 		decimal = objData.AddressData.FT.Decimal
-			// 		dataValue = objData.AddressData.FT.Amount
-			// 	}
-
-			// 	buf = append(buf, objData.AddressData.CodeHash[:]...)
-			// 	buf = append(buf, objData.AddressData.GenesisId[:objData.AddressData.GenesisIdLen]...)
-
-			// 	tokenKey := string(buf)
-			// 	tokenSummary, ok := block.ParseData.TokenSummaryMap[tokenKey]
-			// 	if !ok {
-			// 		tokenSummary = &model.TokenData{
-			// 			CodeType:  objData.AddressData.CodeType,
-			// 			NFTIdx:    tokenIndex,
-			// 			Decimal:   decimal,
-			// 			CodeHash:  objData.AddressData.CodeHash[:],
-			// 			GenesisId: objData.AddressData.GenesisId[:objData.AddressData.GenesisIdLen],
-			// 		}
-			// 		block.ParseData.TokenSummaryMap[tokenKey] = tokenSummary
-			// 	}
-
-			// 	tokenSummary.InSatoshi += objData.Satoshi
-			// 	tokenSummary.InDataValue += 1
-			// }
-
 			if _, err := store.SyncStmtTxIn.Exec(
 				uint32(block.Height),
 				uint64(txIdx),
@@ -328,7 +287,6 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				input.InputVout,
 				address,
 				uint32(objData.AddressData.CodeType),
-				dataValue,
 				objData.Satoshi,
 				string(objData.ScriptType),
 				pkscript,

@@ -38,10 +38,6 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				address = string(output.AddressData.AddressPkh[:]) // 20 bytes
 			}
 
-			var dataValue uint64
-			if output.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-			}
-
 			nftPointsBuf := make([]byte, len(output.CreatePointOfNFTs)*3*8)
 			model.DumpNFTCreatePoints(nftPointsBuf, output.CreatePointOfNFTs)
 
@@ -50,7 +46,6 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				uint32(vout),
 				address,
 				uint32(output.AddressData.CodeType),
-				dataValue,
 				output.Satoshi,
 				string(output.ScriptType),
 				pkscript,

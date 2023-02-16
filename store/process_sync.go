@@ -95,7 +95,6 @@ CREATE TABLE IF NOT EXISTS txout (
 	vout         UInt32,
 	address      String,
 	code_type    UInt32,      -- 0: none, 1: ft, 2: unique, 3: nft
-	data_value   UInt64,
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String,
@@ -145,7 +144,6 @@ CREATE TABLE IF NOT EXISTS txin (
 	vout         UInt32,
 	address      String,
 	code_type    UInt32,      -- 0: none, 1: ft, 2: unique, 3: nft
-	data_value   UInt64,
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String

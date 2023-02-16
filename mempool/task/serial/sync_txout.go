@@ -4,7 +4,6 @@ import (
 	"sensibled/logger"
 	"sensibled/mempool/store"
 	"sensibled/model"
-	scriptDecoder "sensibled/parser/script"
 
 	"go.uber.org/zap"
 )
@@ -20,16 +19,11 @@ func SyncBlockTxOutputInfo(startIdx int, txs []*model.Tx) {
 				address = string(output.AddressData.AddressPkh[:]) // 20 bytes
 			}
 
-			var dataValue uint64
-			if output.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-			}
-
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.TxId),
 				uint32(vout),
 				address,
 				uint32(output.AddressData.CodeType),
-				dataValue,
 				output.Satoshi,
 				string(output.ScriptType),
 				string(output.PkScript),

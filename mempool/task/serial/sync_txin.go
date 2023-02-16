@@ -47,10 +47,6 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				addrPkhInTxMap[address] = append(addrPkhInTxMap[address], startIdx+txIdx)
 			}
 
-			var dataValue uint64
-			if objData.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-			}
-
 			if _, err := store.SyncStmtTxIn.Exec(
 				model.MEMPOOL_HEIGHT, // uint32(block.Height),
 				uint64(startIdx+txIdx),
@@ -66,7 +62,6 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				input.InputVout,
 				address,
 				uint32(objData.AddressData.CodeType),
-				dataValue,
 				objData.Satoshi,
 				string(objData.ScriptType),
 				string(objData.PkScript),
