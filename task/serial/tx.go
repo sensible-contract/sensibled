@@ -97,6 +97,23 @@ func UpdateAddrPkhInTxMapSerial(block *model.ProcessBlock) {
 	}
 }
 
+func UpdateNewNFTInRedis(pipe redis.Pipeliner) {
+	logger.Log.Info("UpdateNewNFTInRedis",
+		zap.Int("new", len(model.GlobalNewInscriptions)),
+	)
+	ctx := context.Background()
+
+	for _, nftData := range model.GlobalNewInscriptions {
+		strInscriptionID := fmt.Sprintf("%s%d", string(nftData.TxId[:]), nftData.IdxInTx)
+
+		// redis有序utxo数据成员
+		member := &redis.Z{
+			Score:  float64(nftData.CreatePoint.Height)*1000000000 + float64(nftData.CreatePoint.IdxInBlock),
+			Member: strInscriptionID}
+		pipe.ZAdd(ctx, "nfts", member) // 有序new nft数据添加
+	}
+}
+
 // UpdateUtxoInRedis 批量更新redis utxo
 func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) {
 	logger.Log.Info("UpdateUtxoInRedis",
