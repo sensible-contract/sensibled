@@ -16,20 +16,19 @@ func SyncBlockTxOutputInfo(startIdx int, txs []*model.Tx) {
 			tx.OutputsValue += output.Satoshi
 
 			address := ""
-			if output.Data.HasAddress {
-				address = string(output.Data.AddressPkh[:]) // 20 bytes
+			if output.AddressData.HasAddress {
+				address = string(output.AddressData.AddressPkh[:]) // 20 bytes
 			}
 
 			var dataValue uint64
-			if output.Data.CodeType == scriptDecoder.CodeType_NFT {
-				dataValue = output.Data.NFT.TokenIndex
+			if output.AddressData.CodeType == scriptDecoder.CodeType_NFT {
 			}
 
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.TxId),
 				uint32(vout),
 				address,
-				uint32(output.Data.CodeType),
+				uint32(output.AddressData.CodeType),
 				dataValue,
 				output.Satoshi,
 				string(output.ScriptType),
