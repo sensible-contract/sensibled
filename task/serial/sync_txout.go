@@ -13,6 +13,7 @@ import (
 func SyncBlockTxOutputInfo(block *model.Block) {
 	for txIdx, tx := range block.Txs {
 		for _, output := range tx.TxOuts {
+			tx.NFTOutputsCnt += uint64(len(output.CreatePointOfNFTs))
 			tx.OutputsValue += output.Satoshi
 			// set sensible flag
 			if output.AddressData.CodeType != scriptDecoder.CodeType_NONE {
@@ -40,6 +41,10 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 			var dataValue uint64
 			if output.AddressData.CodeType == scriptDecoder.CodeType_NFT {
 			}
+
+			nftPointsBuf := make([]byte, len(output.CreatePointOfNFTs)*3*8)
+			model.DumpNFTCreatePoints(nftPointsBuf, output.CreatePointOfNFTs)
+
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.TxId),
 				uint32(vout),
@@ -49,6 +54,11 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				output.Satoshi,
 				string(output.ScriptType),
 				pkscript,
+
+				// nft
+				uint64(len(output.CreatePointOfNFTs)),
+				string(nftPointsBuf),
+
 				uint32(block.Height),
 				uint64(txIdx),
 			); err != nil {

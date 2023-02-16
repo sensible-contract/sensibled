@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS txout (
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String,
+	nftout       UInt64,      -- utxo输出nft个数, 创建nft个数 = out-in，无效创建不计数
+	nftpoints    String,      -- 序列化后的所有输出nftpoints列表
 	height       UInt32,
 	utxidx       UInt64
 ) engine=MergeTree()
