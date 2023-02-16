@@ -34,9 +34,6 @@ func ParseBlockParallel(block *model.Block) {
 		// 按address追踪tx历史
 		parallel.ParseUpdateAddressInTxParallel(uint64(txIdx), tx, block.ParseData)
 	}
-
-	// DB更新txout，比较独立，可以并行更新
-	serial.SyncBlockTxOutputInfo(block)
 }
 
 // ParseBlockSerialStart 再串行处理区块
@@ -47,8 +44,14 @@ func ParseBlockSerialStart(withMempool bool, block *model.Block) {
 	// 从redis中补全查询当前block内所有Tx花费的utxo信息来使用
 	serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
 
-	// DB更新txin，需要前序和当前区块的txout处理完毕，且依赖从redis查来的utxo。
+	// 更新NFT追踪信息，保存在in/out记录上，也更新到utxo中。需要依赖从redis查来的utxo。
+	serial.ParseBlockTxNFTsInAndOutSerial(block)
+
+	// DB更新txin，需要前序和当前区块的txout处理完毕，且依赖从redis查来的utxo。但并不需要txout DB更新完毕
 	serial.SyncBlockTxInputDetail(block)
+
+	// DB更新txout，需要依赖txin执行完毕
+	serial.SyncBlockTxOutputInfo(block)
 
 	// 需要串行，更新当前区块的utxo信息变化到程序内存缓存
 	serial.UpdateUtxoInMapSerial(block.ParseData)
