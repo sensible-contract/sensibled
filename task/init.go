@@ -89,7 +89,7 @@ func ParseEnd(isFull bool) bool {
 func RemoveBlocksForReorg(startBlockHeight int) bool {
 	// 在更新之前，如果有上次已导入但是当前被孤立的块，需要先删除这些块的数据。
 	logger.Log.Info("remove...")
-	utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight, 0) // 已花费的utxo需要回滚
+	utxoToRestore, err := loader.GetSpentUTXOAfterBlockHeight(startBlockHeight, 0) // 已花费的utxo需要回滚，除了coinbase之外
 	if err != nil {
 		logger.Log.Error("get utxo to restore failed", zap.Error(err))
 		return false

@@ -69,7 +69,7 @@ func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 	return &ret, nil
 }
 
-// 已花费的utxo需要回滚
+// 已花费的utxo需要回滚, 除了coinbase之外
 func GetSpentUTXOAfterBlockHeight(start, end int) (utxosMapRsp map[string]*model.TxoData, err error) {
 	if end == 0 {
 		end = model.MEMPOOL_HEIGHT
@@ -78,6 +78,7 @@ func GetSpentUTXOAfterBlockHeight(start, end int) (utxosMapRsp map[string]*model
 	psql := fmt.Sprintf(`
 SELECT utxid, vout, satoshi, script_type, script_pk, nftpoints, height_txo, utxidx FROM txin
    WHERE satoshi > 0 AND
+      txidx > 0 AND
       height >= %d AND
       height < %d`, start, end)
 	return getUtxoBySql(psql)
@@ -92,6 +93,7 @@ func GetNewUTXOAfterBlockHeight(start, end int) (utxosMapRsp map[string]*model.T
 SELECT utxid, vout, satoshi, script_type, script_pk, nftpoints, 0, 0 FROM txout
    WHERE satoshi > 0 AND
       NOT startsWith(script_type, char(0x00, 0x6a)) AND
+      NOT startsWith(script_type, char(0x6a)) AND
       height >= %d AND
       height < %d`, start, end)
 	return getUtxoBySql(psql)

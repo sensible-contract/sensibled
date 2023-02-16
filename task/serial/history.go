@@ -87,7 +87,7 @@ func RemoveAddressTxHistoryFromPikaForReorg(height int, utxoToRestore, utxoToRem
 	ctx := context.Background()
 	pipe := rdb.RdbAddrTxClient.Pipeline()
 	for strAddressPkh := range addressMap {
-		pipe.ZRemRangeByScore(ctx, "{ah"+strAddressPkh+"}", strHeight, "+inf") // 有序address tx history数据添加
+		pipe.ZRemRangeByScore(ctx, "{ah"+strAddressPkh+"}", strHeight, "+inf") // 有序address tx history数据清理
 	}
 
 	if _, err := pipe.Exec(ctx); err != nil {
