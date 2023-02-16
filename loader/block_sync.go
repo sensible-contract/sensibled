@@ -57,13 +57,15 @@ func GetBestBlockHeightFromRedis() (height int, err error) {
 }
 
 func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
+	var nftPointsBuf []byte
 	var ret model.TxoData
-	err := rows.Scan(&ret.UTxid, &ret.Vout, &ret.Satoshi, &ret.ScriptType, &ret.PkScript, &ret.BlockHeight, &ret.TxIdx)
+	err := rows.Scan(&ret.UTxid, &ret.Vout, &ret.Satoshi, &ret.ScriptType, &ret.PkScript, &nftPointsBuf, &ret.BlockHeight, &ret.TxIdx)
 	if err != nil {
 		return nil, err
 	}
 
 	ret.AddressData = scriptDecoder.ExtractPkScriptForTxo(ret.PkScript, ret.ScriptType)
+	ret.LoadNFTCreatePointsFromRaw(nftPointsBuf)
 	return &ret, nil
 }
 
@@ -74,7 +76,7 @@ func GetSpentUTXOAfterBlockHeight(start, end int) (utxosMapRsp map[string]*model
 	}
 
 	psql := fmt.Sprintf(`
-SELECT utxid, vout, satoshi, script_type, script_pk, height_txo, utxidx FROM txin
+SELECT utxid, vout, satoshi, script_type, script_pk, nftpoints, height_txo, utxidx FROM txin
    WHERE satoshi > 0 AND
       height >= %d AND
       height < %d`, start, end)
@@ -87,7 +89,7 @@ func GetNewUTXOAfterBlockHeight(start, end int) (utxosMapRsp map[string]*model.T
 		end = model.MEMPOOL_HEIGHT
 	}
 	psql := fmt.Sprintf(`
-SELECT utxid, vout, satoshi, script_type, script_pk, 0, 0 FROM txout
+SELECT utxid, vout, satoshi, script_type, script_pk, nftpoints, 0, 0 FROM txout
    WHERE satoshi > 0 AND
       NOT startsWith(script_type, char(0x00, 0x6a)) AND
       height >= %d AND
