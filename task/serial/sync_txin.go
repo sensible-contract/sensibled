@@ -10,6 +10,195 @@ import (
 	"go.uber.org/zap"
 )
 
+// ParseBlockTxNFTsInAndOutSerial all tx input/output info
+func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
+	var coinbaseCreatePointOfNFTs []*model.NFTCreatePoint
+	satFeeOffset := uint64(0)
+	nftIndexInBlock := uint64(0)
+	for _, tx := range block.Txs[1:] {
+		// count tx fee
+		satInputAmount := uint64(0)
+		for vin, input := range tx.TxIns {
+			objData, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]
+			if !ok {
+				logger.Log.Info("tx-input-err",
+					zap.String("txin", "input missing utxo"),
+					zap.String("txid", tx.TxIdHex),
+					zap.Int("vin", vin),
+
+					zap.String("utxid", input.InputHashHex),
+					zap.Uint32("vout", input.InputVout),
+				)
+				continue
+			}
+			satInputAmount += objData.Satoshi
+		}
+		satOutputAmount := uint64(0)
+		for _, output := range tx.TxOuts {
+			satOutputAmount += output.Satoshi
+		}
+		satFeeAmount := satInputAmount - satOutputAmount
+
+		// invalid exist nft recreate
+		satInputOffset := uint64(0)
+		for vin, input := range tx.TxIns {
+			objData, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]
+			if !ok {
+				logger.Log.Info("tx-input-err",
+					zap.String("txin", "input missing utxo"),
+					zap.String("txid", tx.TxIdHex),
+					zap.Int("vin", vin),
+
+					zap.String("utxid", input.InputHashHex),
+					zap.Uint32("vout", input.InputVout),
+				)
+				continue
+			}
+
+			for _, nftpoint := range objData.CreatePointOfNFTs {
+				sat := satInputOffset + nftpoint.Offset
+				if int(sat) > len(tx.CreateNFTData) {
+					break
+				}
+				tx.CreateNFTData[sat].Invalid = true
+			}
+
+			satInputOffset += objData.Satoshi
+			if int(satInputOffset) > len(tx.CreateNFTData) {
+				break
+			}
+		}
+
+		// insert created NFT
+		for sat, nft := range tx.CreateNFTData {
+			if nft.Invalid { // nft removed
+				continue
+			}
+			inFee := true
+			satOutputOffset := uint64(0)
+			for _, output := range tx.TxOuts {
+				if uint64(sat) < satOutputOffset+output.Satoshi {
+					output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, &model.NFTCreatePoint{
+						Height: uint32(block.Height),
+						Idx:    nftIndexInBlock + uint64(sat),
+						Offset: uint64(sat) - satOutputOffset,
+					})
+					inFee = false
+					break
+				}
+				satOutputOffset += output.Satoshi
+			}
+
+			// create nft may in fee
+			if inFee {
+				coinbaseCreatePointOfNFTs = append(coinbaseCreatePointOfNFTs, &model.NFTCreatePoint{
+					Height: uint32(block.Height),
+					Idx:    nftIndexInBlock + uint64(sat),
+					Offset: uint64(sat) - satOutputOffset + satFeeOffset, // global fee offset in coinbase
+				})
+			}
+		}
+		nftIndexInBlock += uint64(len(tx.CreateNFTData))
+
+		// insert exsit NFT
+		satInputOffset = uint64(0)
+		for vin, input := range tx.TxIns {
+			objData, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]
+			if !ok {
+				logger.Log.Info("tx-input-err",
+					zap.String("txin", "input missing utxo"),
+					zap.String("txid", tx.TxIdHex),
+					zap.Int("vin", vin),
+
+					zap.String("utxid", input.InputHashHex),
+					zap.Uint32("vout", input.InputVout),
+				)
+				continue
+			}
+
+			for _, nftpoint := range objData.CreatePointOfNFTs {
+				sat := satInputOffset + nftpoint.Offset
+				inFee := true
+				satOutputOffset := uint64(0)
+				for _, output := range tx.TxOuts {
+					if uint64(sat) < satOutputOffset+output.Satoshi {
+						output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, &model.NFTCreatePoint{
+							Height: nftpoint.Height,
+							Idx:    nftpoint.Idx,
+							Offset: uint64(sat - satOutputOffset),
+						})
+						inFee = false
+						break
+					}
+					satOutputOffset += output.Satoshi
+				} // fixme: create nft may in fee
+
+				// create nft may in fee
+				if inFee {
+					coinbaseCreatePointOfNFTs = append(coinbaseCreatePointOfNFTs, &model.NFTCreatePoint{
+						Height: nftpoint.Height,
+						Idx:    nftpoint.Idx,
+						Offset: uint64(sat) - satOutputOffset + satFeeOffset, // global fee offset in coinbase
+					})
+				}
+			}
+			satInputOffset += objData.Satoshi
+		}
+		satFeeOffset += satFeeAmount
+
+		// store utxo nft point
+		for vout, output := range tx.TxOuts {
+			if objData, ok := block.ParseData.SpentUtxoDataMap[output.OutpointKey]; ok {
+				// not spent in self block
+				objData.CreatePointOfNFTs = output.CreatePointOfNFTs
+			} else if objData, ok := block.ParseData.NewUtxoDataMap[output.OutpointKey]; ok {
+				objData.CreatePointOfNFTs = output.CreatePointOfNFTs
+			} else {
+				logger.Log.Info("tx-output-restore-nft-err",
+					zap.String("txout", "output missing utxo"),
+					zap.String("txid", tx.TxIdHex),
+					zap.Int("vout", vout),
+				)
+			}
+		}
+	}
+
+	// coinbase
+	coinbaseTx := block.Txs[0]
+	award := utils.CalcBlockSubsidy(block.Height)
+
+	// update coinbase input nft
+	coinbaseTx.TxIns[0].CreatePointOfNFTs = coinbaseCreatePointOfNFTs
+	for _, nftpoint := range coinbaseCreatePointOfNFTs {
+		sat := award + nftpoint.Offset
+		satOutputOffset := uint64(0)
+		for _, output := range coinbaseTx.TxOuts {
+			if uint64(sat) < satOutputOffset+output.Satoshi {
+				output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, &model.NFTCreatePoint{
+					Height: nftpoint.Height,
+					Idx:    nftpoint.Idx,
+					Offset: uint64(sat - satOutputOffset),
+				})
+				break
+			}
+			satOutputOffset += output.Satoshi
+		}
+	}
+
+	// store utxo nft point
+	for vout, output := range coinbaseTx.TxOuts {
+		if objData, ok := block.ParseData.NewUtxoDataMap[output.OutpointKey]; ok {
+			objData.CreatePointOfNFTs = output.CreatePointOfNFTs
+		} else {
+			logger.Log.Info("coinbase-output-restore-nft-err",
+				zap.String("txout", "output is not utxo"),
+				zap.String("txid", coinbaseTx.TxIdHex),
+				zap.Int("vout", vout),
+			)
+		}
+	}
+}
+
 // SyncBlockTxInputDetail all tx input info
 func SyncBlockTxInputDetail(block *model.Block) {
 	var commonObjData *model.TxoData = &model.TxoData{
