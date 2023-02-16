@@ -142,6 +142,7 @@ func RemoveBlocksForReorg(startBlockHeight int) bool {
 		rdsPipe := rdb.RdbBalanceClient.TxPipeline()
 		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 		serial.UpdateUtxoInRedis(rdsPipe, startBlockHeight, addressBalanceCmds, utxoToRestore, utxoToRemove, true)
+		serial.RemoveNewNFTInRedisStartFromBlockHeight(rdsPipe, startBlockHeight)
 		if _, err = rdsPipe.Exec(ctx); err != nil {
 			logger.Log.Error("redis exec failed", zap.Error(err))
 			model.NeedStop = true

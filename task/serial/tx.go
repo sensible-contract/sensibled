@@ -116,6 +116,16 @@ func UpdateNewNFTInRedis(pipe redis.Pipeliner) {
 	}
 }
 
+// RemoveNewNFTInRedisStartFromBlockHeight 清理被重组区块内的新创建nft
+func RemoveNewNFTInRedisStartFromBlockHeight(pipe redis.Pipeliner, height int) {
+	logger.Log.Info("RemoveNewNFTInRedisAfterBlockHeight",
+		zap.Int("height", height),
+	)
+	ctx := context.Background()
+	strHeight := fmt.Sprintf("%d000000000", height)
+	pipe.ZRemRangeByScore(ctx, "nfts", strHeight, "+inf") // 有序nft数据清理
+}
+
 // UpdateUtxoInRedis 批量更新redis utxo
 func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) {
 	logger.Log.Info("UpdateUtxoInRedis",
