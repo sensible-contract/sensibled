@@ -2,7 +2,9 @@ package serial
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"sensibled/logger"
 	"sensibled/model"
 	scriptDecoder "sensibled/parser/script"
@@ -128,7 +130,37 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		"utxo_total", int64(len(utxoToRestore)-len(utxoToRemove)),
 	)
 
+	// addrToRemove := make(map[string]struct{}, 1)
+	for outpointKey, data := range utxoToRemove {
+		// remove nft point to utxo point
+		for _, nftpoint := range data.CreatePointOfNFTs {
+			nftPointKey := fmt.Sprintf("np:%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			pipe.Del(ctx, nftPointKey)
+		}
+
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
+		if !data.AddressData.HasAddress {
+			continue
+		}
+		// 识别地址，只记录utxo和balance
+		pipe.ZRem(ctx, "{au"+strAddressPkh+"}", outpointKey)                                               // 有序address utxo数据清除
+		addressBalanceCmds["bl"+strAddressPkh] = pipe.DecrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
+
+		for _, nftpoint := range data.CreatePointOfNFTs {
+			nftPointKey := fmt.Sprintf("%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			pipe.ZRem(ctx, "{an"+strAddressPkh+"}", nftPointKey) // 有序address nft数据清除
+		}
+	}
+
 	for outpointKey, data := range utxoToRestore {
+		// remove nft point to utxo point
+		for _, nftpoint := range data.CreatePointOfNFTs {
+			nftPointKey := fmt.Sprintf("np:%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			var offset [8]byte
+			binary.LittleEndian.PutUint64(offset[:], nftpoint.Offset)
+			pipe.Set(ctx, nftPointKey, outpointKey+string(offset[:]), 0)
+		}
+
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
 
 		// redis有序utxo数据成员
@@ -145,23 +177,12 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		pipe.ZAdd(ctx, "{au"+strAddressPkh+"}", member)           // 有序address utxo数据添加
 		pipe.IncrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
 
-	}
-
-	// addrToRemove := make(map[string]struct{}, 1)
-	for outpointKey, data := range utxoToRemove {
-		strAddressPkh := string(data.AddressData.AddressPkh[:])
-
-		// 非合约信息清理
-		// redis有序utxo数据清除
-		if !data.AddressData.HasAddress {
-			// 无法识别地址，暂不记录utxo
-			// pipe.ZRem(ctx, "utxo", outpointKey)
-			continue
+		//更新nft的createIdx到current utxo映射记录
+		for _, nftpoint := range data.CreatePointOfNFTs {
+			nftPointKey := fmt.Sprintf("%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftPointKey}
+			pipe.ZAdd(ctx, "{an"+strAddressPkh+"}", member) // 有序address nft数据清除
 		}
-		// 识别地址，只记录utxo和balance
-		pipe.ZRem(ctx, "{au"+strAddressPkh+"}", outpointKey)                                               // 有序address utxo数据清除
-		addressBalanceCmds["bl"+strAddressPkh] = pipe.DecrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
-
 	}
 
 	logger.Log.Info("UpdateUtxoInRedis finished")
