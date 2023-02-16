@@ -241,8 +241,8 @@ func UpdateUtxoInPika(utxoToRestore, utxoToRemove map[string]*model.TxoData) boo
 	logger.Log.Info("UpdateUtxoInPika finished")
 	return true
 
+	// 注意: redis全局utxo数据不能在这里清除，必须留给区块确认时去做
 	// for outpointKey := range utxoToSpend {
-	// 	// redis全局utxo数据不能在这里清除，留给区块确认时去做
 	// 	pikaPipe.Del(ctx, "u"+outpointKey)
 	// }
 }
