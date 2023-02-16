@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS blktx_height (
 	locktime     UInt32,
 	nftnew       UInt64,        -- 新创建nft个数, 包括无效创建
 	nftin        UInt64,        -- 输入nft个数
-	nftout       UInt64,        -- 输出nft个数, 创建nft个数 = out-in，无效创建不计数
+	nftout       UInt64,        -- 输出nft个数, 创建nft个数 = nftlost+out-in，无效创建不计数
 	nftlost      UInt64,        -- 随Fee丢失的nft个数，如果是在coinbase中丢弃，则真正丢失
 	invalue      UInt64,
 	outvalue     UInt64,
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS txout (
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String,
-	nftout       UInt64,      -- utxo输出nft个数, 创建nft个数 = out-in，无效创建不计数
+	nftout       UInt64,      -- utxo输出nft个数
 	nftpoints    String,      -- 序列化后的所有输出nftpoints列表
 	height       UInt32,
 	utxidx       UInt64
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS txin (
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String
-	nftin        UInt64,      -- 输入utxo包含的nft个数, 创建nft个数 = out-in，无效创建不计数
+	nftin        UInt64,      -- 输入utxo包含的nft个数
 	nftpoints    String,      -- 序列化后的所有输入nftpoints列表
 
 ) engine=MergeTree()
