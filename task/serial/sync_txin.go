@@ -13,7 +13,7 @@ import (
 // ParseBlockTxNFTsInAndOutSerial all tx input/output info
 func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 	var coinbaseCreatePointOfNFTs []*model.NFTCreatePoint
-	satFeeOffset := uint64(0)
+	satFeeOffset := utils.CalcBlockSubsidy(block.Height)
 	nftIndexInBlock := uint64(0)
 	for _, tx := range block.Txs[1:] {
 		// count tx fee
@@ -167,13 +167,12 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 
 	// coinbase
 	coinbaseTx := block.Txs[0]
-	award := utils.CalcBlockSubsidy(block.Height)
 
 	// update coinbase input nft
 	coinbaseTx.TxIns[0].CreatePointOfNFTs = coinbaseCreatePointOfNFTs
 	for _, nftpoint := range coinbaseCreatePointOfNFTs {
 		inFee := true
-		sat := award + nftpoint.Offset
+		sat := nftpoint.Offset
 		satOutputOffset := uint64(0)
 		for _, output := range coinbaseTx.TxOuts {
 			if uint64(sat) < satOutputOffset+output.Satoshi {
