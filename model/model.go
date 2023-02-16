@@ -124,8 +124,9 @@ type ProcessBlock struct {
 }
 
 type InscriptionID struct {
-	TxId   []byte // 32
-	NFTIdx uint64 // nft idx inside tx
+	CreatePoint NFTCreatePoint
+	TxId        []byte // 32
+	IdxInTx     uint64 // nft idx inside tx
 }
 
 type TxData struct {
