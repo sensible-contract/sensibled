@@ -146,9 +146,9 @@ CREATE TABLE IF NOT EXISTS txin (
 	code_type    UInt32,      -- 0: none, 1: ft, 2: unique, 3: nft
 	satoshi      UInt64,
 	script_type  String,
-	script_pk    String
+	script_pk    String,
 	nftin        UInt64,      -- 输入utxo包含的nft个数
-	nftpoints    String,      -- 序列化后的所有输入nftpoints列表
+	nftpoints    String      -- 序列化后的所有输入nftpoints列表
 
 ) engine=MergeTree()
 ORDER BY (txid, idx)
