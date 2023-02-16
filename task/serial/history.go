@@ -3,10 +3,10 @@ package serial
 import (
 	"context"
 	"fmt"
-	"sensibled/logger"
-	"sensibled/model"
-	scriptDecoder "sensibled/parser/script"
-	"sensibled/rdb"
+	"unisatd/logger"
+	"unisatd/model"
+	scriptDecoder "unisatd/parser/script"
+	"unisatd/rdb"
 
 	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"

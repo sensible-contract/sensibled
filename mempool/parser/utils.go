@@ -2,7 +2,7 @@ package parser
 
 import (
 	"math"
-	"sensibled/model"
+	"unisatd/model"
 )
 
 func isTxFinal(tx *model.Tx) bool {

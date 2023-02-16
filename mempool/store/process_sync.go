@@ -1,8 +1,8 @@
 package store
 
 import (
-	"sensibled/loader/clickhouse"
-	"sensibled/logger"
+	"unisatd/loader/clickhouse"
+	"unisatd/logger"
 
 	"go.uber.org/zap"
 )

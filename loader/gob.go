@@ -3,9 +3,9 @@ package loader
 import (
 	"encoding/gob"
 	"os"
-	"sensibled/logger"
-	"sensibled/model"
-	"sensibled/utils"
+	"unisatd/logger"
+	"unisatd/model"
+	"unisatd/utils"
 
 	"go.uber.org/zap"
 )

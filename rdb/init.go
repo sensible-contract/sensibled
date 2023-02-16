@@ -3,7 +3,7 @@ package rdb
 import (
 	"context"
 	"fmt"
-	"sensibled/logger"
+	"unisatd/logger"
 
 	redis "github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"

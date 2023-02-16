@@ -3,7 +3,7 @@ package loader
 import (
 	"encoding/hex"
 	"fmt"
-	"sensibled/logger"
+	"unisatd/logger"
 
 	"github.com/spf13/viper"
 	"github.com/zeromq/goczmq"

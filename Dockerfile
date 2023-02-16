@@ -9,7 +9,7 @@ WORKDIR /build/
 COPY . .
 
 # Build binary output
-RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o sensibled -ldflags '-s -w' main.go
+RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o unisatd -ldflags '-s -w' main.go
 
 
 FROM alpine:latest
@@ -20,6 +20,6 @@ RUN adduser -u 1000 -D sato -h /data
 USER sato
 WORKDIR /data/
 
-COPY --chown=sato --from=build /build/sensibled /data/sensibled
+COPY --chown=sato --from=build /build/unisatd /data/unisatd
 
-ENTRYPOINT ["./sensibled"]
+ENTRYPOINT ["./unisatd"]

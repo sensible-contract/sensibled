@@ -1,9 +1,9 @@
 package serial
 
 import (
-	"sensibled/logger"
-	"sensibled/model"
-	"sensibled/store"
+	"unisatd/logger"
+	"unisatd/model"
+	"unisatd/store"
 
 	"go.uber.org/zap"
 )

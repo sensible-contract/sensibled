@@ -3,9 +3,8 @@ package parallel
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"sensibled/model"
-
-	scriptDecoder "sensibled/parser/script"
+	"unisatd/model"
+	scriptDecoder "unisatd/parser/script"
 )
 
 // ParseTx 同区块内串行

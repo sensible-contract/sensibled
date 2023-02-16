@@ -2,8 +2,8 @@ package model
 
 import (
 	"encoding/binary"
-	scriptDecoder "sensibled/parser/script"
 	"sync"
+	scriptDecoder "unisatd/parser/script"
 
 	"go.uber.org/zap/zapcore"
 )

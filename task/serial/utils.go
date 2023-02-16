@@ -5,9 +5,9 @@ import (
 	"encoding/gob"
 	"encoding/hex"
 	"os"
-	"sensibled/logger"
-	"sensibled/model"
-	"sensibled/rdb"
+	"unisatd/logger"
+	"unisatd/model"
+	"unisatd/rdb"
 
 	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"

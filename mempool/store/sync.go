@@ -3,8 +3,8 @@ package store
 import (
 	"database/sql"
 	"fmt"
-	"sensibled/loader/clickhouse"
-	"sensibled/logger"
+	"unisatd/loader/clickhouse"
+	"unisatd/logger"
 
 	"go.uber.org/zap"
 )

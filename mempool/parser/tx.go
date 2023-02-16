@@ -2,8 +2,8 @@ package parser
 
 import (
 	"encoding/binary"
-	"sensibled/model"
-	"sensibled/utils"
+	"unisatd/model"
+	"unisatd/utils"
 )
 
 func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
