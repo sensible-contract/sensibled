@@ -70,18 +70,18 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 		}
 
 		// insert created NFT
-		for sat, nft := range tx.CreateNFTData {
+		for createIdxInTx, nft := range tx.CreateNFTData {
 			if nft.Invalid { // nft removed
 				continue
 			}
 			inFee := true
 			satOutputOffset := uint64(0)
 			for _, output := range tx.TxOuts {
-				if uint64(sat) < satOutputOffset+output.Satoshi {
+				if uint64(createIdxInTx) < satOutputOffset+output.Satoshi {
 					output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, &model.NFTCreatePoint{
 						Height: uint32(block.Height),
-						Idx:    nftIndexInBlock + uint64(sat),
-						Offset: uint64(sat) - satOutputOffset,
+						Idx:    nftIndexInBlock + uint64(createIdxInTx),
+						Offset: uint64(createIdxInTx) - satOutputOffset,
 					})
 					inFee = false
 					break
@@ -93,8 +93,8 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 			if inFee {
 				coinbaseCreatePointOfNFTs = append(coinbaseCreatePointOfNFTs, &model.NFTCreatePoint{
 					Height: uint32(block.Height),
-					Idx:    nftIndexInBlock + uint64(sat),
-					Offset: uint64(sat) - satOutputOffset + satFeeOffset, // global fee offset in coinbase
+					Idx:    nftIndexInBlock + uint64(createIdxInTx),
+					Offset: uint64(createIdxInTx) - satOutputOffset + satFeeOffset, // global fee offset in coinbase
 				})
 			}
 		}
