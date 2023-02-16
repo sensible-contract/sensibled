@@ -90,7 +90,7 @@ func ParseUpdateTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model
 	}
 }
 
-// ParseUpdateNewUtxoInTxParallel utxo 信息
+// ParseUpdateNewUtxoInTxParallel utxo 信息, 输出初始化时缺少NFT数据，会在查询utxo后、写入input db前补齐
 func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, block *model.ProcessBlock) {
 	for _, output := range tx.TxOuts {
 		if output.LockingScriptUnspendable {
