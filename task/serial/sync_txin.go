@@ -259,6 +259,9 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				pkscript = string(objData.PkScript)
 			}
 
+			nftPointsBuf := make([]byte, len(input.CreatePointOfNFTs)*3*8)
+			model.DumpNFTCreatePoints(nftPointsBuf, input.CreatePointOfNFTs)
+
 			var dataValue uint64
 			// var tokenIndex uint64
 			// var decimal uint8
@@ -309,6 +312,8 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				scriptwits,
 				uint32(input.Sequence),
 
+				uint64(len(input.CreatePointOfNewNFTs)), // new nft count
+
 				uint32(objData.BlockHeight),
 				uint64(objData.TxIdx),
 				string(input.InputHash),
@@ -319,6 +324,10 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				objData.Satoshi,
 				string(objData.ScriptType),
 				pkscript,
+
+				// nft
+				uint64(len(input.CreatePointOfNFTs)),
+				string(nftPointsBuf),
 			); err != nil {
 				logger.Log.Info("sync-txin-full-err",
 					zap.String("sync", "txin full err"),

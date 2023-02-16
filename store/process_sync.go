@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS txin (
 	script_sig   String,
 	script_wits  String,
 	nsequence    UInt32,
+	nftnew       UInt64,        -- 新创建nft个数, 包括无效创建
 
 	height_txo   UInt32,
 	utxidx       UInt64,
@@ -136,6 +137,9 @@ CREATE TABLE IF NOT EXISTS txin (
 	satoshi      UInt64,
 	script_type  String,
 	script_pk    String
+	nftin        UInt64,      -- 输入utxo包含的nft个数, 创建nft个数 = out-in，无效创建不计数
+	nftpoints    String,      -- 序列化后的所有输入nftpoints列表
+
 ) engine=MergeTree()
 ORDER BY (txid, idx)
 PARTITION BY intDiv(height, 2100)
