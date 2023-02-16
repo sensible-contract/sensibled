@@ -168,7 +168,7 @@ func (d *TxoData) Marshal(buf []byte) int {
 	offset += scriptDecoder.PutVLQ(buf[offset:], d.TxIdx)
 	offset += scriptDecoder.PutVLQ(buf[offset:], scriptDecoder.CompressTxOutAmount(d.Satoshi))
 	offset += scriptDecoder.PutCompressedScript(buf[offset:], d.PkScript)
-	offset += d.DumpNFTCreatePoints(buf[offset:])
+	offset += DumpNFTCreatePoints(buf[offset:], d.CreatePointOfNFTs)
 
 	// binary.LittleEndian.PutUint32(buf, d.BlockHeight)  // 4
 	// binary.LittleEndian.PutUint64(buf[4:], d.TxIdx)    // 8
@@ -220,9 +220,9 @@ func (d *TxoData) Unmarshal(buf []byte) {
 }
 
 // dump nft
-func (d *TxoData) DumpNFTCreatePoints(buf []byte) int {
+func DumpNFTCreatePoints(buf []byte, createPointOfNFTs []*NFTCreatePoint) int {
 	offset := 0
-	for _, nft := range d.CreatePointOfNFTs {
+	for _, nft := range createPointOfNFTs {
 		offset += scriptDecoder.PutVLQ(buf[offset:], uint64(nft.Height))
 		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Idx)
 		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Offset)
