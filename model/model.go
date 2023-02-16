@@ -24,7 +24,10 @@ type Tx struct {
 	OutputsValue uint64
 	TxIns        []*TxIn
 	TxOuts       []*TxOut
-	IsSensible   bool
+
+	CreateNFTData []*scriptDecoder.NFTData
+
+	IsSensible bool
 }
 
 type TxIn struct {
@@ -37,6 +40,9 @@ type TxIn struct {
 	ScriptWitness []byte
 
 	// other:
+	CreatePointOfNewNFTs []*NFTCreatePoint // 新创建的nft, 有些如果是重复创建,则标记invalid
+	CreatePointOfNFTs    []*NFTCreatePoint // 输入的nft
+
 	InputOutpointKey string // 32 + 4
 	InputOutpoint    []byte // 32 + 4
 	InputPoint       []byte // 32 + 4
@@ -58,6 +64,8 @@ type TxOut struct {
 	ScriptTypeHex string
 
 	AddressData *scriptDecoder.AddressData
+
+	CreatePointOfNFTs []*NFTCreatePoint
 
 	LockingScriptUnspendable bool
 }
@@ -143,7 +151,7 @@ type TxoData struct {
 	PkScript    []byte
 	ScriptType  []byte
 
-	CreateIdxNFTs []*NFTCreatePoint
+	CreatePointOfNFTs []*NFTCreatePoint
 
 	AddressData *scriptDecoder.AddressData
 }
@@ -160,12 +168,7 @@ func (d *TxoData) Marshal(buf []byte) int {
 	offset += scriptDecoder.PutVLQ(buf[offset:], d.TxIdx)
 	offset += scriptDecoder.PutVLQ(buf[offset:], scriptDecoder.CompressTxOutAmount(d.Satoshi))
 	offset += scriptDecoder.PutCompressedScript(buf[offset:], d.PkScript)
-
-	for _, nft := range d.CreateIdxNFTs {
-		offset += scriptDecoder.PutVLQ(buf[offset:], uint64(nft.Height))
-		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Idx)
-		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Offset)
-	}
+	offset += d.DumpNFTCreatePoints(buf[offset:])
 
 	// binary.LittleEndian.PutUint32(buf, d.BlockHeight)  // 4
 	// binary.LittleEndian.PutUint64(buf[4:], d.TxIdx)    // 8
@@ -213,8 +216,22 @@ func (d *TxoData) Unmarshal(buf []byte) {
 	d.Satoshi = scriptDecoder.DecompressTxOutAmount(compressedAmount)
 	d.PkScript = scriptDecoder.DecompressScript(buf[offset : offset+scriptSize])
 	offset += scriptSize
+	offset += d.LoadNFTCreatePointsFromRaw(buf[offset:])
+}
 
-	// nft data
+// dump nft
+func (d *TxoData) DumpNFTCreatePoints(buf []byte) int {
+	offset := 0
+	for _, nft := range d.CreatePointOfNFTs {
+		offset += scriptDecoder.PutVLQ(buf[offset:], uint64(nft.Height))
+		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Idx)
+		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Offset)
+	}
+	return offset
+}
+
+// load nft
+func (d *TxoData) LoadNFTCreatePointsFromRaw(buf []byte) (offset int) {
 	for {
 		if len(buf[offset:]) == 0 {
 			return
@@ -238,7 +255,7 @@ func (d *TxoData) Unmarshal(buf []byte) {
 		}
 		offset += bytesRead
 
-		d.CreateIdxNFTs = append(d.CreateIdxNFTs, &NFTCreatePoint{
+		d.CreatePointOfNFTs = append(d.CreatePointOfNFTs, &NFTCreatePoint{
 			Height: uint32(height),
 			Idx:    nftIdx,
 			Offset: satOffset,
