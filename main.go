@@ -213,7 +213,7 @@ func syncBlock() {
 				}
 				if commonHeigth < 0 {
 					// 节点区块落后于db高度
-					logger.Log.Error("less blocks on disk")
+					logger.Log.Error("less blocks in /node/blocks/")
 					time.Sleep(time.Second * 5)
 					break
 				}
