@@ -81,8 +81,8 @@ func NewTxs(stripMode bool, txsraw []byte) (txs []*model.Tx) {
 			if nft, ok := scriptDecoder.ExtractPkScriptForNFT(nftScript); ok {
 				satOffset := len(input.CreatePointOfNewNFTs)
 				input.CreatePointOfNewNFTs = append(input.CreatePointOfNewNFTs, &model.NFTCreatePoint{
-					Idx:    uint64(len(tx.CreateNFTData)),
-					Offset: uint64(satOffset),
+					IdxInBlock: uint64(len(tx.CreateNFTData)),
+					Offset:     uint64(satOffset),
 				})
 				tx.CreateNFTData = append(tx.CreateNFTData, nft)
 

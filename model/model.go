@@ -135,9 +135,9 @@ type TxData struct {
 
 // nft create point on create
 type NFTCreatePoint struct {
-	Height uint32 // Height of NFT show in block onCreate
-	Idx    uint64 // Index of NFT show in block onCreate
-	Offset uint64 // sat offset in utxo
+	Height     uint32 // Height of NFT show in block onCreate
+	IdxInBlock uint64 // Index of NFT show in block onCreate
+	Offset     uint64 // sat offset in utxo
 }
 
 type TxoData struct {
@@ -222,7 +222,7 @@ func DumpNFTCreatePoints(buf []byte, createPointOfNFTs []*NFTCreatePoint) int {
 	offset := 0
 	for _, nft := range createPointOfNFTs {
 		offset += scriptDecoder.PutVLQ(buf[offset:], uint64(nft.Height))
-		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Idx)
+		offset += scriptDecoder.PutVLQ(buf[offset:], nft.IdxInBlock)
 		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Offset)
 	}
 	return offset
@@ -254,9 +254,9 @@ func (d *TxoData) LoadNFTCreatePointsFromRaw(buf []byte) (offset int) {
 		offset += bytesRead
 
 		d.CreatePointOfNFTs = append(d.CreatePointOfNFTs, &NFTCreatePoint{
-			Height: uint32(height),
-			Idx:    nftIdx,
-			Offset: satOffset,
+			Height:     uint32(height),
+			IdxInBlock: nftIdx,
+			Offset:     satOffset,
 		})
 	}
 }
