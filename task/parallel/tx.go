@@ -9,6 +9,14 @@ import (
 
 // ParseTx 先并行分析交易tx，不同区块并行，同区块内串行
 func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
+	// store nft index to id
+	for idx := range tx.CreateNFTData {
+		block.NFTsCreateIndexToNFTID = append(block.NFTsCreateIndexToNFTID, &model.InscriptionID{
+			TxId:   tx.TxId,
+			NFTIdx: uint64(idx),
+		})
+	}
+
 	for idx, input := range tx.TxIns {
 		key := make([]byte, 36)
 		copy(key, tx.TxId)
