@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/binary"
+	"sensibled/mempool/parser"
 	"sensibled/model"
 	scriptDecoder "sensibled/parser/script"
 	"sensibled/utils"
@@ -17,25 +18,79 @@ func NewTxs(stripMode bool, txsraw []byte) (txs []*model.Tx) {
 	for i := range txs {
 		txoffset := uint(0)
 		txs[i], txoffset = NewTx(txsraw[offset:])
-		txs[i].Raw = txsraw[offset : offset+txoffset]
+
+		tx := txs[i]
+		tx.Raw = txsraw[offset : offset+txoffset]
 		offset += txoffset
 
 		if stripMode {
-			txs[i].TxId = make([]byte, 32)
-			copy(txs[i].TxId, txsraw[offset:offset+32])
+			tx.TxId = make([]byte, 32)
+			copy(tx.TxId, txsraw[offset:offset+32])
 			offset += 32
 
-			txs[i].Size = binary.LittleEndian.Uint32(txsraw[offset : offset+4])
+			tx.Size = binary.LittleEndian.Uint32(txsraw[offset : offset+4])
 			offset += 4
 		} else {
-			if txs[i].WitOffset > 0 {
-				txs[i].TxId = utils.GetWitnessHash256(txs[i].Raw, txs[i].WitOffset)
+			if tx.WitOffset > 0 {
+				tx.TxId = utils.GetWitnessHash256(tx.Raw, tx.WitOffset)
 			} else {
-				txs[i].TxId = utils.GetHash256(txs[i].Raw)
+				tx.TxId = utils.GetHash256(tx.Raw)
 			}
-			txs[i].Size = uint32(txoffset)
+			tx.Size = uint32(txoffset)
 		}
-		txs[i].TxIdHex = utils.HashString(txs[i].TxId)
+		tx.TxIdHex = utils.HashString(tx.TxId)
+
+		// nft decode
+		if tx.WitOffset == 0 {
+			continue
+		}
+		isNFTInLastInput := true
+		for _, input := range tx.TxIns {
+			// 只支持第一个输入的NFT
+			if !isNFTInLastInput {
+				break
+			}
+			if len(input.ScriptWitness) == 0 {
+				break
+			}
+
+			wits, offset := parser.NewTxWit(input.ScriptWitness)
+			if len(input.ScriptWitness) != int(offset) {
+				break
+			}
+
+			// 只支持p2tr格式的见证，单NFT，多段OP_FALSE/OP_IF仅识别第一个。
+			// 跳过没有脚本的wits
+			if len(wits) < 2 {
+				break
+			}
+
+			// 附件
+			hasAnnex := (wits[len(wits)-1].Script[0] == 0x50)
+			// 跳过P2WPKH
+			if len(wits) < 3 && hasAnnex {
+				break
+			}
+
+			nftScript := wits[len(wits)-2].Script
+			if hasAnnex {
+				// fixme: -1 at official impliment
+				nftScript = wits[len(wits)-3].Script
+			}
+
+			if nft, ok := scriptDecoder.ExtractPkScriptForNFT(nftScript); ok {
+				satOffset := len(input.CreatePointOfNewNFTs)
+				input.CreatePointOfNewNFTs = append(input.CreatePointOfNewNFTs, &model.NFTCreatePoint{
+					Idx:    uint64(len(tx.CreateNFTData)),
+					Offset: uint64(satOffset),
+				})
+				tx.CreateNFTData = append(tx.CreateNFTData, nft)
+
+			} else {
+				isNFTInLastInput = false
+				break
+			}
+		}
 	}
 	return txs
 }

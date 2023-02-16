@@ -52,3 +52,9 @@ func (u *AddressData) MarshalJSON() ([]byte, error) {
 		AddressPkh: hex.EncodeToString(u.AddressPkh[:]),
 	})
 }
+
+type NFTData struct {
+	Invalid     bool
+	ContentType []byte
+	ContentBody []byte
+}
