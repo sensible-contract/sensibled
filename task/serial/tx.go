@@ -2,10 +2,7 @@ package serial
 
 import (
 	"context"
-	"encoding/gob"
 	"encoding/hex"
-	"fmt"
-	"os"
 	"sensibled/logger"
 	"sensibled/model"
 	scriptDecoder "sensibled/parser/script"
@@ -16,10 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	ctx = context.Background()
-)
-
 // ParseGetSpentUtxoDataFromRedisSerial 同步从redis中查询所需utxo信息来使用
 // 部分utxo信息在程序内存，missing的utxo将从redis查询
 // 区块同步结束时会批量更新缓存的utxo到redis
@@ -27,6 +20,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 	pipe := rdb.RdbUtxoClient.Pipeline()
 	m := map[string]*redis.StringCmd{}
 	needExec := false
+	ctx := context.Background()
 	for outpointKey := range block.SpentUtxoKeysMap {
 		// 检查是否是区块内自产自花
 		if data, ok := block.NewUtxoDataMap[outpointKey]; ok {
@@ -103,148 +97,13 @@ func UpdateAddrPkhInTxMapSerial(block *model.ProcessBlock) {
 	}
 }
 
-// SaveGlobalAddressTxHistoryIntoPika Pika更新address tx历史
-func SaveGlobalAddressTxHistoryIntoPika() bool {
-	type Item struct {
-		Member *redis.Z
-		Addr   string
-	}
-	items := make([]*Item, 0)
-
-	for strAddressPkh, listTxPosition := range model.GlobalAddrPkhInTxMap {
-		for _, txPosition := range listTxPosition {
-			key := fmt.Sprintf("%d:%d", txPosition.BlockHeight, txPosition.TxIdx)
-			score := float64(uint64(txPosition.BlockHeight)*1000000000 + txPosition.TxIdx)
-			member := &redis.Z{Score: score, Member: key}
-			items = append(items, &Item{
-				Member: member,
-				Addr:   strAddressPkh,
-			})
-		}
-	}
-
-	if len(items) == 0 {
-		return true
-	}
-
-	sliceLen := 100000
-	for idx := 0; idx < (len(items)-1)/sliceLen+1; idx++ {
-
-		pikaPipe := rdb.RdbAddrTxClient.Pipeline()
-		n := 0
-		for _, item := range items[idx*sliceLen:] {
-			if n == sliceLen {
-				break
-			}
-
-			// 有序address tx history数据添加
-			pikaPipe.ZAdd(ctx, "{ah"+item.Addr+"}", item.Member)
-			n++
-		}
-		if _, err := pikaPipe.Exec(ctx); err != nil && err != redis.Nil {
-			logger.Log.Error("pika address exec failed", zap.Error(err))
-			model.NeedStop = true
-			return false
-		}
-	}
-
-	return true
-}
-
-// RemoveAddressTxHistoryFromPikaForReorg 清理被重组区块内的address tx历史
-func RemoveAddressTxHistoryFromPikaForReorg(height int, utxoToRestore, utxoToRemove map[string]*model.TxoData) {
-	addressMap := make(map[string]struct{})
-	for _, data := range utxoToRemove {
-		scriptType := scriptDecoder.GetLockingScriptType(data.PkScript)
-		dData := scriptDecoder.ExtractPkScriptForTxo(data.PkScript, scriptType)
-		if dData.HasAddress {
-			addressMap[string(dData.AddressPkh[:])] = struct{}{}
-		}
-	}
-	for _, data := range utxoToRestore {
-		scriptType := scriptDecoder.GetLockingScriptType(data.PkScript)
-		dData := scriptDecoder.ExtractPkScriptForTxo(data.PkScript, scriptType)
-		if dData.HasAddress {
-			addressMap[string(dData.AddressPkh[:])] = struct{}{}
-		}
-	}
-
-	logger.Log.Info("RemoveAddressTxHistoryFromPikaForReorg",
-		zap.Int("nAddr", len(addressMap)))
-
-	strHeight := fmt.Sprintf("%d000000000", height)
-
-	pipe := rdb.RdbAddrTxClient.Pipeline()
-	for strAddressPkh := range addressMap {
-		pipe.ZRemRangeByScore(ctx, "{ah"+strAddressPkh+"}", strHeight, "+inf") // 有序address tx history数据添加
-	}
-
-	if _, err := pipe.Exec(ctx); err != nil {
-		logger.Log.Error("pika exec failed", zap.Error(err))
-		model.NeedStop = true
-	}
-}
-
-// WriteDownUtxoToFile 批量更新redis utxo
-func WriteDownUtxoToFile(utxoToRestore, utxoToRemove map[string]*model.TxoData) {
-	logger.Log.Info("WriteDownUtxoToFile",
-		zap.Int("add", len(utxoToRestore)),
-		zap.Int("del", len(utxoToRemove)))
-
-	outpointKeyToDel := make([]string, len(utxoToRemove))
-
-	idx := 0
-	for outpointKey := range utxoToRemove {
-		outpointKeyToDel[idx] = outpointKey
-		idx++
-	}
-
-	gobFile, err := os.OpenFile("./cmd/utxoToRemove.gob", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
-	if err != nil {
-		logger.Log.Error("open outpointKeyToDel file failed", zap.Error(err))
-		return
-	}
-	defer gobFile.Close()
-
-	enc := gob.NewEncoder(gobFile)
-	if err := enc.Encode(outpointKeyToDel); err != nil {
-		logger.Log.Error("save outpointKeyToDel failed", zap.Error(err))
-	}
-	logger.Log.Info("save outpointKeyToDel ok")
-
-	/////////////////////////////////////////////////////////////////
-
-	idx = 0
-	utxoBufToRestore := make([][]byte, len(utxoToRestore))
-	for outpointKey, data := range utxoToRestore {
-		buf := make([]byte, 36+20+len(data.PkScript))
-		length := data.Marshal(buf)
-
-		buf = append(buf[:length], []byte(outpointKey)...)
-		utxoBufToRestore[idx] = buf[:length+36]
-		idx++
-	}
-
-	gobFile1, err := os.OpenFile("./cmd/utxoToRestore.gob", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
-	if err != nil {
-		logger.Log.Error("open utxoBufToRestore file failed", zap.Error(err))
-		return
-	}
-	defer gobFile1.Close()
-
-	enc1 := gob.NewEncoder(gobFile1)
-	if err := enc1.Encode(utxoBufToRestore); err != nil {
-		logger.Log.Error("save utxoBufToRestore failed", zap.Error(err))
-	}
-	logger.Log.Info("save utxoBufToRestore ok")
-}
-
 // UpdateUtxoInRedis 批量更新redis utxo
 func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) {
 	logger.Log.Info("UpdateUtxoInRedis",
 		zap.Int("add", len(utxoToRestore)),
 		zap.Int("del", len(utxoToRemove)))
 
+	ctx := context.Background()
 	pipe.HSet(ctx, "info",
 		"blocks_total", blocksTotal,
 	)
@@ -320,33 +179,4 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 	// }
 
 	logger.Log.Info("UpdateUtxoInRedis finished")
-}
-
-func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.IntCmd) bool {
-	if len(addressBalanceCmds) == 0 {
-		return true
-	}
-	pipe := rdb.RdbBalanceClient.TxPipeline()
-	// 删除balance为0的记录
-	// 要求整个函数单线程处理，否则可能删除非0数据
-	for keyString, cmd := range addressBalanceCmds {
-		balance, err := cmd.Result()
-		if err == redis.Nil {
-			logger.Log.Error("redis not found balance", zap.String("key", hex.EncodeToString([]byte(keyString))))
-			continue
-		} else if err != nil {
-			logger.Log.Error("DeleteKeysWhitchAddressBalanceZero get failed", zap.Error(err))
-			return false
-		}
-
-		if balance == 0 {
-			pipe.Del(ctx, keyString)
-		}
-	}
-
-	if _, err := pipe.Exec(ctx); err != nil {
-		logger.Log.Error("DeleteKeysWhitchAddressBalanceZero failed", zap.Error(err))
-		return false
-	}
-	return true
 }
