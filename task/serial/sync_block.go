@@ -16,9 +16,21 @@ func SyncBlock(block *model.Block) {
 	txInputsValue := uint64(0)
 	txOutputsValue := uint64(0)
 
+	nftInputsCnt := uint64(0)
+	nftOutputsCnt := uint64(0)
+
+	// 在普通交易中丢弃，在coinbase中收集的的nft个数
+	nftLostCnt := block.Txs[0].NFTInputsCnt
+
+	nftNewCnt := uint64(0)
+
 	for _, tx := range block.Txs[1:] {
 		txInputsValue += tx.InputsValue
 		txOutputsValue += tx.OutputsValue
+
+		nftNewCnt += uint64(len(tx.CreateNFTData))
+		nftInputsCnt += tx.NFTInputsCnt
+		nftOutputsCnt += tx.NFTOutputsCnt
 	}
 
 	// for _, tokenSummary := range block.ParseData.TokenSummaryMap {
@@ -30,6 +42,13 @@ func SyncBlock(block *model.Block) {
 		string(block.Parent),
 		string(block.MerkleRoot),
 		block.TxCnt,
+
+		// nft
+		nftNewCnt,
+		nftInputsCnt,
+		nftOutputsCnt,
+		nftLostCnt,
+
 		txInputsValue,
 		txOutputsValue,
 		coinbaseOut,

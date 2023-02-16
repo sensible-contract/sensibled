@@ -20,6 +20,10 @@ CREATE TABLE IF NOT EXISTS blk_height (
 	previd       FixedString(32),
 	merkle       FixedString(32),
 	ntx          UInt64,
+	nftnew       UInt64,        -- without coinbase, 新创建nft个数, 包括无效重复创建
+	nftin        UInt64,        -- without coinbase, 输入nft个数
+	nftout       UInt64,        -- without coinbase, 输出nft个数, 创建nft个数 = nftlost+out-in，无效创建不计数
+	nftlost      UInt64,        -- 在普通交易中丢弃，在coinbase中收集的的nft个数
 	invalue      UInt64,        -- without coinbase
 	outvalue     UInt64,        -- without coinbase
 	coinbase_out UInt64,
@@ -39,6 +43,10 @@ CREATE TABLE IF NOT EXISTS blk (
 	previd       FixedString(32),
 	merkle       FixedString(32),
 	ntx          UInt64,
+	nftnew       UInt64,        -- without coinbase, 新创建nft个数, 包括无效创建
+	nftin        UInt64,        -- without coinbase, 输入nft个数
+	nftout       UInt64,        -- without coinbase, 输出nft个数, 创建nft个数 = nftlost+out-in，无效创建不计数
+	nftlost      UInt64,        -- 在普通交易中丢弃，在coinbase中收集的的nft个数
 	invalue      UInt64,        -- without coinbase
 	outvalue     UInt64,        -- without coinbase
 	coinbase_out UInt64,
