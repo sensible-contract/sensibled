@@ -113,7 +113,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 	}
 
 	for outpointKey, data := range utxoToRestore {
-		// remove nft point to utxo point
+		// add nft point to utxo point
 		for _, nftpoint := range data.CreatePointOfNFTs {
 			nftPointKey := fmt.Sprintf("np:%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
 			var offset [8]byte
