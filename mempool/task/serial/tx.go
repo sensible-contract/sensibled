@@ -185,6 +185,9 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	ctx := context.Background()
 	// 清除内存池数据
 	if needReset {
+		// remove nft
+		RemoveNewNFTInRedisStartFromBlockHeight(pipe, model.MEMPOOL_HEIGHT)
+
 		logger.Log.Info("reset redis mempool start")
 		keys, err := rdb.RdbBalanceClient.SMembers(ctx, "mp:keys").Result()
 		if err != nil {
