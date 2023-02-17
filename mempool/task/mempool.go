@@ -232,16 +232,19 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 		parallel.ParseUpdateAddressInTxParallel(uint64(startIdx+txIdx), tx, mp.AddrPkhInTxMap)
 	}
 
-	// 2 dep 0
-	serial.SyncBlockTxOutputInfo(startIdx, mp.BatchTxs)
-
 	// 3 dep 1
 	// SpentUtxoDataMap w
 	serial.ParseGetSpentUtxoDataFromRedisSerial(mp.SpentUtxoKeysMap, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
 
+	// 更新NFT追踪信息，保存在in/out记录上，也更新到utxo中。需要依赖从redis查来的utxo。
+	serial.ParseMempoolBatchTxNFTsInAndOutSerial(startIdx, mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
+
 	// 4 dep 3
 	// SpentUtxoDataMap r
 	serial.SyncBlockTxInputDetail(startIdx, mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap, mp.AddrPkhInTxMap)
+
+	// 2 dep 4
+	serial.SyncBlockTxOutputInfo(startIdx, mp.BatchTxs)
 
 	// 5 dep 2 4
 	serial.SyncBlockTx(startIdx, mp.BatchTxs)
