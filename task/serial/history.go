@@ -3,6 +3,7 @@ package serial
 import (
 	"context"
 	"fmt"
+	"sort"
 	"unisatd/logger"
 	"unisatd/model"
 	scriptDecoder "unisatd/parser/script"
@@ -93,5 +94,26 @@ func RemoveAddressTxHistoryFromPikaForReorg(height int, utxoToRestore, utxoToRem
 	if _, err := pipe.Exec(ctx); err != nil {
 		logger.Log.Error("pika exec failed", zap.Error(err))
 		model.NeedStop = true
+	}
+}
+
+// UpdateAddrPkhInTxMapSerial 顺序更新当前区块的address tx history信息变化到程序全局缓存
+func UpdateAddrPkhInTxMapSerial(block *model.ProcessBlock) {
+	for strAddressPkh, listTxid := range block.AddrPkhInTxMap {
+
+		sort.Ints(listTxid)
+		lastTxIdx := -1
+		for _, txIdx := range listTxid {
+			if lastTxIdx == txIdx {
+				continue
+			}
+			lastTxIdx = txIdx
+
+			model.GlobalAddrPkhInTxMap[strAddressPkh] = append(model.GlobalAddrPkhInTxMap[strAddressPkh],
+				model.TxLocation{
+					BlockHeight: block.Height,
+					TxIdx:       uint64(txIdx),
+				})
+		}
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"sort"
 	"unisatd/logger"
 	"unisatd/model"
 	scriptDecoder "unisatd/parser/script"
@@ -78,26 +77,6 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	}
 }
 
-// UpdateAddrPkhInTxMapSerial 顺序更新当前区块的address tx history信息变化到程序全局缓存
-func UpdateAddrPkhInTxMapSerial(block *model.ProcessBlock) {
-	for strAddressPkh, listTxid := range block.AddrPkhInTxMap {
-
-		sort.Ints(listTxid)
-		lastTxIdx := -1
-		for _, txIdx := range listTxid {
-			if lastTxIdx == txIdx {
-				continue
-			}
-			lastTxIdx = txIdx
-
-			model.GlobalAddrPkhInTxMap[strAddressPkh] = append(model.GlobalAddrPkhInTxMap[strAddressPkh],
-				model.TxLocation{
-					BlockHeight: block.Height,
-					TxIdx:       uint64(txIdx),
-				})
-		}
-	}
-}
 // UpdateUtxoInRedis 批量更新redis utxo
 func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) {
 	logger.Log.Info("UpdateUtxoInRedis",
