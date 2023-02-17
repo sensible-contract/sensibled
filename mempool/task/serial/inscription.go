@@ -62,7 +62,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 					output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, &createPoint)
 
 					// global store new nft
-					model.GlobalNewInscriptions = append(model.GlobalNewInscriptions, &model.InscriptionID{
+					model.GlobalMempoolNewInscriptions = append(model.GlobalMempoolNewInscriptions, &model.InscriptionID{
 						NFTData:     nft,
 						CreatePoint: createPoint,
 						TxId:        tx.TxId,
@@ -84,7 +84,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 					Offset:     uint64(createIdxInTx) - satOutputOffset, // global fee offset in coinbase
 				}
 				// global store new nft
-				model.GlobalNewInscriptions = append(model.GlobalNewInscriptions, &model.InscriptionID{
+				model.GlobalMempoolNewInscriptions = append(model.GlobalMempoolNewInscriptions, &model.InscriptionID{
 					NFTData:     nft,
 					CreatePoint: createPoint,
 					TxId:        tx.TxId,
@@ -159,12 +159,12 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 
 func UpdateNewNFTInRedis(pipe redis.Pipeliner) {
 	logger.Log.Info("UpdateNewNFTInRedis",
-		zap.Int("new", len(model.GlobalNewInscriptions)),
+		zap.Int("new", len(model.GlobalMempoolNewInscriptions)),
 	)
 	ctx := context.Background()
 
-	for _, nftData := range model.GlobalNewInscriptions {
 		strInscriptionID := fmt.Sprintf("%s%d", string(nftData.TxId[:]), nftData.IdxInTx)
+	for _, nftData := range model.GlobalMempoolNewInscriptions {
 
 		// redis有序utxo数据成员
 		member := &redis.Z{
