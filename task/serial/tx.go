@@ -91,7 +91,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		"utxo_total", int64(len(utxoToRestore)-len(utxoToRemove)),
 	)
 
-	// addrToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
 		// remove nft point to utxo point
 		for _, nftpoint := range data.CreatePointOfNFTs {
@@ -129,8 +128,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 
 		// 非合约信息记录
 		if !data.AddressData.HasAddress {
-			// 无法识别地址，暂不记录utxo
-			// pipe.ZAdd(ctx, "utxo", member)
 			continue
 		}
 

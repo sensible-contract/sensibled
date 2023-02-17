@@ -222,69 +222,21 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
 		if !data.AddressData.HasAddress {
-			// 无法识别地址，暂不记录utxo
-			// logger.Log.Info("ignore mp:utxo", zap.String("key", hex.EncodeToString([]byte(outpointKey))),
-			// 	zap.Float64("score", member.Score))
-			// pipe.ZAdd(ctx, "mp:utxo", member)
 			continue
 		}
 
-		// 不是合约tx，则记录address utxo
 		// redis有序address utxo数据添加
 		// logger.Log.Info("ZAdd mp:au",
-		// 	zap.String("addrHex", hex.EncodeToString(data.AddressData.AddressPkh[:])),
-		// 	zap.String("key", hex.EncodeToString([]byte(outpointKey))),
-		// 	zap.Float64("score", member.Score))
 		mpkeyAU := "mp:{au" + strAddressPkh + "}"
 		pipe.ZAdd(ctx, mpkeyAU, member)
 
 		// balance of address
-		// logger.Log.Info("IncrBy mp:bl",
-		// 	zap.String("addrHex", hex.EncodeToString(data.AddressData.AddressPkh[:])),
-		// 	zap.Uint64("satoshi", data.Satoshi))
 		mpkeyBL := "mp:bl" + strAddressPkh
 		pipe.IncrBy(ctx, mpkeyBL, int64(data.Satoshi))
 
 		mpkeys = append(mpkeys, mpkeyAU, mpkeyBL)
 		continue
 
-		// contract balance of address
-		// logger.Log.Info("IncrBy mp:cb",
-		// 	zap.String("addrHex", hex.EncodeToString(data.AddressData.AddressPkh[:])),
-		// 	zap.Uint64("satoshi", data.Satoshi))
-
-		// mpkeyCB := "mp:cb" + strAddressPkh
-		// pipe.IncrBy(ctx, mpkeyCB, int64(data.Satoshi))
-		// mpkeys = append(mpkeys, mpkeyCB)
-
-		// redis有序genesis utxo数据添加
-		// if data.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-		// mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-		// mpkeyND := "mp:nd" + strCodeHash + strGenesisId
-		// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
-		// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
-		// mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
-
-		// member.Score = float64(data.AddressData.NFT.TokenIndex)
-		// pipe.ZAdd(ctx, mpkeyNU, member)                         // nft:utxo
-		// pipe.ZAdd(ctx, mpkeyND, member)                         // nft:utxo-detail
-		// pipe.ZIncrBy(ctx, mpkeyNO, 1, strAddressPkh)            // nft:owners
-		// pipe.ZIncrBy(ctx, mpkeyNS, 1, strCodeHash+strGenesisId) // nft:summary
-		// }
-
-		// update token info
-		// if data.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-		// 	pipe.HSet(ctx, "nI"+strCodeHash+strGenesisId+strconv.Itoa(int(data.AddressData.NFT.TokenIndex)),
-		// 		"metatxid", data.AddressData.NFT.MetaTxId[:],
-		// 		"metavout", data.AddressData.NFT.MetaOutputIndex,
-		// 		"supply", data.AddressData.NFT.TokenSupply,
-		// 		"sensibleid", data.AddressData.NFT.SensibleId,
-		// 	)
-		// 	pipe.HSet(ctx, "ni"+strCodeHash+strGenesisId,
-		// 		"supply", data.AddressData.NFT.TokenSupply,
-		// 		"sensibleid", data.AddressData.NFT.SensibleId,
-		// 	)
-		// }
 	}
 
 	// addrToRemove := make(map[string]struct{}, 1)
@@ -293,12 +245,9 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		// redis有序utxo数据清除
 		if !data.AddressData.HasAddress {
-			// 无法识别地址，暂不记录utxo
-			// pipe.ZRem(ctx, "mp:utxo", outpointKey)
 			continue
 		}
 
-		// 不是合约tx，则记录address utxo
 		// redis有序address utxo数据清除
 		mpkeyAU := "mp:{au" + strAddressPkh + "}"
 		pipe.ZRem(ctx, mpkeyAU, outpointKey)
@@ -307,27 +256,9 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		mpkeyBL := "mp:bl" + strAddressPkh
 		pipe.DecrBy(ctx, mpkeyBL, int64(data.Satoshi))
 
-		// contract balance of address
-		// mpkeyCB := "mp:cb" + strAddressPkh
-		// pipe.DecrBy(ctx, mpkeyCB, int64(data.Satoshi))
-
-		// redis有序genesis utxo数据清除
-		// if data.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-		// mpkeyNU := "mp:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-		// mpkeyND := "mp:nd" + strCodeHash + strGenesisId
-		// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
-		// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
-
-		// pipe.ZRem(ctx, mpkeyNU, outpointKey)                     // nft:utxo
-		// pipe.ZRem(ctx, mpkeyND, outpointKey)                     // nft:utxo-detail
-		// pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
-		// pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
 
 		// }
 
-		// 记录key以备删除
-		// addrToRemove[strAddressPkh] = struct{}{}
-	}
 
 	for outpointKey, data := range utxoToSpend {
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
@@ -336,9 +267,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
 		if !data.AddressData.HasAddress {
-			// 无法识别地址，暂不记录utxo
-			// pipe.ZAdd(ctx, "mp:s:utxo", member)
-			continue
 		}
 
 		// 不是合约tx，则记录address utxo
@@ -352,39 +280,16 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		mpkeys = append(mpkeys, mpkeyAU, mpkeyBL)
 
-		// contract balance of address
-		// mpkeyCB := "mp:cb" + strAddressPkh
-		// pipe.DecrBy(ctx, mpkeyCB, int64(data.Satoshi))
-		// mpkeys = append(mpkeys, mpkeyCB)
 
-		// redis有序genesis utxo数据添加
-		// if data.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-		// member.Score = float64(data.AddressData.NFT.TokenIndex)
 
-		// mpkeyNU := "mp:s:{nu" + strAddressPkh + "}" + strCodeHash + strGenesisId
-		// mpkeyND := "mp:s:nd" + strCodeHash + strGenesisId
-		// mpkeyNO := "mp:{no" + strGenesisId + strCodeHash + "}"
-		// mpkeyNS := "mp:{ns" + strAddressPkh + "}"
 
 		// mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
 
-		// pipe.ZAdd(ctx, mpkeyNU, member)                          // nft:utxo
-		// pipe.ZAdd(ctx, mpkeyND, member)                          // nft:utxo-detail
-		// pipe.ZIncrBy(ctx, mpkeyNO, -1, strAddressPkh)            // nft:owners
-		// pipe.ZIncrBy(ctx, mpkeyNS, -1, strCodeHash+strGenesisId) // nft:summary
 
 		// }
 
-		// 记录key以备删除
-		// addrToRemove[strAddressPkh] = struct{}{}
 	}
 
-	// 删除summary 为0的记录
-	// for addr := range addrToRemove {
-	// 	pipe.ZRemRangeByScore(ctx, "mp:{ns"+addr+"}", "0", "0")
-	// 	pipe.ZRemRangeByScore(ctx, "mp:{fs"+addr+"}", "0", "0")
-	// 	pipe.ZRemRangeByScore(ctx, "mp:{nas"+addr+"}", "0", "0")
-	// }
 
 	// 记录所有的mp:keys，以备区块确认后直接删除重来
 	for _, mpkey := range mpkeys {
