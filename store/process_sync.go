@@ -84,6 +84,28 @@ ORDER BY (height, txid)
 PARTITION BY intDiv(height, 2100)
 `,
 
+		// nft list
+		// ================================================================
+		// 区块包含的新创建nft列表，分区内按区块高度height排序、索引。按blk height查询时可确定分区 (快)
+		"DROP TABLE IF EXISTS blknft_height",
+		`
+CREATE TABLE IF NOT EXISTS blknft_height (
+	txid         FixedString(32),  -- inscription create txid
+	idx          UInt32,           -- inscription create index, aka, output sat offset
+	vin          UInt32,           -- revaled at input index
+	vout         UInt32,           -- created at output index
+	offset       UInt32,           -- created sat offset at this output
+	content_type String,
+	content      String,
+	height       UInt32,
+	txidx        UInt64,
+	nftidx       UInt64,            -- nft 在区块中的创建序号
+	nftnumber    UInt64
+) engine=MergeTree()
+ORDER BY (height, txid)
+PARTITION BY intDiv(height, 2100)
+`,
+
 		// txout
 		// ================================================================
 		// 交易输出列表，分区内按交易txid+idx排序、索引，单条记录包括输出的各种细节。仅按txid查询时将遍历所有分区（慢）
@@ -205,6 +227,7 @@ PARTITION BY substring(utxid, 1, 1)
 		"ALTER TABLE blk DELETE WHERE height >= ",
 
 		"ALTER TABLE blktx_height DELETE WHERE height >= ",
+		"ALTER TABLE blknft_height DELETE WHERE height >= ",
 
 		"ALTER TABLE txin_spent DELETE WHERE height >= ",
 
@@ -215,11 +238,13 @@ PARTITION BY substring(utxid, 1, 1)
 	createPartSQLs = []string{
 		"DROP TABLE IF EXISTS blk_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",
+		"DROP TABLE IF EXISTS blknft_height_new",
 		"DROP TABLE IF EXISTS txout_new",
 		"DROP TABLE IF EXISTS txin_new",
 
 		"CREATE TABLE IF NOT EXISTS blk_height_new AS blk_height",
 		"CREATE TABLE IF NOT EXISTS blktx_height_new AS blktx_height",
+		"CREATE TABLE IF NOT EXISTS blknft_height_new AS blknft_height",
 		"CREATE TABLE IF NOT EXISTS txout_new AS txout",
 		"CREATE TABLE IF NOT EXISTS txin_new AS txin",
 	}
@@ -243,6 +268,7 @@ PARTITION BY substring(utxid, 1, 1)
 	processPartSQLs = []string{
 		"INSERT INTO blk_height SELECT * FROM blk_height_new;",
 		"INSERT INTO blktx_height SELECT * FROM blktx_height_new;",
+		"INSERT INTO blknft_height SELECT * FROM blknft_height_new;",
 
 		// 优化blk表，以便统一按height排序查询
 		// "OPTIMIZE TABLE blk_height FINAL",
@@ -255,6 +281,7 @@ PARTITION BY substring(utxid, 1, 1)
 
 		"DROP TABLE IF EXISTS blk_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",
+		"DROP TABLE IF EXISTS blknft_height_new",
 	}
 )
 
