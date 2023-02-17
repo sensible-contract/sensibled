@@ -12,12 +12,16 @@ import (
 func SyncBlockTxOutputInfo(startIdx int, txs []*model.Tx) {
 	for txIdx, tx := range txs {
 		for vout, output := range tx.TxOuts {
+			tx.NFTOutputsCnt += uint64(len(output.CreatePointOfNFTs))
 			tx.OutputsValue += output.Satoshi
 
 			address := ""
 			if output.AddressData.HasAddress {
 				address = string(output.AddressData.AddressPkh[:]) // 20 bytes
 			}
+
+			nftPointsBuf := make([]byte, len(output.CreatePointOfNFTs)*3*8)
+			model.DumpNFTCreatePoints(nftPointsBuf, output.CreatePointOfNFTs)
 
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.TxId),
@@ -27,6 +31,11 @@ func SyncBlockTxOutputInfo(startIdx int, txs []*model.Tx) {
 				output.Satoshi,
 				string(output.ScriptType),
 				string(output.PkScript),
+
+				// nft
+				uint64(len(output.CreatePointOfNFTs)),
+				string(nftPointsBuf),
+
 				model.MEMPOOL_HEIGHT, // uint32(block.Height),
 				uint64(startIdx+txIdx),
 			); err != nil {
