@@ -141,6 +141,13 @@ type NFTCreatePoint struct {
 	Offset     uint64 // sat offset in utxo
 }
 
+func (p *NFTCreatePoint) GetCreateIdxKey() string {
+	var key [12]byte
+	binary.LittleEndian.PutUint32(key[0:4], p.Height)
+	binary.LittleEndian.PutUint64(key[4:12], p.IdxInBlock)
+	return string(key[:])
+}
+
 type TxoData struct {
 	UTxid       []byte
 	Vout        uint32
