@@ -115,16 +115,16 @@ type TxLocation struct {
 }
 
 type ProcessBlock struct {
-	Height                 uint32
-	AddrPkhInTxMap         map[string][]int
-	SpentUtxoKeysMap       map[string]struct{}
-	SpentUtxoDataMap       map[string]*TxoData
-	NewUtxoDataMap         map[string]*TxoData
-	NFTsCreateIndexToNFTID []*InscriptionID // index: createBlockNFTIndex;  nft: IncriptionID
+	Height                   uint32
+	AddrPkhInTxMap           map[string][]int
+	SpentUtxoKeysMap         map[string]struct{}
+	SpentUtxoDataMap         map[string]*TxoData
+	NewUtxoDataMap           map[string]*TxoData
+	NFTsCreateIndexToNFTInfo []*NewInscriptionInfo // index: createBlockNFTIndex;  nft: IncriptionID
 }
 
-type InscriptionID struct {
-	NFTData     *scriptDecoder.NFTData
+type NewInscriptionInfo struct {
+	NFTData     *scriptDecoder.NFTData // type/data
 	CreatePoint NFTCreatePoint
 	TxId        []byte // 32
 	IdxInTx     uint64 // nft idx inside tx

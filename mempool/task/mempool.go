@@ -23,13 +23,13 @@ type Mempool struct {
 	Txs     map[string]struct{} // 所有Tx
 	SkipTxs map[string]struct{} // 需要跳过的Tx
 
-	BatchTxs               []*model.Tx // 当前同步批次的Tx
-	AddrPkhInTxMap         map[string][]int
-	SpentUtxoKeysMap       map[string]struct{}       // 在当前同步批次中被花费的所有utxo集合
-	SpentUtxoDataMap       map[string]*model.TxoData // 当前同步批次中花费的已确认的utxo集合
-	NewUtxoDataMap         map[string]*model.TxoData // 当前同步批次中新产生的utxo集合
-	RemoveUtxoDataMap      map[string]*model.TxoData // 当前同步批次中花费的未确认的utxo集合，且属于前批次产生的utxo
-	NFTsCreateIndexToNFTID []*model.InscriptionID    // order in block/mempool  nft: nftpoint/nftid
+	BatchTxs                 []*model.Tx // 当前同步批次的Tx
+	AddrPkhInTxMap           map[string][]int
+	SpentUtxoKeysMap         map[string]struct{}         // 在当前同步批次中被花费的所有utxo集合
+	SpentUtxoDataMap         map[string]*model.TxoData   // 当前同步批次中花费的已确认的utxo集合
+	NewUtxoDataMap           map[string]*model.TxoData   // 当前同步批次中新产生的utxo集合
+	RemoveUtxoDataMap        map[string]*model.TxoData   // 当前同步批次中花费的未确认的utxo集合，且属于前批次产生的utxo
+	NFTsCreateIndexToNFTInfo []*model.NewInscriptionInfo // order in block/mempool  nft: nftpoint/nftid
 
 	m sync.Mutex
 }
@@ -45,7 +45,7 @@ func (mp *Mempool) Init() {
 	mp.SpentUtxoDataMap = make(map[string]*model.TxoData, 1)
 	mp.NewUtxoDataMap = make(map[string]*model.TxoData, 1)
 	mp.RemoveUtxoDataMap = make(map[string]*model.TxoData, 1)
-	mp.NFTsCreateIndexToNFTID = make([]*model.InscriptionID, 0) // order in block/mempool  nft: nftpoint/nftid
+	mp.NFTsCreateIndexToNFTInfo = make([]*model.NewInscriptionInfo, 0) // order in block/mempool  nft: nftpoint/nftid
 }
 
 func (mp *Mempool) LoadFromMempool() bool {

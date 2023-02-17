@@ -17,8 +17,8 @@ var (
 
 	GlobalMempoolNewUtxoDataMap map[string]*TxoData
 
-	GlobalNewInscriptions        []*InscriptionID
-	GlobalMempoolNewInscriptions []*InscriptionID
+	GlobalNewInscriptions        []*NewInscriptionInfo
+	GlobalMempoolNewInscriptions []*NewInscriptionInfo
 )
 
 func init() {
@@ -61,7 +61,7 @@ func CleanUtxoMap() {
 
 	GlobalNewUtxoDataMap = make(map[string]*TxoData, 0)
 	GlobalSpentUtxoDataMap = make(map[string]*TxoData, 0)
-	GlobalNewInscriptions = make([]*InscriptionID, 0)
+	GlobalNewInscriptions = make([]*NewInscriptionInfo, 0)
 }
 
 // 清空本地map内存
@@ -72,5 +72,5 @@ func CleanMempoolUtxoMap() {
 	runtime.GC()
 
 	GlobalMempoolNewUtxoDataMap = make(map[string]*TxoData, 0)
-	GlobalMempoolNewInscriptions = make([]*InscriptionID, 0)
+	GlobalMempoolNewInscriptions = make([]*NewInscriptionInfo, 0)
 }

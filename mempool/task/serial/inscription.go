@@ -63,7 +63,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 					output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, &createPoint)
 
 					// global store new nft
-					model.GlobalMempoolNewInscriptions = append(model.GlobalMempoolNewInscriptions, &model.InscriptionID{
+					model.GlobalMempoolNewInscriptions = append(model.GlobalMempoolNewInscriptions, &model.NewInscriptionInfo{
 						NFTData:     nft,
 						CreatePoint: createPoint,
 						TxId:        tx.TxId,
@@ -85,7 +85,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 					Offset:     uint64(createIdxInTx) - satOutputOffset, // global fee offset in coinbase
 				}
 				// global store new nft
-				model.GlobalMempoolNewInscriptions = append(model.GlobalMempoolNewInscriptions, &model.InscriptionID{
+				model.GlobalMempoolNewInscriptions = append(model.GlobalMempoolNewInscriptions, &model.NewInscriptionInfo{
 					NFTData:     nft,
 					CreatePoint: createPoint,
 					TxId:        tx.TxId,
