@@ -18,6 +18,13 @@ func SyncBlockTx(startIdx int, txs []*model.Tx) {
 			tx.Size,
 			tx.WitOffset,
 			tx.LockTime,
+
+			// nft count
+			len(tx.CreateNFTData),
+			tx.NFTInputsCnt,
+			tx.NFTOutputsCnt,
+			tx.NFTLostCnt,
+
 			tx.InputsValue,
 			tx.OutputsValue,
 			string(tx.Raw),
