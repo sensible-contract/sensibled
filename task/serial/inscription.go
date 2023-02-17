@@ -88,6 +88,7 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 
 					// global store new nft
 					model.GlobalNewInscriptions = append(model.GlobalNewInscriptions, &model.InscriptionID{
+						NFTData:     nft,
 						CreatePoint: createPoint,
 						TxId:        tx.TxId,
 						IdxInTx:     uint64(createIdxInTx),
@@ -111,6 +112,7 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 
 				// global store new nft
 				model.GlobalNewInscriptions = append(model.GlobalNewInscriptions, &model.InscriptionID{
+					NFTData:     nft,
 					CreatePoint: createPoint,
 					TxId:        tx.TxId,
 					IdxInTx:     uint64(createIdxInTx),

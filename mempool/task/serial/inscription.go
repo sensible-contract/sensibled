@@ -63,6 +63,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 
 					// global store new nft
 					model.GlobalNewInscriptions = append(model.GlobalNewInscriptions, &model.InscriptionID{
+						NFTData:     nft,
 						CreatePoint: createPoint,
 						TxId:        tx.TxId,
 						IdxInTx:     uint64(createIdxInTx),
@@ -84,6 +85,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 				}
 				// global store new nft
 				model.GlobalNewInscriptions = append(model.GlobalNewInscriptions, &model.InscriptionID{
+					NFTData:     nft,
 					CreatePoint: createPoint,
 					TxId:        tx.TxId,
 					IdxInTx:     uint64(createIdxInTx),

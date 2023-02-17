@@ -124,6 +124,7 @@ type ProcessBlock struct {
 }
 
 type InscriptionID struct {
+	NFTData     *scriptDecoder.NFTData
 	CreatePoint NFTCreatePoint
 	TxId        []byte // 32
 	IdxInTx     uint64 // nft idx inside tx
