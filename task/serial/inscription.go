@@ -240,7 +240,7 @@ func UpdateNewNFTInRedis(pipe redis.Pipeliner) {
 	ctx := context.Background()
 
 	for _, nftData := range model.GlobalNewInscriptions {
-		strInscriptionID := fmt.Sprintf("%s%d", string(nftData.TxId[:]), nftData.IdxInTx)
+		strInscriptionID := fmt.Sprintf("%si%d", utils.HashString(nftData.TxId), nftData.IdxInTx)
 
 		// redis有序utxo数据成员
 		member := &redis.Z{
