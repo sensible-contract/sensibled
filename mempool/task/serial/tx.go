@@ -2,9 +2,9 @@ package serial
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"sort"
 	"unisatd/logger"
 	"unisatd/model"
 	scriptDecoder "unisatd/parser/script"
@@ -213,38 +213,20 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 	// 更新内存池数据
 	mpkeys := make([]string, 5*(len(utxoToRestore)+len(utxoToRemove)+len(utxoToSpend)))
-	for outpointKey, data := range utxoToRestore {
-		strAddressPkh := string(data.AddressData.AddressPkh[:])
 
-		// redis有序utxo数据添加
-		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
-
-		if !data.AddressData.HasAddress {
-			continue
-		}
-
-		// redis有序address utxo数据添加
-		// logger.Log.Info("ZAdd mp:au",
-		mpkeyAU := "mp:{au" + strAddressPkh + "}"
-		pipe.ZAdd(ctx, mpkeyAU, member)
-
-		// balance of address
-		mpkeyBL := "mp:bl" + strAddressPkh
-		pipe.IncrBy(ctx, mpkeyBL, int64(data.Satoshi))
-
-		mpkeys = append(mpkeys, mpkeyAU, mpkeyBL)
-		continue
-
-	}
-
-	// addrToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
-		strAddressPkh := string(data.AddressData.AddressPkh[:])
+		// remove nft point to utxo point
+		for _, nftpoint := range data.CreatePointOfNFTs {
+			nftPointKey := fmt.Sprintf("np:%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			pipe.Del(ctx, nftPointKey)
+		}
 
 		// redis有序utxo数据清除
 		if !data.AddressData.HasAddress {
 			continue
 		}
+
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
 
 		// redis有序address utxo数据清除
 		mpkeyAU := "mp:{au" + strAddressPkh + "}"
@@ -254,18 +236,29 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		mpkeyBL := "mp:bl" + strAddressPkh
 		pipe.DecrBy(ctx, mpkeyBL, int64(data.Satoshi))
 
-
-		// }
-
+		mpkeyAN := "mp:{an" + strAddressPkh + "}"
+		for _, nftpoint := range data.CreatePointOfNFTs {
+			nftPointKey := fmt.Sprintf("%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			pipe.ZRem(ctx, mpkeyAN, nftPointKey) // 有序address nft数据清除
+		}
+	}
 
 	for outpointKey, data := range utxoToSpend {
+		// 注意: redis全局nft数据不能在这里清除，必须留给区块确认时去做
+		// remove nft point to utxo point
+		// for _, nftpoint := range data.CreatePointOfNFTs {
+		// 	nftPointKey := fmt.Sprintf("np:%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+		// 	pipe.Del(ctx, nftPointKey)
+		// }
+
+		if !data.AddressData.HasAddress {
+			continue
+		}
+
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
 
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
-
-		if !data.AddressData.HasAddress {
-		}
 
 		// 不是合约tx，则记录address utxo
 		// redis有序address utxo数据添加
@@ -276,18 +269,54 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		mpkeyBL := "mp:bl" + strAddressPkh
 		pipe.DecrBy(ctx, mpkeyBL, int64(data.Satoshi))
 
-		mpkeys = append(mpkeys, mpkeyAU, mpkeyBL)
+		//更新nft的createIdx到current utxo映射记录
+		mpkeyAN := "mp:s:{an" + strAddressPkh + "}"
+		for _, nftpoint := range data.CreatePointOfNFTs {
+			nftPointKey := fmt.Sprintf("%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftPointKey}
+			pipe.ZAdd(ctx, mpkeyAN, member) // 有序address nft数据清除
+		}
 
-
-
-
-		// mpkeys = append(mpkeys, mpkeyNU, mpkeyND, mpkeyNO, mpkeyNS)
-
-
-		// }
-
+		mpkeys = append(mpkeys, mpkeyAU, mpkeyBL, mpkeyAN)
 	}
 
+	for outpointKey, data := range utxoToRestore {
+		// add nft point to utxo point
+		for _, nftpoint := range data.CreatePointOfNFTs {
+			nftPointKey := fmt.Sprintf("np:%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			var offset [8]byte
+			binary.LittleEndian.PutUint64(offset[:], nftpoint.Offset)
+			pipe.Set(ctx, nftPointKey, outpointKey+string(offset[:]), 0)
+		}
+
+		if !data.AddressData.HasAddress {
+			continue
+		}
+
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
+
+		// redis有序utxo数据添加
+		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
+
+		// 不是合约tx，则记录address utxo
+		// redis有序address utxo数据添加
+		mpkeyAU := "mp:{au" + strAddressPkh + "}"
+		pipe.ZAdd(ctx, mpkeyAU, member)
+
+		// balance of address
+		mpkeyBL := "mp:bl" + strAddressPkh
+		pipe.IncrBy(ctx, mpkeyBL, int64(data.Satoshi))
+
+		//更新nft的createIdx到current utxo映射记录
+		mpkeyAN := "mp:{an" + strAddressPkh + "}"
+		for _, nftpoint := range data.CreatePointOfNFTs {
+			nftPointKey := fmt.Sprintf("%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftPointKey}
+			pipe.ZAdd(ctx, mpkeyAN, member) // 有序address nft数据清除
+		}
+
+		mpkeys = append(mpkeys, mpkeyAU, mpkeyBL, mpkeyAN)
+	}
 
 	// 记录所有的mp:keys，以备区块确认后直接删除重来
 	for _, mpkey := range mpkeys {
