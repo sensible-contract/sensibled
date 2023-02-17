@@ -28,7 +28,7 @@ func SyncBlock(block *model.Block) {
 		txInputsValue += tx.InputsValue
 		txOutputsValue += tx.OutputsValue
 
-		nftNewCnt += uint64(len(tx.CreateNFTData))
+		nftNewCnt += uint64(len(tx.NewNFTDataCreated))
 		nftInputsCnt += tx.NFTInputsCnt
 		nftOutputsCnt += tx.NFTOutputsCnt
 	}

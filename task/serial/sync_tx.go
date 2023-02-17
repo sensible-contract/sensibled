@@ -26,7 +26,7 @@ func SyncBlockTx(block *model.Block) {
 			tx.LockTime,
 
 			// nft count
-			len(tx.CreateNFTData),
+			len(tx.NewNFTDataCreated),
 			tx.NFTInputsCnt,
 			tx.NFTOutputsCnt,
 			tx.NFTLostCnt,

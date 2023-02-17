@@ -25,10 +25,10 @@ type Tx struct {
 	TxIns        []*TxIn
 	TxOuts       []*TxOut
 
-	CreateNFTData []*scriptDecoder.NFTData
-	NFTInputsCnt  uint64
-	NFTOutputsCnt uint64
-	NFTLostCnt    uint64
+	NewNFTDataCreated []*scriptDecoder.NFTData
+	NFTInputsCnt      uint64
+	NFTOutputsCnt     uint64
+	NFTLostCnt        uint64
 
 	IsSensible bool
 }

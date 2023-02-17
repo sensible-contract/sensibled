@@ -58,20 +58,20 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 
 			for _, nftpoint := range objData.CreatePointOfNFTs {
 				sat := satInputOffset + nftpoint.Offset
-				if int(sat) > len(tx.CreateNFTData) {
+				if int(sat) > len(tx.NewNFTDataCreated) {
 					break
 				}
-				tx.CreateNFTData[sat].Invalid = true
+				tx.NewNFTDataCreated[sat].Invalid = true
 			}
 
 			satInputOffset += objData.Satoshi
-			if int(satInputOffset) > len(tx.CreateNFTData) {
+			if int(satInputOffset) > len(tx.NewNFTDataCreated) {
 				break
 			}
 		}
 
 		// insert created NFT
-		for createIdxInTx, nft := range tx.CreateNFTData {
+		for createIdxInTx, nft := range tx.NewNFTDataCreated {
 			if nft.Invalid { // nft removed
 				continue
 			}
@@ -117,7 +117,7 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 				})
 			}
 		}
-		nftIndexInBlock += uint64(len(tx.CreateNFTData))
+		nftIndexInBlock += uint64(len(tx.NewNFTDataCreated))
 
 		// insert exsit NFT
 		satInputOffset = uint64(0)
