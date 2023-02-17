@@ -35,7 +35,7 @@ func prepareSyncCk() bool {
 	sqlTxIn := fmt.Sprintf(sqlTxInPattern, "txin_mempool_new")
 
 	var err error
-
+	// tx
 	syncTx, err = clickhouse.CK.Begin()
 	if err != nil {
 		logger.Log.Error("sync-begin-tx", zap.Error(err))
@@ -68,7 +68,7 @@ func prepareSyncCk() bool {
 		logger.Log.Error("sync-prepare-txout", zap.Error(err))
 		return false
 	}
-
+	// txin
 	syncTxIn, err = clickhouse.CK.Begin()
 	if err != nil {
 		logger.Log.Error("sync-begin-txinfull", zap.Error(err))

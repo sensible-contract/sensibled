@@ -45,6 +45,7 @@ func prepareSyncCk(isFull bool) bool {
 		sqlTxIn = fmt.Sprintf(sqlTxInPattern, "txin")
 	}
 	var err error
+	// blk
 	syncBlk, err = clickhouse.CK.Begin()
 	if err != nil {
 		logger.Log.Error("sync-begin-blk", zap.Error(err))
@@ -55,7 +56,7 @@ func prepareSyncCk(isFull bool) bool {
 		logger.Log.Error("sync-prepare-blk", zap.Error(err))
 		return false
 	}
-
+	// tx
 	syncTx, err = clickhouse.CK.Begin()
 	if err != nil {
 		logger.Log.Error("sync-begin-tx", zap.Error(err))
@@ -88,7 +89,7 @@ func prepareSyncCk(isFull bool) bool {
 		logger.Log.Error("sync-prepare-txout", zap.Error(err))
 		return false
 	}
-
+	// txin
 	syncTxIn, err = clickhouse.CK.Begin()
 	if err != nil {
 		logger.Log.Error("sync-begin-txinfull", zap.Error(err))
