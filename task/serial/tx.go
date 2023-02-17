@@ -98,10 +98,10 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 			pipe.Del(ctx, nftPointKey)
 		}
 
-		strAddressPkh := string(data.AddressData.AddressPkh[:])
 		if !data.AddressData.HasAddress {
 			continue
 		}
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
 		// 识别地址，只记录utxo和balance
 		pipe.ZRem(ctx, "{au"+strAddressPkh+"}", outpointKey)                                               // 有序address utxo数据清除
 		addressBalanceCmds["bl"+strAddressPkh] = pipe.DecrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
@@ -121,15 +121,15 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 			pipe.Set(ctx, nftPointKey, outpointKey+string(offset[:]), 0)
 		}
 
-		strAddressPkh := string(data.AddressData.AddressPkh[:])
-
-		// redis有序utxo数据成员
-		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
-
 		// 非合约信息记录
 		if !data.AddressData.HasAddress {
 			continue
 		}
+
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
+
+		// redis有序utxo数据成员
+		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
 		// 识别地址，只记录utxo和balance
 		pipe.ZAdd(ctx, "{au"+strAddressPkh+"}", member)           // 有序address utxo数据添加
