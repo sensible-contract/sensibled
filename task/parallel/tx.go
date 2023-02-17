@@ -32,51 +32,6 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		}
 
 		output.AddressData = scriptDecoder.ExtractPkScriptForTxo(output.PkScript, output.ScriptType)
-
-		if output.AddressData.CodeType == scriptDecoder.CodeType_NONE || output.AddressData.CodeType == scriptDecoder.CodeType_SENSIBLE {
-			// not token
-			continue
-		}
-
-		// update token summary
-		// buf := make([]byte, 12, 12+20+40)
-		// binary.LittleEndian.PutUint32(buf, output.AddressData.CodeType)
-		// if output.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-		// 	binary.LittleEndian.PutUint64(buf[4:], output.AddressData.NFT.TokenIndex)
-		// } else if output.AddressData.CodeType == scriptDecoder.CodeType_NFT_SELL {
-		// 	binary.LittleEndian.PutUint64(buf[4:], output.AddressData.NFTSell.TokenIndex)
-		// }
-
-		// buf = append(buf, output.AddressData.CodeHash[:]...)
-		// buf = append(buf, output.AddressData.GenesisId[:output.AddressData.GenesisIdLen]...)
-
-		// var tokenIndex uint64
-		// var decimal uint8
-		// switch output.AddressData.CodeType {
-		// case scriptDecoder.CodeType_NFT:
-		// 	tokenIndex = output.AddressData.NFT.TokenIndex
-		// case scriptDecoder.CodeType_NFT_SELL:
-		// 	tokenIndex = output.AddressData.NFTSell.TokenIndex
-		// case scriptDecoder.CodeType_FT:
-		// 	decimal = output.AddressData.FT.Decimal
-		// }
-
-		// tokenKey := string(buf)
-
-		// tokenSummary, ok := block.TokenSummaryMap[tokenKey]
-		// if !ok {
-		// 	tokenSummary = &model.TokenData{
-		// 		CodeType:  output.AddressData.CodeType,
-		// 		NFTIdx:    tokenIndex,
-		// 		Decimal:   decimal,
-		// 		CodeHash:  output.AddressData.CodeHash[:],
-		// 		GenesisId: output.AddressData.GenesisId[:output.AddressData.GenesisIdLen],
-		// 	}
-		// 	block.TokenSummaryMap[tokenKey] = tokenSummary
-		// }
-
-		// tokenSummary.OutSatoshi += output.Satoshi
-		// tokenSummary.OutDataValue += 1
 	}
 }
 
