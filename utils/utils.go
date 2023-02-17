@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"unisatd/model"
+	scriptDecoder "unisatd/parser/script"
 )
 
 func CalcBlockSubsidy(height int) uint64 {
@@ -42,6 +44,73 @@ func EncodeVarIntForBlock(cnt uint64, raw []byte) (cnt_size int) {
 		raw[0] = 0xff
 		binary.LittleEndian.PutUint64(raw[1:9], uint64(cnt))
 		return 9
+	}
+}
+
+func NewTxWit(txwitraw []byte) (wits []*model.TxWit, offset uint) {
+	txWitcnt, txWitcntsize := DecodeVarIntForBlock(txwitraw[0:])
+	offset = txWitcntsize
+
+	wits = make([]*model.TxWit, txWitcnt)
+	for witIndex := uint(0); witIndex < txWitcnt; witIndex++ {
+		txWitScriptcnt, txWitScriptcntsize := DecodeVarIntForBlock(txwitraw[offset:])
+		offset += txWitScriptcntsize
+
+		txwit := new(model.TxWit)
+		txwit.Script = txwitraw[offset : offset+txWitScriptcnt]
+
+		wits[witIndex] = txwit
+		offset += txWitScriptcnt
+	}
+	return
+}
+
+func EncodeTxNFT(tx *model.Tx) {
+	isNFTInLastInput := true
+	for _, input := range tx.TxIns {
+		// 只支持第一个输入的NFT
+		if !isNFTInLastInput {
+			break
+		}
+		if len(input.ScriptWitness) == 0 {
+			break
+		}
+
+		wits, offset := NewTxWit(input.ScriptWitness)
+		if len(input.ScriptWitness) != int(offset) {
+			break
+		}
+
+		// 只支持p2tr格式的见证，单NFT，多段OP_FALSE/OP_IF仅识别第一个。
+		// 跳过没有脚本的wits
+		if len(wits) < 2 {
+			break
+		}
+
+		// 附件
+		hasAnnex := (wits[len(wits)-1].Script[0] == 0x50)
+		// 跳过P2WPKH
+		if len(wits) < 3 && hasAnnex {
+			break
+		}
+
+		nftScript := wits[len(wits)-2].Script
+		if hasAnnex {
+			// fixme: -1 at official impliment
+			nftScript = wits[len(wits)-3].Script
+		}
+
+		if nft, ok := scriptDecoder.ExtractPkScriptForNFT(nftScript); ok {
+			satOffset := len(tx.CreateNFTData)
+			input.CreatePointOfNewNFTs = append(input.CreatePointOfNewNFTs, &model.NFTCreatePoint{
+				Offset: uint64(satOffset), // fixme: which sat? if some nft failed
+			})
+			tx.CreateNFTData = append(tx.CreateNFTData, nft)
+
+		} else {
+			isNFTInLastInput = false
+			break
+		}
 	}
 }
 

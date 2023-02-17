@@ -85,6 +85,12 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 
 	tx.LockTime = binary.LittleEndian.Uint32(rawtx[offset : offset+4])
 	offset += 4
+
+	// nft decode
+	if isWit {
+		utils.EncodeTxNFT(tx)
+	}
+
 	return
 }
 
