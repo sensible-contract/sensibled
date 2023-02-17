@@ -35,6 +35,7 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				)
 			}
 			tx.InputsValue += objData.Satoshi
+			tx.NFTInputsCnt += uint64(len(input.CreatePointOfNFTs))
 
 			address := ""
 			if objData.AddressData.HasAddress {
@@ -46,6 +47,9 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				addrPkhInTxMap[address] = append(addrPkhInTxMap[address], startIdx+txIdx)
 			}
 
+			nftPointsBuf := make([]byte, len(input.CreatePointOfNFTs)*3*8)
+			model.DumpNFTCreatePoints(nftPointsBuf, input.CreatePointOfNFTs)
+
 			if _, err := store.SyncStmtTxIn.Exec(
 				model.MEMPOOL_HEIGHT, // uint32(block.Height),
 				uint64(startIdx+txIdx),
@@ -54,6 +58,8 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				string(input.ScriptSig),
 				string(input.ScriptWitness),
 				uint32(input.Sequence),
+
+				uint64(len(input.CreatePointOfNewNFTs)), // new nft count
 
 				uint32(objData.BlockHeight),
 				uint64(objData.TxIdx),
@@ -64,6 +70,9 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				objData.Satoshi,
 				string(objData.ScriptType),
 				string(objData.PkScript),
+				// nft
+				uint64(len(input.CreatePointOfNFTs)),
+				string(nftPointsBuf),
 			); err != nil {
 				logger.Log.Info("sync-txin-full-err",
 					zap.String("sync", "txin full err"),
