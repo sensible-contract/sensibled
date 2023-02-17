@@ -220,7 +220,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	for outpointKey, data := range utxoToRemove {
 		// remove nft point to utxo point
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			nftPointKey := fmt.Sprintf("np:%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			nftPointKey := fmt.Sprintf("np%s", nftpoint.GetCreateIdxKey())
 			pipe.Del(ctx, nftPointKey)
 		}
 
@@ -241,7 +241,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		mpkeyAN := "mp:{an" + strAddressPkh + "}"
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			nftPointKey := fmt.Sprintf("%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			nftPointKey := nftpoint.GetCreateIdxKey()
 			pipe.ZRem(ctx, mpkeyAN, nftPointKey) // 有序address nft数据清除
 		}
 	}
@@ -275,7 +275,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		//更新nft的createIdx到current utxo映射记录
 		mpkeyAN := "mp:s:{an" + strAddressPkh + "}"
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			nftPointKey := fmt.Sprintf("%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			nftPointKey := nftpoint.GetCreateIdxKey()
 			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftPointKey}
 			pipe.ZAdd(ctx, mpkeyAN, member) // 有序address nft数据清除
 		}
@@ -286,7 +286,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	for outpointKey, data := range utxoToRestore {
 		// add nft point to utxo point
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			nftPointKey := fmt.Sprintf("np:%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			nftPointKey := fmt.Sprintf("np%s", nftpoint.GetCreateIdxKey())
 			var offset [8]byte
 			binary.LittleEndian.PutUint64(offset[:], nftpoint.Offset)
 			pipe.Set(ctx, nftPointKey, outpointKey+string(offset[:]), 0)
@@ -313,7 +313,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		//更新nft的createIdx到current utxo映射记录
 		mpkeyAN := "mp:{an" + strAddressPkh + "}"
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			nftPointKey := fmt.Sprintf("%d:%d", nftpoint.Height, nftpoint.IdxInBlock)
+			nftPointKey := nftpoint.GetCreateIdxKey()
 			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftPointKey}
 			pipe.ZAdd(ctx, mpkeyAN, member) // 有序address nft数据清除
 		}
