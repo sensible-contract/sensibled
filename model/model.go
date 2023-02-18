@@ -127,7 +127,8 @@ type NewInscriptionInfo struct {
 	NFTData     *scriptDecoder.NFTData // type/data
 	CreatePoint NFTCreatePoint
 	TxId        []byte // 32
-	IdxInTx     uint64 // nft idx inside tx
+	IdxInTx     uint32 // nft idx inside tx
+	InTxVout    uint32 // nft vout inside tx
 }
 
 type TxData struct {

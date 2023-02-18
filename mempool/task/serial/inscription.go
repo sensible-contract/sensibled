@@ -53,7 +53,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 			}
 			inFee := true
 			satOutputOffset := uint64(0)
-			for _, output := range tx.TxOuts {
+			for vout, output := range tx.TxOuts {
 				if uint64(createIdxInTx) < satOutputOffset+output.Satoshi {
 					createPoint := model.NFTCreatePoint{
 						Height:     uint32(model.MEMPOOL_HEIGHT),
@@ -67,7 +67,8 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 						NFTData:     nft,
 						CreatePoint: createPoint,
 						TxId:        tx.TxId,
-						IdxInTx:     uint64(createIdxInTx),
+						IdxInTx:     uint32(createIdxInTx),
+						InTxVout:    uint32(vout),
 					})
 
 					inFee = false
@@ -89,7 +90,8 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 					NFTData:     nft,
 					CreatePoint: createPoint,
 					TxId:        tx.TxId,
-					IdxInTx:     uint64(createIdxInTx),
+					IdxInTx:     uint32(createIdxInTx),
+					InTxVout:    tx.TxOutCnt,
 				})
 			}
 		}
