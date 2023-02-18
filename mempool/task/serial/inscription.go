@@ -50,27 +50,25 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64,
 			if nft.Invalid { // nft removed
 				continue
 			}
+			createPoint := &model.NFTCreatePoint{
+				Height:     uint32(model.MEMPOOL_HEIGHT),
+				IdxInBlock: nftIndexInBlock + uint64(createIdxInTx),
+			}
+			newInscriptionInfo := &model.NewInscriptionInfo{
+				NFTData:     nft,
+				CreatePoint: createPoint,
+				TxIdx:       uint64(startIdx + txIdx),
+				TxId:        tx.TxId,
+				IdxInTx:     uint32(createIdxInTx),
+			}
+
 			inFee := true
 			satOutputOffset := uint64(0)
 			for vout, output := range tx.TxOuts {
 				if uint64(createIdxInTx) < satOutputOffset+output.Satoshi {
-					createPoint := model.NFTCreatePoint{
-						Height:     uint32(model.MEMPOOL_HEIGHT),
-						IdxInBlock: nftIndexInBlock + uint64(createIdxInTx),
-						Offset:     uint64(createIdxInTx) - satOutputOffset,
-					}
-					output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, &createPoint)
-
-					newInscriptionInfo := &model.NewInscriptionInfo{
-						NFTData:     nft,
-						CreatePoint: createPoint,
-						TxIdx:       uint64(startIdx + txIdx),
-						TxId:        tx.TxId,
-						IdxInTx:     uint32(createIdxInTx),
-						InTxVout:    uint32(vout),
-					}
-					newInscriptions = append(newInscriptions, newInscriptionInfo)
-
+					createPoint.Offset = uint64(createIdxInTx) - satOutputOffset
+					output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, createPoint)
+					newInscriptionInfo.InTxVout = uint32(vout)
 					inFee = false
 					break
 				}
@@ -80,21 +78,10 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64,
 			// create nft may in fee
 			if inFee {
 				tx.NFTLostCnt += 1
-				createPoint := model.NFTCreatePoint{
-					Height:     uint32(model.MEMPOOL_HEIGHT),
-					IdxInBlock: nftIndexInBlock + uint64(createIdxInTx),
-					Offset:     uint64(createIdxInTx) - satOutputOffset, // global fee offset in coinbase
-				}
-				newInscriptionInfo := &model.NewInscriptionInfo{
-					NFTData:     nft,
-					CreatePoint: createPoint,
-					TxIdx:       uint64(startIdx + txIdx),
-					TxId:        tx.TxId,
-					IdxInTx:     uint32(createIdxInTx),
-					InTxVout:    tx.TxOutCnt,
-				}
-				newInscriptions = append(newInscriptions, newInscriptionInfo)
+				createPoint.Offset = uint64(createIdxInTx) - satOutputOffset
+				newInscriptionInfo.InTxVout = tx.TxOutCnt
 			}
+			newInscriptions = append(newInscriptions, newInscriptionInfo)
 		}
 		nftIndexInBlock += uint64(len(tx.NewNFTDataCreated))
 
