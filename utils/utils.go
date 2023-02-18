@@ -88,7 +88,7 @@ func EncodeTxNFT(tx *model.Tx) {
 		}
 
 		// 附件
-		hasAnnex := (wits[len(wits)-1].Script[0] == 0x50)
+		hasAnnex := (len(wits[len(wits)-1].Script) > 0 && wits[len(wits)-1].Script[0] == 0x50)
 		// 跳过P2WPKH
 		if len(wits) < 3 && hasAnnex {
 			break
