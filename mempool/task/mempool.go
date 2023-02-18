@@ -53,6 +53,7 @@ func (mp *Mempool) LoadFromMempool() bool {
 	// 清空
 	mp.Txs = make(map[string]struct{}, 0)
 	mp.SkipTxs = make(map[string]struct{}, 0)
+	mp.NewInscriptions = make([]*model.NewInscriptionInfo, 0)
 
 	for i := 0; i < 1000; i++ {
 		select {
