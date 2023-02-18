@@ -58,14 +58,14 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 
 			for _, nftpoint := range objData.CreatePointOfNFTs {
 				sat := satInputOffset + nftpoint.Offset
-				if int(sat) > len(tx.NewNFTDataCreated) {
-					break
+				if int(sat) >= len(tx.NewNFTDataCreated) {
+					continue
 				}
 				tx.NewNFTDataCreated[sat].Invalid = true
 			}
 
 			satInputOffset += objData.Satoshi
-			if int(satInputOffset) > len(tx.NewNFTDataCreated) {
+			if int(satInputOffset) >= len(tx.NewNFTDataCreated) {
 				break
 			}
 		}
