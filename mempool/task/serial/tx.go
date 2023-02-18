@@ -217,7 +217,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	)
 
 	// 更新内存池数据
-	mpkeys := make([]string, 5*(len(utxoToRestore)+len(utxoToRemove)+len(utxoToSpend)))
+	mpkeys := make([]string, 0)
 
 	for outpointKey, data := range utxoToRemove {
 		// remove nft point to utxo point
