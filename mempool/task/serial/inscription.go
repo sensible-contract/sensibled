@@ -94,7 +94,6 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64,
 					zap.String("txin", "input missing utxo"),
 					zap.String("txid", tx.TxIdHex),
 					zap.Int("vin", vin),
-
 					zap.String("utxid", input.InputHashHex),
 					zap.Uint32("vout", input.InputVout),
 				)
@@ -131,7 +130,6 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64,
 			if output.LockingScriptUnspendable {
 				continue
 			}
-
 			if objData, ok := mpSpentUtxo[output.OutpointKey]; ok {
 				// not spent in self block
 				objData.CreatePointOfNFTs = output.CreatePointOfNFTs

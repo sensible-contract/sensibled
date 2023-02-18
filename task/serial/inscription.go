@@ -126,13 +126,11 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 					zap.String("txin", "input missing utxo"),
 					zap.String("txid", tx.TxIdHex),
 					zap.Int("vin", vin),
-
 					zap.String("utxid", input.InputHashHex),
 					zap.Uint32("vout", input.InputVout),
 				)
 				continue
 			}
-
 			for _, nftpoint := range objData.CreatePointOfNFTs {
 				sat := satInputOffset + nftpoint.Offset
 				inFee := true
