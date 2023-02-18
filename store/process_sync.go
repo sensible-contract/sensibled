@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS blknft_height (
 	vout         UInt32,           -- created at output index
 	offset       UInt32,           -- created sat offset at this output
 	content_type String,
+	content_len  UInt32,
 	content      String,
 	height       UInt32,
 	txidx        UInt64,

@@ -19,6 +19,7 @@ func SyncBlockNFT(nfts []*model.NewInscriptionInfo) {
 			nft.InTxVout,
 			nft.CreatePoint.Offset,
 			string(nft.NFTData.ContentType),
+			uint32(len(nft.NFTData.ContentBody)),
 			string(nft.NFTData.ContentBody),
 
 			nft.CreatePoint.Height,
