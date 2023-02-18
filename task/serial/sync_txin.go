@@ -62,7 +62,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 
 			// 清理非sensible且无地址的锁定脚本
 			pkscript := ""
-			if !isPkScriptPrune || tx.IsSensible || objData.AddressData.HasAddress {
+			if !isPkScriptPrune || tx.GenesisNewNFT || objData.AddressData.HasAddress {
 				pkscript = string(objData.PkScript)
 			}
 

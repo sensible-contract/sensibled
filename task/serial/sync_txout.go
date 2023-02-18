@@ -19,13 +19,13 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 
 		for vout, output := range tx.TxOuts {
 			// prune false opreturn output
-			if isOpReturnPrune && !tx.IsSensible && scriptDecoder.IsOpreturn(output.ScriptType) {
+			if isOpReturnPrune && !tx.GenesisNewNFT && scriptDecoder.IsOpreturn(output.ScriptType) {
 				continue
 			}
 
 			// prune string(output.Pkscript),
 			pkscript := ""
-			if !isPkScriptPrune || tx.IsSensible || output.AddressData.HasAddress {
+			if !isPkScriptPrune || tx.GenesisNewNFT || output.AddressData.HasAddress {
 				pkscript = string(output.PkScript)
 			}
 

@@ -14,7 +14,7 @@ func SyncBlockTx(block *model.Block) {
 		// keep sensible rawtx only
 		// prune txraw
 		txraw := ""
-		if !isTxrawPrune || tx.IsSensible {
+		if !isTxrawPrune || tx.GenesisNewNFT {
 			txraw = string(tx.Raw)
 		}
 		if _, err := store.SyncStmtTx.Exec(

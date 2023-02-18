@@ -30,7 +30,7 @@ type Tx struct {
 	NFTOutputsCnt     uint64
 	NFTLostCnt        uint64
 
-	IsSensible bool
+	GenesisNewNFT bool
 }
 
 type TxIn struct {
