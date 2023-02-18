@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS blknft_height (
 	nftidx       UInt64,            -- nft 在区块中的创建序号
 	nftnumber    UInt64
 ) engine=MergeTree()
-ORDER BY (height, txid)
+ORDER BY (height, nftidx)
 PARTITION BY intDiv(height, 2100)
 `,
 
