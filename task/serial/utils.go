@@ -45,7 +45,9 @@ func WriteDownUtxoToFile(utxoToRestore, utxoToRemove map[string]*model.TxoData) 
 	idx = 0
 	utxoBufToRestore := make([][]byte, len(utxoToRestore))
 	for outpointKey, data := range utxoToRestore {
-		buf := make([]byte, 36+20+len(data.PkScript))
+		buf := make([]byte, 36+20+
+			len(data.PkScript)+
+			len(data.CreatePointOfNFTs)*3*8)
 		length := data.Marshal(buf)
 
 		buf = append(buf[:length], []byte(outpointKey)...)
