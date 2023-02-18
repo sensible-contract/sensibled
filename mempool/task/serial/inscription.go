@@ -14,7 +14,7 @@ import (
 // ParseMempoolBatchTxNFTsInAndOutSerial all tx input/output info
 func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) (newInscriptions []*model.NewInscriptionInfo) {
 
-	for _, tx := range txs {
+	for txIdx, tx := range txs {
 		// invalid exist nft recreate
 		satInputOffset := uint64(0)
 		for vin, input := range tx.TxIns {
@@ -64,6 +64,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64,
 					newInscriptionInfo := &model.NewInscriptionInfo{
 						NFTData:     nft,
 						CreatePoint: createPoint,
+						TxIdx:       uint64(startIdx + txIdx),
 						TxId:        tx.TxId,
 						IdxInTx:     uint32(createIdxInTx),
 						InTxVout:    uint32(vout),
@@ -87,6 +88,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64,
 				newInscriptionInfo := &model.NewInscriptionInfo{
 					NFTData:     nft,
 					CreatePoint: createPoint,
+					TxIdx:       uint64(startIdx + txIdx),
 					TxId:        tx.TxId,
 					IdxInTx:     uint32(createIdxInTx),
 					InTxVout:    tx.TxOutCnt,

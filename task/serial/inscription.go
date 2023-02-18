@@ -16,7 +16,7 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 	var coinbaseCreatePointOfNFTs []*model.NFTCreatePoint
 	satFeeOffset := utils.CalcBlockSubsidy(block.Height)
 	nftIndexInBlock := uint64(0)
-	for _, tx := range block.Txs[1:] {
+	for txIdx, tx := range block.Txs[1:] {
 		// count tx fee
 		satInputAmount := uint64(0)
 		for vin, input := range tx.TxIns {
@@ -88,6 +88,7 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 					newInscriptionInfo := &model.NewInscriptionInfo{
 						NFTData:     nft,
 						CreatePoint: createPoint,
+						TxIdx:       uint64(txIdx + 1),
 						TxId:        tx.TxId,
 						IdxInTx:     uint32(createIdxInTx),
 						InTxVout:    uint32(vout),
@@ -118,6 +119,7 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 				newInscriptionInfo := &model.NewInscriptionInfo{
 					NFTData:     nft,
 					CreatePoint: createPoint,
+					TxIdx:       uint64(txIdx + 1),
 					TxId:        tx.TxId,
 					IdxInTx:     uint32(createIdxInTx),
 					InTxVout:    tx.TxOutCnt,
