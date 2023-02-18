@@ -67,7 +67,7 @@ func NewTxWit(txwitraw []byte) (wits []*model.TxWit, offset uint) {
 
 func EncodeTxNFT(tx *model.Tx) {
 	isNFTInLastInput := true
-	for _, input := range tx.TxIns {
+	for vin, input := range tx.TxIns {
 		// 只支持第一个输入的NFT
 		if !isNFTInLastInput {
 			break
@@ -101,6 +101,7 @@ func EncodeTxNFT(tx *model.Tx) {
 		}
 
 		if nft, ok := scriptDecoder.ExtractPkScriptForNFT(nftScript); ok {
+			nft.InTxVin = uint32(vin)
 			satOffset := len(tx.NewNFTDataCreated)
 			input.CreatePointOfNewNFTs = append(input.CreatePointOfNewNFTs, &model.NFTCreatePoint{
 				Offset: uint64(satOffset), // fixme: which sat? if some nft failed
