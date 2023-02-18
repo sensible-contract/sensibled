@@ -253,6 +253,8 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 
 	// 5 dep 2 4
 	serial.SyncBlockTx(startIdx, mp.BatchTxs)
+
+	serial.SyncBlockNFT(startIdx, mp.NewInscriptionsThisBatch)
 }
 
 // ParseEnd 最后分析执行
