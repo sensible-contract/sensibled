@@ -60,7 +60,7 @@ func GetOpcodeFormScript(raw []byte) (size uint, data []byte, isPush bool) {
 	// skip valid tag
 	if 0 < c && c < 0x4f {
 		cnt, cntsize := SafeDecodeVarIntForScript(raw)
-		if int(cntsize+cnt) > len(raw) {
+		if int(cntsize+cnt) == 0 || int(cntsize+cnt) > len(raw) {
 			return cntsize + cnt, nil, false
 		}
 		return cntsize + cnt, raw[cntsize : cntsize+cnt], true
