@@ -107,7 +107,7 @@ func EncodeTxNFT(tx *model.Tx) {
 				Offset: uint64(satOffset), // fixme: which sat? if some nft failed
 			})
 			tx.NewNFTDataCreated = append(tx.NewNFTDataCreated, nft)
-
+			tx.IsSensible = true
 		} else {
 			isNFTInLastInput = false
 			break

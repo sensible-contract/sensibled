@@ -15,10 +15,6 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 		for _, output := range tx.TxOuts {
 			tx.NFTOutputsCnt += uint64(len(output.CreatePointOfNFTs))
 			tx.OutputsValue += output.Satoshi
-			// set sensible flag
-			if output.AddressData.CodeType != scriptDecoder.CodeType_NONE {
-				tx.IsSensible = true
-			}
 		}
 
 		for vout, output := range tx.TxOuts {

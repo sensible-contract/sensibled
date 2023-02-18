@@ -50,11 +50,6 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				block.ParseData.AddrPkhInTxMap[address] = append(block.ParseData.AddrPkhInTxMap[address], txIdx)
 			}
 
-			// set sensible flag
-			if objData.AddressData.CodeType != scriptDecoder.CodeType_NONE {
-				tx.IsSensible = true
-			}
-
 			// 解锁脚本一般可安全清理
 			scriptsig := ""
 			if !isScriptSigPrune {
