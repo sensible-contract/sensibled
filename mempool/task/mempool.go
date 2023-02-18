@@ -308,7 +308,6 @@ func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		return
 
 		// Pika更新addr tx历史
 		if ok := serial.SaveAddressTxHistoryIntoPika(initSyncMempool, mp.AddrPkhInTxMap); !ok {
