@@ -85,15 +85,19 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 						Offset:     uint64(createIdxInTx) - satOutputOffset,
 					}
 					output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, &createPoint)
-
-					// global store new nft
-					model.GlobalNewInscriptions = append(model.GlobalNewInscriptions, &model.NewInscriptionInfo{
+					newInscriptionInfo := &model.NewInscriptionInfo{
 						NFTData:     nft,
 						CreatePoint: createPoint,
 						TxId:        tx.TxId,
 						IdxInTx:     uint32(createIdxInTx),
 						InTxVout:    uint32(vout),
-					})
+					}
+					block.ParseData.NewInscriptions = append(block.ParseData.NewInscriptions,
+						newInscriptionInfo,
+					)
+					// global store new nft
+					model.GlobalNewInscriptions = append(model.GlobalNewInscriptions,
+						newInscriptionInfo)
 
 					inFee = false
 					break
@@ -111,14 +115,20 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 				}
 				coinbaseCreatePointOfNFTs = append(coinbaseCreatePointOfNFTs, &createPoint)
 
-				// global store new nft
-				model.GlobalNewInscriptions = append(model.GlobalNewInscriptions, &model.NewInscriptionInfo{
+				newInscriptionInfo := &model.NewInscriptionInfo{
 					NFTData:     nft,
 					CreatePoint: createPoint,
 					TxId:        tx.TxId,
 					IdxInTx:     uint32(createIdxInTx),
 					InTxVout:    tx.TxOutCnt,
-				})
+				}
+				block.ParseData.NewInscriptions = append(block.ParseData.NewInscriptions,
+					newInscriptionInfo,
+				)
+				// global store new nft
+				model.GlobalNewInscriptions = append(model.GlobalNewInscriptions,
+					newInscriptionInfo,
+				)
 			}
 		}
 		nftIndexInBlock += uint64(len(tx.NewNFTDataCreated))
@@ -235,13 +245,13 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 	}
 }
 
-func UpdateNewNFTInRedis(pipe redis.Pipeliner) {
+func UpdateNewNFTInRedis(pipe redis.Pipeliner, newInscriptions []*model.NewInscriptionInfo) {
 	logger.Log.Info("UpdateNewNFTInRedis",
-		zap.Int("new", len(model.GlobalNewInscriptions)),
+		zap.Int("new", len(newInscriptions)),
 	)
 	ctx := context.Background()
 
-	for _, nftData := range model.GlobalNewInscriptions {
+	for _, nftData := range newInscriptions {
 		strInscriptionID := fmt.Sprintf("%si%d", utils.HashString(nftData.TxId), nftData.IdxInTx)
 
 		// redis有序utxo数据成员

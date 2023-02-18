@@ -12,8 +12,7 @@ import (
 )
 
 // ParseMempoolBatchTxNFTsInAndOutSerial all tx input/output info
-func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) {
-	nftIndexInBlock := uint64(len(model.GlobalMempoolNewInscriptions))
+func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) (newInscriptions []*model.NewInscriptionInfo) {
 
 	for _, tx := range txs {
 		// invalid exist nft recreate
@@ -62,14 +61,14 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 					}
 					output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, &createPoint)
 
-					// global store new nft
-					model.GlobalMempoolNewInscriptions = append(model.GlobalMempoolNewInscriptions, &model.NewInscriptionInfo{
+					newInscriptionInfo := &model.NewInscriptionInfo{
 						NFTData:     nft,
 						CreatePoint: createPoint,
 						TxId:        tx.TxId,
 						IdxInTx:     uint32(createIdxInTx),
 						InTxVout:    uint32(vout),
-					})
+					}
+					newInscriptions = append(newInscriptions, newInscriptionInfo)
 
 					inFee = false
 					break
@@ -85,14 +84,14 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 					IdxInBlock: nftIndexInBlock + uint64(createIdxInTx),
 					Offset:     uint64(createIdxInTx) - satOutputOffset, // global fee offset in coinbase
 				}
-				// global store new nft
-				model.GlobalMempoolNewInscriptions = append(model.GlobalMempoolNewInscriptions, &model.NewInscriptionInfo{
+				newInscriptionInfo := &model.NewInscriptionInfo{
 					NFTData:     nft,
 					CreatePoint: createPoint,
 					TxId:        tx.TxId,
 					IdxInTx:     uint32(createIdxInTx),
 					InTxVout:    tx.TxOutCnt,
-				})
+				}
+				newInscriptions = append(newInscriptions, newInscriptionInfo)
 			}
 		}
 		nftIndexInBlock += uint64(len(tx.NewNFTDataCreated))
@@ -158,15 +157,17 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, txs []*model.Tx, mpNewU
 			}
 		}
 	}
+
+	return
 }
 
-func UpdateNewNFTInRedis(pipe redis.Pipeliner) {
+func UpdateNewNFTInRedis(pipe redis.Pipeliner, newInscriptions []*model.NewInscriptionInfo) {
 	logger.Log.Info("UpdateNewNFTInRedis",
-		zap.Int("new", len(model.GlobalMempoolNewInscriptions)),
+		zap.Int("new", len(newInscriptions)),
 	)
 	ctx := context.Background()
 
-	for _, nftData := range model.GlobalMempoolNewInscriptions {
+	for _, nftData := range newInscriptions {
 		strInscriptionID := fmt.Sprintf("%si%d", utils.HashString(nftData.TxId), nftData.IdxInTx)
 
 		// redis有序utxo数据成员

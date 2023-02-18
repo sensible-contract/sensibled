@@ -212,7 +212,7 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 		// 批量更新redis utxo
 		serial.UpdateUtxoInRedis(rdsPipe, stageBlockHeight, addressBalanceCmds,
 			model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
-		serial.UpdateNewNFTInRedis(rdsPipe)
+		serial.UpdateNewNFTInRedis(rdsPipe, model.GlobalNewInscriptions)
 		if _, err := rdsPipe.Exec(ctx); err != nil {
 			logger.Log.Error("redis exec failed", zap.Error(err))
 			model.NeedStop = true
@@ -317,7 +317,7 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 			// 批量更新redis utxo
 			serial.UpdateUtxoInRedis(rdsPipe, stageBlockHeight, addressBalanceCmds,
 				model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
-			serial.UpdateNewNFTInRedis(rdsPipe)
+			serial.UpdateNewNFTInRedis(rdsPipe, model.GlobalNewInscriptions)
 		}
 		// for txin dump
 		// 6 dep 2 4
@@ -325,6 +325,7 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 		if needSaveMempool {
 			memSerial.UpdateUtxoInRedis(rdsPipe, initSyncMempool,
 				mempool.NewUtxoDataMap, mempool.RemoveUtxoDataMap, mempool.SpentUtxoDataMap)
+			memSerial.UpdateNewNFTInRedis(rdsPipe, mempool.NewInscriptions)
 		}
 		if _, err := rdsPipe.Exec(ctx); err != nil {
 			logger.Log.Error("redis exec failed", zap.Error(err))

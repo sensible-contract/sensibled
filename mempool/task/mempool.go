@@ -20,8 +20,9 @@ import (
 )
 
 type Mempool struct {
-	Txs     map[string]struct{} // 所有Tx
-	SkipTxs map[string]struct{} // 需要跳过的Tx
+	Txs             map[string]struct{}         // 所有Tx
+	SkipTxs         map[string]struct{}         // 需要跳过的Tx
+	NewInscriptions []*model.NewInscriptionInfo // order in block/mempool  nft: nftpoint/nftid
 
 	BatchTxs                 []*model.Tx // 当前同步批次的Tx
 	AddrPkhInTxMap           map[string][]int
@@ -29,7 +30,7 @@ type Mempool struct {
 	SpentUtxoDataMap         map[string]*model.TxoData   // 当前同步批次中花费的已确认的utxo集合
 	NewUtxoDataMap           map[string]*model.TxoData   // 当前同步批次中新产生的utxo集合
 	RemoveUtxoDataMap        map[string]*model.TxoData   // 当前同步批次中花费的未确认的utxo集合，且属于前批次产生的utxo
-	NFTsCreateIndexToNFTInfo []*model.NewInscriptionInfo // order in block/mempool  nft: nftpoint/nftid
+	NewInscriptionsThisBatch []*model.NewInscriptionInfo // order in block/mempool  nft: nftpoint/nftid
 
 	m sync.Mutex
 }
@@ -45,7 +46,7 @@ func (mp *Mempool) Init() {
 	mp.SpentUtxoDataMap = make(map[string]*model.TxoData, 1)
 	mp.NewUtxoDataMap = make(map[string]*model.TxoData, 1)
 	mp.RemoveUtxoDataMap = make(map[string]*model.TxoData, 1)
-	mp.NFTsCreateIndexToNFTInfo = make([]*model.NewInscriptionInfo, 0) // order in block/mempool  nft: nftpoint/nftid
+	mp.NewInscriptionsThisBatch = make([]*model.NewInscriptionInfo, 0) // order in block/mempool  nft: nftpoint/nftid
 }
 
 func (mp *Mempool) LoadFromMempool() bool {
@@ -237,7 +238,11 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 	serial.ParseGetSpentUtxoDataFromRedisSerial(mp.SpentUtxoKeysMap, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
 
 	// 更新NFT追踪信息，保存在in/out记录上，也更新到utxo中。需要依赖从redis查来的utxo。
-	serial.ParseMempoolBatchTxNFTsInAndOutSerial(startIdx, mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
+	newInscriptions := serial.ParseMempoolBatchTxNFTsInAndOutSerial(startIdx,
+		uint64(len(mp.NewInscriptions)),
+		mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
+	mp.NewInscriptions = append(mp.NewInscriptions, newInscriptions...)
+	mp.NewInscriptionsThisBatch = append(mp.NewInscriptionsThisBatch, newInscriptions...)
 
 	// 4 dep 3
 	// SpentUtxoDataMap r
@@ -350,6 +355,7 @@ func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool) {
 		// 6 dep 2 4
 		serial.UpdateUtxoInRedis(rdsPipe, initSyncMempool,
 			mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
+		serial.UpdateNewNFTInRedis(rdsPipe, mp.NewInscriptionsThisBatch)
 
 		ctx := context.Background()
 		if _, err := rdsPipe.Exec(ctx); err != nil {
