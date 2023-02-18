@@ -243,8 +243,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		mpkeyAN := "mp:{an" + strAddressPkh + "}"
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			nftPointKey := nftpoint.GetCreateIdxKey()
-			pipe.ZRem(ctx, mpkeyAN, nftPointKey) // 有序address nft数据清除
+			pipe.ZRem(ctx, mpkeyAN, nftpoint.GetCreateIdxKey()) // 有序address nft数据清除
 		}
 	}
 
@@ -277,8 +276,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		//更新nft的createIdx到current utxo映射记录
 		mpkeyAN := "mp:s:{an" + strAddressPkh + "}"
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			nftPointKey := nftpoint.GetCreateIdxKey()
-			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftPointKey}
+			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftpoint.GetCreateIdxKey()}
 			pipe.ZAdd(ctx, mpkeyAN, member) // 有序address nft数据清除
 		}
 
@@ -315,8 +313,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		//更新nft的createIdx到current utxo映射记录
 		mpkeyAN := "mp:{an" + strAddressPkh + "}"
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			nftPointKey := nftpoint.GetCreateIdxKey()
-			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftPointKey}
+			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftpoint.GetCreateIdxKey()}
 			pipe.ZAdd(ctx, mpkeyAN, member) // 有序address nft数据清除
 		}
 

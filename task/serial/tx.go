@@ -136,8 +136,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 
 		//更新nft的createIdx到current utxo映射记录
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			nftPointKey := fmt.Sprintf("np%s", nftpoint.GetCreateIdxKey())
-			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftPointKey}
+			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftpoint.GetCreateIdxKey()}
 			pipe.ZAdd(ctx, "{an"+strAddressPkh+"}", member) // 有序address nft数据清除
 		}
 	}
