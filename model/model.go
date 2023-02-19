@@ -149,7 +149,7 @@ func (d *NewInscriptionInfo) DumpString() string {
 	copy(data[40:72], d.TxId[:])
 
 	binary.LittleEndian.PutUint32(data[72:76], d.IdxInTx)
-	binary.LittleEndian.PutUint32(data[76:78], uint32(len(d.NFTData.ContentType)))
+	binary.LittleEndian.PutUint16(data[76:78], uint16(len(d.NFTData.ContentType)))
 
 	return string(data[:]) + string(d.NFTData.ContentType) + string(d.NFTData.ContentBody)
 }
