@@ -11,8 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func getTxFee(tx *model.Tx, spentUtxoDataMap map[string]*model.TxoData) uint64 {
-	satInputAmount := uint64(0)
+func getTxFee(tx *model.Tx, spentUtxoDataMap map[string]*model.TxoData) (satInputAmount, satOutputAmount uint64) {
 	for vin, input := range tx.TxIns {
 		objData, ok := spentUtxoDataMap[input.InputOutpointKey]
 		if !ok {
@@ -28,12 +27,11 @@ func getTxFee(tx *model.Tx, spentUtxoDataMap map[string]*model.TxoData) uint64 {
 		}
 		satInputAmount += objData.Satoshi
 	}
-	satOutputAmount := uint64(0)
 	for _, output := range tx.TxOuts {
 		satOutputAmount += output.Satoshi
 	}
 
-	return satInputAmount - satOutputAmount
+	return satInputAmount, satOutputAmount
 }
 
 func invalidTxRecreateNFT(tx *model.Tx, spentUtxoDataMap map[string]*model.TxoData) {
@@ -77,6 +75,7 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 
 		invalidTxRecreateNFT(tx, block.ParseData.SpentUtxoDataMap)
 
+		satInputAmount, satOutputAmount := getTxFee(tx, block.ParseData.SpentUtxoDataMap)
 		// insert created NFT
 		for createIdxInTx, nft := range tx.NewNFTDataCreated {
 			if nft.Invalid { // nft removed
@@ -92,6 +91,12 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 				TxIdx:       uint64(txIdx + 1),
 				TxId:        tx.TxId,
 				IdxInTx:     uint32(createIdxInTx),
+
+				InputsValue:  satInputAmount,
+				OutputsValue: satOutputAmount,
+				Ordinal:      0, // fixme: missing ordinal
+				Number:       0,
+				BlockTime:    block.BlockTime,
 			}
 			inFee := true
 			satOutputOffset := uint64(0)
@@ -161,7 +166,7 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 			satInputOffset += objData.Satoshi
 		}
 
-		satFeeOffset += getTxFee(tx, block.ParseData.SpentUtxoDataMap)
+		satFeeOffset += satInputAmount - satOutputAmount
 
 		// store utxo nft point
 		for vout, output := range tx.TxOuts {

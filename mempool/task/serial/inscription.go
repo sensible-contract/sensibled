@@ -12,10 +12,34 @@ import (
 	"go.uber.org/zap"
 )
 
+func getTxFee(tx *model.Tx, spentUtxoDataMap map[string]*model.TxoData) (satInputAmount, satOutputAmount uint64) {
+	for vin, input := range tx.TxIns {
+		objData, ok := spentUtxoDataMap[input.InputOutpointKey]
+		if !ok {
+			logger.Log.Info("tx-input-err",
+				zap.String("txin", "input missing utxo"),
+				zap.String("txid", tx.TxIdHex),
+				zap.Int("vin", vin),
+
+				zap.String("utxid", input.InputHashHex),
+				zap.Uint32("vout", input.InputVout),
+			)
+			continue
+		}
+		satInputAmount += objData.Satoshi
+	}
+	for _, output := range tx.TxOuts {
+		satOutputAmount += output.Satoshi
+	}
+
+	return satInputAmount, satOutputAmount
+}
+
 // ParseMempoolBatchTxNFTsInAndOutSerial all tx input/output info
 func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) (newInscriptions []*model.NewInscriptionInfo) {
 
 	for txIdx, tx := range txs {
+		satInputAmount, satOutputAmount := getTxFee(tx, mpSpentUtxo)
 		// invalid exist nft recreate
 		satInputOffset := uint64(0)
 		for vin, input := range tx.TxIns {
@@ -61,6 +85,12 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64,
 				TxIdx:       uint64(startIdx + txIdx),
 				TxId:        tx.TxId,
 				IdxInTx:     uint32(createIdxInTx),
+
+				InputsValue:  satInputAmount,
+				OutputsValue: satOutputAmount,
+				Ordinal:      0, // fixme: missing ordinal
+				Number:       0,
+				BlockTime:    0,
 			}
 
 			inFee := true
