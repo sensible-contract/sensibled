@@ -15,42 +15,39 @@ import (
 
 // SaveGlobalAddressTxHistoryIntoPika Pika更新address tx历史
 func SaveGlobalAddressTxHistoryIntoPika() bool {
-	type Item struct {
-		Member *redis.Z
-		Addr   string
-	}
-	items := make([]*Item, 0)
-
-	for strAddressPkh, listTxPosition := range model.GlobalAddrPkhInTxMap {
-		for _, txPosition := range listTxPosition {
-			key := fmt.Sprintf("%d:%d", txPosition.BlockHeight, txPosition.TxIdx)
-			score := float64(uint64(txPosition.BlockHeight)*1000000000 + txPosition.TxIdx)
-			member := &redis.Z{Score: score, Member: key}
-			items = append(items, &Item{
-				Member: member,
-				Addr:   strAddressPkh,
-			})
-		}
-	}
-
-	if len(items) == 0 {
+	if len(model.GlobalAddrPkhInTxMap) == 0 {
 		return true
 	}
 
+	type Item struct {
+		Members []*redis.Z
+		Addr    string
+	}
+	items := make([]*Item, len(model.GlobalAddrPkhInTxMap))
+	for strAddressPkh, listTxPosition := range model.GlobalAddrPkhInTxMap {
+		txZSetMembers := make([]*redis.Z, len(listTxPosition))
+		for idx, txPosition := range listTxPosition {
+			key := fmt.Sprintf("%d:%d", txPosition.BlockHeight, txPosition.TxIdx)
+			score := float64(uint64(txPosition.BlockHeight)*1000000000 + txPosition.TxIdx)
+			member := &redis.Z{Score: score, Member: key}
+			txZSetMembers[idx] = member
+		}
+		items = append(items, &Item{
+			Addr:    strAddressPkh,
+			Members: txZSetMembers,
+		})
+	}
+
 	ctx := context.Background()
-	sliceLen := 100000
-	for idx := 0; idx < (len(items)-1)/sliceLen+1; idx++ {
+	maxSize := 1000000
+	for idx := 0; idx < len(items); {
 
 		pikaPipe := rdb.RdbAddrTxClient.Pipeline()
-		n := 0
-		for _, item := range items[idx*sliceLen:] {
-			if n == sliceLen {
-				break
-			}
-
+		size := 0
+		for ; size < maxSize && idx < len(items); idx++ {
 			// 有序address tx history数据添加
-			pikaPipe.ZAdd(ctx, "{ah"+item.Addr+"}", item.Member)
-			n++
+			pikaPipe.ZAdd(ctx, "{ah"+items[idx].Addr+"}", items[idx].Members...)
+			size += 32 + len(items[idx].Members)*32
 		}
 		if _, err := pikaPipe.Exec(ctx); err != nil && err != redis.Nil {
 			logger.Log.Error("pika address exec failed", zap.Error(err))
