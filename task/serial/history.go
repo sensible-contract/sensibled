@@ -19,11 +19,12 @@ func SaveGlobalAddressTxHistoryIntoPika() bool {
 		return true
 	}
 
+	maxSize := 1000000
 	type Item struct {
 		Members []*redis.Z
 		Addr    string
 	}
-	items := make([]*Item, len(model.GlobalAddrPkhInTxMap))
+	items := make([]*Item, 0)
 	for strAddressPkh, listTxPosition := range model.GlobalAddrPkhInTxMap {
 		txZSetMembers := make([]*redis.Z, len(listTxPosition))
 		for idx, txPosition := range listTxPosition {
@@ -32,14 +33,27 @@ func SaveGlobalAddressTxHistoryIntoPika() bool {
 			member := &redis.Z{Score: score, Member: key}
 			txZSetMembers[idx] = member
 		}
-		items = append(items, &Item{
-			Addr:    strAddressPkh,
-			Members: txZSetMembers,
-		})
+		if len(txZSetMembers) < maxSize/32 {
+			items = append(items, &Item{
+				Addr:    strAddressPkh,
+				Members: txZSetMembers,
+			})
+			continue
+		}
+
+		for idx := 0; idx < len(txZSetMembers); idx += maxSize / 32 {
+			end := idx + maxSize/32
+			if end > len(txZSetMembers) {
+				end = len(txZSetMembers)
+			}
+			items = append(items, &Item{
+				Addr:    strAddressPkh,
+				Members: txZSetMembers[idx:end],
+			})
+		}
 	}
 
 	ctx := context.Background()
-	maxSize := 1000000
 	for idx := 0; idx < len(items); {
 
 		pikaPipe := rdb.RdbAddrTxClient.Pipeline()
