@@ -172,6 +172,11 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 	go func() {
 		defer wg.Done()
 
+		if ok := memSerial.UpdateNewNFTDataInPika(model.GlobalNewInscriptions); !ok {
+			model.NeedStop = true
+			return
+		}
+
 		if ok := serial.SaveGlobalAddressTxHistoryIntoPika(); !ok {
 			model.NeedStop = true
 			return
@@ -244,6 +249,11 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 
 		// Pika更新addr tx历史
 		if needSaveBlock {
+			if ok := memSerial.UpdateNewNFTDataInPika(model.GlobalNewInscriptions); !ok {
+				model.NeedStop = true
+				return
+			}
+
 			if ok := serial.SaveGlobalAddressTxHistoryIntoPika(); !ok {
 				model.NeedStop = true
 				return
@@ -252,6 +262,12 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 
 		if needSaveMempool {
 			needReset := true
+
+			if ok := memSerial.UpdateNewNFTDataInPika(mempool.NewInscriptions); !ok {
+				model.NeedStop = true
+				return
+			}
+
 			if ok := memSerial.SaveAddressTxHistoryIntoPika(needReset, mempool.AddrPkhInTxMap); !ok {
 				model.NeedStop = true
 				return

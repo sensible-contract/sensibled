@@ -124,12 +124,34 @@ type ProcessBlock struct {
 }
 
 type NewInscriptionInfo struct {
-	NFTData     *scriptDecoder.NFTData // type/data
-	CreatePoint *NFTCreatePoint
-	TxIdx       uint64 // txidx in block
-	TxId        []byte // create txid
-	IdxInTx     uint32 // nft idx inside tx
-	InTxVout    uint32 // nft outgoing(vout) inside tx
+	NFTData      *scriptDecoder.NFTData // type/data
+	CreatePoint  *NFTCreatePoint
+	TxIdx        uint64 // txidx in block
+	TxId         []byte // create txid
+	IdxInTx      uint32 // nft idx inside tx
+	InTxVout     uint32 // nft outgoing(vout) inside tx
+	InputsValue  uint64
+	OutputsValue uint64
+	Ordinal      uint64
+	Number       uint64
+	BlockTime    uint32
+}
+
+func (d *NewInscriptionInfo) DumpString() string {
+	var data [78]byte
+	binary.LittleEndian.PutUint32(data[0:4], d.CreatePoint.Height) // fixme: may nil
+	binary.LittleEndian.PutUint32(data[4:8], d.BlockTime)
+	binary.LittleEndian.PutUint64(data[8:16], d.InputsValue)
+	binary.LittleEndian.PutUint64(data[16:24], d.OutputsValue)
+	binary.LittleEndian.PutUint64(data[24:32], d.Ordinal)
+	binary.LittleEndian.PutUint64(data[32:40], d.Number)
+
+	copy(data[40:72], d.TxId[:])
+
+	binary.LittleEndian.PutUint32(data[72:76], d.IdxInTx)
+	binary.LittleEndian.PutUint32(data[76:78], uint32(len(d.NFTData.ContentType)))
+
+	return string(data[:]) + string(d.NFTData.ContentType) + string(d.NFTData.ContentBody)
 }
 
 type TxData struct {

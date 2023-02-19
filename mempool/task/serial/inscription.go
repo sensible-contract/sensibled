@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"unisatd/logger"
 	"unisatd/model"
+	"unisatd/rdb"
 	"unisatd/utils"
 
 	redis "github.com/go-redis/redis/v8"
@@ -146,6 +147,42 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64,
 	}
 
 	return
+}
+
+func UpdateNewNFTDataInPika(newInscriptions []*model.NewInscriptionInfo) bool {
+	logger.Log.Info("UpdateNewNFTDataInPika",
+		zap.Int("new", len(newInscriptions)),
+	)
+	ctx := context.Background()
+
+	type Item struct {
+		CreateIdx string
+		Data      string
+	}
+	items := make([]*Item, 0)
+	for _, nftData := range newInscriptions {
+		items = append(items, &Item{
+			CreateIdx: nftData.CreatePoint.GetCreateIdxKey(),
+			Data:      nftData.DumpString(),
+		})
+	}
+
+	maxSize := 1000000
+	for idx := 0; idx < len(items); {
+		pikaPipe := rdb.RdbAddrTxClient.Pipeline()
+		size := 0
+		for ; size < maxSize && idx < len(items); idx++ {
+			// 有序address tx history数据添加
+			pikaPipe.Set(ctx, "nb"+items[idx].CreateIdx, items[idx].Data, 0)
+			size += 32 + len(items[idx].Data)
+		}
+		if _, err := pikaPipe.Exec(ctx); err != nil && err != redis.Nil {
+			logger.Log.Error("pika address exec failed", zap.Error(err))
+			model.NeedStop = true
+			return false
+		}
+	}
+	return true
 }
 
 func UpdateNewNFTInRedis(pipe redis.Pipeliner, newInscriptions []*model.NewInscriptionInfo) {

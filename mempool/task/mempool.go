@@ -309,6 +309,11 @@ func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool) {
 	go func() {
 		defer wg.Done()
 
+		if ok := serial.UpdateNewNFTDataInPika(mp.NewInscriptions); !ok {
+			model.NeedStop = true
+			return
+		}
+
 		// Pika更新addr tx历史
 		if ok := serial.SaveAddressTxHistoryIntoPika(initSyncMempool, mp.AddrPkhInTxMap); !ok {
 			model.NeedStop = true
