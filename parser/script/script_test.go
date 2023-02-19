@@ -15,15 +15,10 @@ func TestScript(t *testing.T) {
 		if len(scriptHex) == 0 {
 			continue
 		}
-		script, err := hex.DecodeString(scriptHex)
+		_, err := hex.DecodeString(scriptHex)
 		if err != nil {
 			t.Logf("ignore line: %d", line)
 			continue
 		}
-
-		pc, ok := GetLockingScriptPushDropPosition(script)
-		t.Logf("script: %d, ok: %v", pc, ok)
-		pc, ok = GetLockingScriptStatePosition(script)
-		t.Logf("state script: %d, ok: %v", pc, ok)
 	}
 }
