@@ -46,6 +46,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 		}
 		p += size // consume OP_CODE
 		if !isPush || size != 1 || data[0] != OP_FALSE {
+			// fmt.Println("skip not OP_FALSE")
 			// skip if not OP_FALSE
 			continue
 		}
@@ -62,6 +63,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 		}
 		p += size // consume OP_CODE
 		if isPush || size != 1 || data[0] != OP_IF {
+			// fmt.Println("skip not OP_IF")
 			// skip if not OP_IF
 			continue
 		}
@@ -74,6 +76,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 		p += size // consume OP_CODE
 		if !isPush || len(data) != 3 || data[0] != 'o' || data[1] != 'r' || data[2] != 'd' {
 			// skip if not 'ord'
+			// fmt.Println("skip not ord", isPush, size, data)
 			continue
 		}
 

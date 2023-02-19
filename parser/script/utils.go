@@ -50,21 +50,26 @@ func SafeDecodeVarIntForScript(raw []byte) (cnt uint, cnt_size uint) {
 
 func GetOpcodeFormScript(raw []byte) (size uint, data []byte, isPush bool) {
 	if len(raw) < 1 {
+		// fmt.Println("push null")
 		return 0, nil, false
 	}
 
 	c := raw[0]
 	if c > OP_16 {
+		// fmt.Println("code", c)
 		return 1, raw[0:1], false
 	}
 	// skip valid tag
 	if 0 < c && c < 0x4f {
 		cnt, cntsize := SafeDecodeVarIntForScript(raw)
 		if int(cntsize+cnt) == 0 || int(cntsize+cnt) > len(raw) {
+			// fmt.Println("invalid push")
 			return cntsize + cnt, nil, false
 		}
+		// fmt.Println("push_", cnt, string(raw[cntsize:cntsize+cnt]))
 		return cntsize + cnt, raw[cntsize : cntsize+cnt], true
 	} else {
+		// fmt.Println("code", c)
 		return 1, raw[0:1], true
 	}
 }
