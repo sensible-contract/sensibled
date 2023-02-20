@@ -1,4 +1,4 @@
-package serial
+package prune
 
 import (
 	"fmt"
@@ -7,10 +7,11 @@ import (
 )
 
 var (
-	isTxrawPrune     bool
-	isPkScriptPrune  bool
-	isScriptSigPrune bool
-	isOpReturnPrune  bool
+	IsTxrawPrune     bool
+	IsPkScriptPrune  bool
+	IsScriptSigPrune bool
+	IsOpReturnPrune  bool
+	IsHistoryPrune   bool
 )
 
 func Init() {
@@ -24,15 +25,17 @@ func Init() {
 	}
 
 	// 清理非sensible的txraw
-	isTxrawPrune = viper.GetBool("txraw")
+	IsTxrawPrune = viper.GetBool("txraw")
 
 	// 清理非sensible的锁定脚本
 	// 清理无地址的锁定脚本，若要保留，可以设置为20位空地址
-	isPkScriptPrune = viper.GetBool("pkscript")
+	IsPkScriptPrune = viper.GetBool("pkscript")
 
 	// 清理所有的解锁脚本
-	isScriptSigPrune = viper.GetBool("scriptsig")
+	IsScriptSigPrune = viper.GetBool("scriptsig")
 
 	// 清理所有非sensible交易的false opreturn输出
-	isOpReturnPrune = viper.GetBool("opreturn")
+	IsOpReturnPrune = viper.GetBool("opreturn")
+
+	IsHistoryPrune = viper.GetBool("history")
 }

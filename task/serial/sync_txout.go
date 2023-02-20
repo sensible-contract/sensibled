@@ -4,6 +4,7 @@ import (
 	"unisatd/logger"
 	"unisatd/model"
 	scriptDecoder "unisatd/parser/script"
+	"unisatd/prune"
 	"unisatd/store"
 
 	"go.uber.org/zap"
@@ -19,13 +20,13 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 
 		for vout, output := range tx.TxOuts {
 			// prune false opreturn output
-			if isOpReturnPrune && !tx.GenesisNewNFT && scriptDecoder.IsOpreturn(output.ScriptType) {
+			if prune.IsOpReturnPrune && !tx.GenesisNewNFT && scriptDecoder.IsOpreturn(output.ScriptType) {
 				continue
 			}
 
 			// prune string(output.Pkscript),
 			pkscript := ""
-			if !isPkScriptPrune || tx.GenesisNewNFT || output.AddressData.HasAddress {
+			if !prune.IsPkScriptPrune || tx.GenesisNewNFT || output.AddressData.HasAddress {
 				pkscript = string(output.PkScript)
 			}
 

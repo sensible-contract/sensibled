@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"unisatd/model"
 	scriptDecoder "unisatd/parser/script"
+	"unisatd/prune"
 )
 
 // ParseTx 先并行分析交易tx，不同区块并行，同区块内串行
@@ -68,6 +69,9 @@ func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, block *model.Pro
 
 // ParseUpdateAddressInTxParallel address tx历史记录
 func ParseUpdateAddressInTxParallel(txIdx uint64, tx *model.Tx, block *model.ProcessBlock) {
+	if prune.IsHistoryPrune {
+		return
+	}
 	for _, output := range tx.TxOuts {
 		if output.AddressData.HasAddress {
 			address := string(output.AddressData.AddressPkh[:])

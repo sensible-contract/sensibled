@@ -4,6 +4,7 @@ import (
 	"unisatd/logger"
 	"unisatd/model"
 	scriptDecoder "unisatd/parser/script"
+	"unisatd/prune"
 	"unisatd/store"
 	"unisatd/utils"
 
@@ -46,23 +47,23 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			}
 
 			// address tx历史记录
-			if objData.AddressData.HasAddress {
+			if !prune.IsHistoryPrune && objData.AddressData.HasAddress {
 				block.ParseData.AddrPkhInTxMap[address] = append(block.ParseData.AddrPkhInTxMap[address], txIdx)
 			}
 
 			// 解锁脚本一般可安全清理
 			scriptsig := ""
-			if !isScriptSigPrune {
+			if !prune.IsScriptSigPrune {
 				scriptsig = string(input.ScriptSig)
 			}
 			scriptwits := ""
-			if !isScriptSigPrune {
+			if !prune.IsScriptSigPrune {
 				scriptwits = string(input.ScriptWitness)
 			}
 
 			// 清理非sensible且无地址的锁定脚本
 			pkscript := ""
-			if !isPkScriptPrune || tx.GenesisNewNFT || objData.AddressData.HasAddress {
+			if !prune.IsPkScriptPrune || tx.GenesisNewNFT || objData.AddressData.HasAddress {
 				pkscript = string(objData.PkScript)
 			}
 

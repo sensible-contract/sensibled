@@ -3,6 +3,7 @@ package serial
 import (
 	"unisatd/logger"
 	"unisatd/model"
+	"unisatd/prune"
 	"unisatd/store"
 
 	"go.uber.org/zap"
@@ -14,7 +15,7 @@ func SyncBlockTx(block *model.Block) {
 		// keep sensible rawtx only
 		// prune txraw
 		txraw := ""
-		if !isTxrawPrune || tx.GenesisNewNFT {
+		if !prune.IsTxrawPrune || tx.GenesisNewNFT {
 			txraw = string(tx.Raw)
 		}
 		if _, err := store.SyncStmtTx.Exec(

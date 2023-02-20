@@ -9,3 +9,6 @@ scriptsig: false
 
 # 清理所有非sensible交易的false opreturn输出
 opreturn: false
+
+# 清理地址历史索引
+history: true

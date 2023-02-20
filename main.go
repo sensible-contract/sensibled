@@ -22,10 +22,10 @@ import (
 	memSerial "unisatd/mempool/task/serial"
 	"unisatd/model"
 	"unisatd/parser"
+	"unisatd/prune"
 	"unisatd/rdb"
 	"unisatd/store"
 	"unisatd/task"
-	"unisatd/task/serial"
 
 	redis "github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
@@ -125,7 +125,7 @@ func init() {
 	rdb.RdbUtxoClient = rdb.Init("conf/rdb_utxo.yaml")
 	rdb.RdbAddrTxClient = rdb.Init("conf/rdb_address.yaml")
 	clickhouse.Init()
-	serial.Init()
+	prune.Init()
 }
 
 func logProcessInfo(info processInfo) {
