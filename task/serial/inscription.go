@@ -263,7 +263,7 @@ func RemoveNewNFTInRedisStartFromBlockHeight(pipe redis.Pipeliner, height int) {
 }
 
 // CountNewNFTInRedisBeforeBlockHeight 清理被重组区块内的新创建nft
-func CountNewNFTInRedisBeforeBlockHeight(height int) (nftNumber uint64, err error) {
+func CountNewNFTInRedisBeforeBlockHeight(height int) (nftNumber uint64) {
 	logger.Log.Info("CountNewNFTInRedisBeforeBlockHeight",
 		zap.Int("height", height),
 	)
@@ -273,8 +273,8 @@ func CountNewNFTInRedisBeforeBlockHeight(height int) (nftNumber uint64, err erro
 	n, err := rdb.RdbBalanceClient.ZCount(ctx, "nfts", "-inf", strHeight).Result()
 	if err != nil {
 		logger.Log.Info("get nftNumber from redis failed", zap.Error(err))
-		return 0, err
+		return 0
 	}
 
-	return uint64(n), nil
+	return uint64(n)
 }

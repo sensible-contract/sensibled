@@ -202,6 +202,7 @@ func syncBlock() {
 		needSaveBlock := false
 		stageBlockHeight := 0
 		txCount := 0
+		nftStartNumber := uint64(0)
 
 		if !isFull {
 			// 现有追加扫描
@@ -220,6 +221,8 @@ func syncBlock() {
 				}
 				if newblock == 0 {
 					stageBlockHeight = commonHeigth
+					nftStartNumber = serial.CountNewNFTInRedisBeforeBlockHeight(commonHeigth + 1)
+
 					goto WAIT_BLOCK // 无新区块，开始等待
 				}
 				startBlockHeight = commonHeigth + 1 // 从公有块高度（COMMON_HEIGHT）下一个开始扫描
@@ -251,10 +254,7 @@ func syncBlock() {
 			logProcessInfo(info)
 		}
 
-		nftStartNumber, err := serial.CountNewNFTInRedisBeforeBlockHeight(startBlockHeight)
-		if err != nil {
-			nftStartNumber = 0
-		}
+		nftStartNumber = serial.CountNewNFTInRedisBeforeBlockHeight(startBlockHeight)
 
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
 		stageBlockHeight, txCount = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount, nftStartNumber)
