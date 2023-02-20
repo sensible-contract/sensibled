@@ -138,7 +138,7 @@ type NewInscriptionInfo struct {
 }
 
 func (d *NewInscriptionInfo) DumpString() string {
-	var data [78]byte
+	var data [80]byte
 	binary.LittleEndian.PutUint32(data[0:4], d.CreatePoint.Height) // fixme: may nil
 	binary.LittleEndian.PutUint32(data[4:8], d.BlockTime)
 	binary.LittleEndian.PutUint64(data[8:16], d.InputsValue)
@@ -149,9 +149,9 @@ func (d *NewInscriptionInfo) DumpString() string {
 	copy(data[40:72], d.TxId[:])
 
 	binary.LittleEndian.PutUint32(data[72:76], d.IdxInTx)
-	binary.LittleEndian.PutUint16(data[76:78], uint16(len(d.NFTData.ContentType)))
+	binary.LittleEndian.PutUint32(data[76:80], uint32(len(d.NFTData.ContentBody)))
 
-	return string(data[:]) + string(d.NFTData.ContentType) + string(d.NFTData.ContentBody)
+	return string(data[:]) + string(d.NFTData.ContentType)
 }
 
 type TxData struct {
