@@ -13,9 +13,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// SaveGlobalAddressTxHistoryIntoPika Pika更新address tx历史
-func SaveGlobalAddressTxHistoryIntoPika() bool {
-	if len(model.GlobalAddrPkhInTxMap) == 0 {
+// UpdateAddrPkhInTxMapSerial 顺序更新当前区块的address tx历史
+func UpdateAddrPkhInTxMapSerial(blockHeight uint32, addrPkhInTxMap map[string][]int) bool {
+	if len(addrPkhInTxMap) == 0 {
 		return true
 	}
 
@@ -25,13 +25,22 @@ func SaveGlobalAddressTxHistoryIntoPika() bool {
 		Addr    string
 	}
 	items := make([]*Item, 0)
-	for strAddressPkh, listTxPosition := range model.GlobalAddrPkhInTxMap {
-		txZSetMembers := make([]*redis.Z, len(listTxPosition))
-		for idx, txPosition := range listTxPosition {
-			key := fmt.Sprintf("%d:%d", txPosition.BlockHeight, txPosition.TxIdx)
-			score := float64(uint64(txPosition.BlockHeight)*1000000000 + txPosition.TxIdx)
+	for strAddressPkh, listTxidx := range addrPkhInTxMap {
+		sort.Ints(listTxidx)
+
+		txZSetMembers := make([]*redis.Z, 0)
+
+		lastTxIdx := -1
+		for _, txIdx := range listTxidx {
+			if lastTxIdx == txIdx {
+				continue
+			}
+			lastTxIdx = txIdx
+
+			key := fmt.Sprintf("%d:%d", blockHeight, txIdx)
+			score := float64(uint64(blockHeight)*1000000000 + uint64(txIdx))
 			member := &redis.Z{Score: score, Member: key}
-			txZSetMembers[idx] = member
+			txZSetMembers = append(txZSetMembers, member)
 		}
 		if len(txZSetMembers) < maxSize/32 {
 			items = append(items, &Item{
@@ -105,26 +114,5 @@ func RemoveAddressTxHistoryFromPikaForReorg(height int, utxoToRestore, utxoToRem
 	if _, err := pipe.Exec(ctx); err != nil {
 		logger.Log.Error("pika exec failed", zap.Error(err))
 		model.NeedStop = true
-	}
-}
-
-// UpdateAddrPkhInTxMapSerial 顺序更新当前区块的address tx history信息变化到程序全局缓存
-func UpdateAddrPkhInTxMapSerial(block *model.ProcessBlock) {
-	for strAddressPkh, listTxid := range block.AddrPkhInTxMap {
-
-		sort.Ints(listTxid)
-		lastTxIdx := -1
-		for _, txIdx := range listTxid {
-			if lastTxIdx == txIdx {
-				continue
-			}
-			lastTxIdx = txIdx
-
-			model.GlobalAddrPkhInTxMap[strAddressPkh] = append(model.GlobalAddrPkhInTxMap[strAddressPkh],
-				model.TxLocation{
-					BlockHeight: block.Height,
-					TxIdx:       uint64(txIdx),
-				})
-		}
 	}
 }

@@ -107,13 +107,7 @@ type BlockCache struct {
 	Parent     []byte // 32 bytes
 }
 
-////////////////
-
-type TxLocation struct {
-	BlockHeight uint32
-	TxIdx       uint64
-}
-
+// //////////////
 type ProcessBlock struct {
 	Height           uint32
 	AddrPkhInTxMap   map[string][]int

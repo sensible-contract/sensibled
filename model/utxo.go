@@ -10,8 +10,6 @@ var (
 	GlobalConfirmedTxMap    map[string]struct{}
 	GlobalConfirmedTxOldMap map[string]struct{}
 
-	GlobalAddrPkhInTxMap map[string][]TxLocation
-
 	GlobalNewUtxoDataMap   map[string]*TxoData
 	GlobalSpentUtxoDataMap map[string]*TxoData
 
@@ -49,14 +47,10 @@ func CleanConfirmedTxMap(force bool) {
 
 // 清空本地map内存
 func CleanUtxoMap() {
-	GlobalAddrPkhInTxMap = nil
-
 	GlobalNewUtxoDataMap = nil
 	GlobalSpentUtxoDataMap = nil
 	GlobalNewInscriptions = nil
 	runtime.GC()
-
-	GlobalAddrPkhInTxMap = make(map[string][]TxLocation, 0)
 
 	GlobalNewUtxoDataMap = make(map[string]*TxoData, 0)
 	GlobalSpentUtxoDataMap = make(map[string]*TxoData, 0)
