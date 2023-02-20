@@ -36,7 +36,8 @@ func getTxFee(tx *model.Tx, spentUtxoDataMap map[string]*model.TxoData) (satInpu
 }
 
 // ParseMempoolBatchTxNFTsInAndOutSerial all tx input/output info
-func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) (newInscriptions []*model.NewInscriptionInfo) {
+func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftStartNumber uint64,
+	txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) (nftIndexInBlockAfter uint64, newInscriptions []*model.NewInscriptionInfo) {
 
 	for txIdx, tx := range txs {
 		satInputAmount, satOutputAmount := getTxFee(tx, mpSpentUtxo)
@@ -89,9 +90,10 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64,
 				InputsValue:  satInputAmount,
 				OutputsValue: satOutputAmount,
 				Ordinal:      0, // fixme: missing ordinal
-				Number:       0,
+				Number:       nftStartNumber,
 				BlockTime:    0,
 			}
+			nftStartNumber += 1
 
 			inFee := true
 			satOutputOffset := uint64(0)
@@ -176,7 +178,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock uint64,
 		}
 	}
 
-	return
+	return nftIndexInBlock, newInscriptions
 }
 
 func UpdateNewNFTDataInPika(newInscriptions []*model.NewInscriptionInfo) bool {

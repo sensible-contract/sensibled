@@ -20,9 +20,10 @@ import (
 )
 
 type Mempool struct {
-	Txs                  map[string]struct{} // 所有Tx
-	SkipTxs              map[string]struct{} // 需要跳过的Tx
-	NewInscriptionsCount []struct{}          //
+	Txs                             map[string]struct{} // 所有Tx
+	SkipTxs                         map[string]struct{} // 需要跳过的Tx
+	NewInscriptionsCount            uint64
+	NewInscriptionsWithInvalidCount uint64
 
 	BatchTxs          []*model.Tx // 当前同步批次的Tx
 	AddrPkhInTxMap    map[string][]int
@@ -53,7 +54,8 @@ func (mp *Mempool) LoadFromMempool() bool {
 	// 清空
 	mp.Txs = make(map[string]struct{}, 0)
 	mp.SkipTxs = make(map[string]struct{}, 0)
-	mp.NewInscriptionsCount = make([]struct{}, 0)
+	mp.NewInscriptionsCount = 0
+	mp.NewInscriptionsWithInvalidCount = 0
 
 	for i := 0; i < 1000; i++ {
 		select {
@@ -215,7 +217,7 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 }
 
 // ParseMempool 开始串行同步mempool
-func (mp *Mempool) ParseMempool(startIdx int) {
+func (mp *Mempool) ParseMempool(startIdx int, nftStartNumber uint64) {
 
 	mp.AddrPkhInTxMap = make(map[string][]int, len(mp.BatchTxs))
 	// first
@@ -239,11 +241,11 @@ func (mp *Mempool) ParseMempool(startIdx int) {
 	serial.ParseGetSpentUtxoDataFromRedisSerial(mp.SpentUtxoKeysMap, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
 
 	// 更新NFT追踪信息，保存在in/out记录上，也更新到utxo中。需要依赖从redis查来的utxo。
-	newInscriptions := serial.ParseMempoolBatchTxNFTsInAndOutSerial(startIdx,
-		uint64(len(mp.NewInscriptionsCount)),
+	newCount, newInscriptions := serial.ParseMempoolBatchTxNFTsInAndOutSerial(startIdx, mp.NewInscriptionsWithInvalidCount, nftStartNumber,
 		mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
-	count := make([]struct{}, len(newInscriptions))
-	mp.NewInscriptionsCount = append(mp.NewInscriptionsCount, count...)
+
+	mp.NewInscriptionsWithInvalidCount += newCount
+	mp.NewInscriptionsCount += uint64(len(newInscriptions))
 	mp.NewInscriptions = append(mp.NewInscriptions, newInscriptions...)
 
 	// 4 dep 3
@@ -268,7 +270,7 @@ func ParseEnd() bool {
 	return store.ProcessPartSyncCk()
 }
 
-func (mp *Mempool) Process(initSyncMempool bool, stageBlockHeight, startIdx int) bool {
+func (mp *Mempool) Process(initSyncMempool bool, stageBlockHeight, startIdx int, nftStartNumber uint64) bool {
 	mp.Init()
 	if initSyncMempool {
 		logger.Log.Info("init sync mempool...")
@@ -295,9 +297,9 @@ func (mp *Mempool) Process(initSyncMempool bool, stageBlockHeight, startIdx int)
 			return false
 		}
 	}
-	store.CreatePartSyncCk()  // 初始化同步数据库表
-	store.PreparePartSyncCk() // 准备同步db，todo: 可能初始化失败
-	mp.ParseMempool(startIdx) // 开始同步mempool
+	store.CreatePartSyncCk()                  // 初始化同步数据库表
+	store.PreparePartSyncCk()                 // 准备同步db，todo: 可能初始化失败
+	mp.ParseMempool(startIdx, nftStartNumber) // 开始同步mempool
 	return true
 }
 

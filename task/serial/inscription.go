@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"unisatd/logger"
 	"unisatd/model"
+	"unisatd/rdb"
 	"unisatd/utils"
 
 	redis "github.com/go-redis/redis/v8"
@@ -67,7 +68,7 @@ func invalidTxRecreateNFT(tx *model.Tx, spentUtxoDataMap map[string]*model.TxoDa
 }
 
 // ParseBlockTxNFTsInAndOutSerial all tx input/output info
-func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
+func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 	var coinbaseCreatePointOfNFTs []*model.NFTCreatePoint
 	satFeeOffset := utils.CalcBlockSubsidy(block.Height)
 	nftIndexInBlock := uint64(0)
@@ -95,9 +96,10 @@ func ParseBlockTxNFTsInAndOutSerial(block *model.Block) {
 				InputsValue:  satInputAmount,
 				OutputsValue: satOutputAmount,
 				Ordinal:      0, // fixme: missing ordinal
-				Number:       0,
+				Number:       nftStartNumber,
 				BlockTime:    block.BlockTime,
 			}
+			nftStartNumber += 1
 			inFee := true
 			satOutputOffset := uint64(0)
 			for vout, output := range tx.TxOuts {
@@ -258,4 +260,21 @@ func RemoveNewNFTInRedisStartFromBlockHeight(pipe redis.Pipeliner, height int) {
 	ctx := context.Background()
 	strHeight := fmt.Sprintf("%d000000000", height)
 	pipe.ZRemRangeByScore(ctx, "nfts", strHeight, "+inf") // 有序nft数据清理
+}
+
+// CountNewNFTInRedisBeforeBlockHeight 清理被重组区块内的新创建nft
+func CountNewNFTInRedisBeforeBlockHeight(height int) (nftNumber uint64, err error) {
+	logger.Log.Info("CountNewNFTInRedisBeforeBlockHeight",
+		zap.Int("height", height),
+	)
+	ctx := context.Background()
+	strHeight := fmt.Sprintf("%d000000000)", height)
+
+	n, err := rdb.RdbBalanceClient.ZCount(ctx, "nfts", "-inf", strHeight).Result()
+	if err != nil {
+		logger.Log.Info("get nftNumber from redis failed", zap.Error(err))
+		return 0, err
+	}
+
+	return uint64(n), nil
 }

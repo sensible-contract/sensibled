@@ -48,7 +48,7 @@ func NewBlockchain(stripMode bool, path string, magicHex string) (bc *Blockchain
 }
 
 // ParseLongestChain 两遍遍历区块。先获取header，再遍历区块
-func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount int) (lastHeight, txCount int) {
+func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount int, nftStartNumber uint64) (lastHeight, txCount int) {
 	blocksReady := make(chan *model.Block, 64)
 	blocksDone := make(chan struct{}, 64)
 
@@ -58,7 +58,7 @@ func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchT
 	go bc.InitLongestChainBlockByHeader(blocksDone, blocksReady, startBlockHeight, endBlockHeight, batchTxCount)
 
 	// 按顺序消费解码后的区块
-	go bc.ParseLongestChainBlockStart(blocksDone, blocksReady, blocksStage, startBlockHeight, endBlockHeight)
+	go bc.ParseLongestChainBlockStart(blocksDone, blocksReady, blocksStage, startBlockHeight, endBlockHeight, nftStartNumber)
 
 	// 并行消费处理后的区块
 	return bc.ParseLongestChainBlockEnd(blocksStage)
@@ -143,7 +143,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 }
 
 // ParseLongestChainBlock 按顺序消费解码后的区块
-func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, blocksReady, blocksStage chan *model.Block, startBlockHeight, maxBlockHeight int) {
+func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, blocksReady, blocksStage chan *model.Block, startBlockHeight, maxBlockHeight int, nftStartNumber uint64) {
 	blocksTotal := len(bc.BlocksOfChainById)
 
 	withMempool := false
@@ -177,7 +177,9 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 
 			// 再串行分析区块。可执行一些严格要求按序处理的任务，区块会串行依次执行
 			// 当串行执行到某个区块时，一定运行完毕了之前区块的所有任务和本区块的预处理任务
-			task.ParseBlockSerialStart(withMempool, block)
+			task.ParseBlockSerialStart(withMempool, nftStartNumber, block)
+			nftStartNumber += uint64(len(block.ParseData.NewInscriptions))
+
 			// block speed
 			utilsTask.ParseBlockSpeed(len(block.Txs), len(model.GlobalNewUtxoDataMap), len(model.GlobalSpentUtxoDataMap),
 				block.Height, maxBlockHeight, block.FileIdx)

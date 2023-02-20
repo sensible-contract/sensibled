@@ -26,6 +26,7 @@ import (
 	"unisatd/rdb"
 	"unisatd/store"
 	"unisatd/task"
+	"unisatd/task/serial"
 
 	redis "github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
@@ -250,10 +251,17 @@ func syncBlock() {
 			logProcessInfo(info)
 		}
 
+		nftStartNumber, err := serial.CountNewNFTInRedisBeforeBlockHeight(startBlockHeight)
+		if err != nil {
+			nftStartNumber = 0
+		}
+
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
-		stageBlockHeight, txCount = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
+		stageBlockHeight, txCount = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount, nftStartNumber)
 		// 按批次处理区块
 		logger.Log.Info("range", zap.Int("start", startBlockHeight), zap.Int("end", stageBlockHeight+1))
+
+		nftStartNumber += uint64(len(model.GlobalNewInscriptions))
 
 		if info.Height == 0 {
 			info.Height = stageBlockHeight
@@ -302,10 +310,11 @@ func syncBlock() {
 			logProcessInfo(info)
 		}
 		for {
-			needSaveMempool := mempool.Process(initSyncMempool, stageBlockHeight, startIdx)
+			needSaveMempool := mempool.Process(initSyncMempool, stageBlockHeight, startIdx, nftStartNumber)
 			if !needSaveMempool {
 				break
 			}
+			nftStartNumber += uint64(len(mempool.NewInscriptions))
 
 			memSerial.UpdateUtxoInLocalMapSerial(mempool.SpentUtxoKeysMap,
 				mempool.NewUtxoDataMap,

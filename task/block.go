@@ -37,7 +37,7 @@ func ParseBlockParallel(block *model.Block) {
 }
 
 // ParseBlockSerialStart 再串行处理区块
-func ParseBlockSerialStart(withMempool bool, block *model.Block) {
+func ParseBlockSerialStart(withMempool bool, nftStartNumber uint64, block *model.Block) {
 	if withMempool {
 		serial.MarkConfirmedBlockTx(block)
 	}
@@ -45,7 +45,7 @@ func ParseBlockSerialStart(withMempool bool, block *model.Block) {
 	serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
 
 	// 更新NFT追踪信息，保存在in/out记录上，也更新到utxo中。需要依赖从redis查来的utxo。
-	serial.ParseBlockTxNFTsInAndOutSerial(block)
+	serial.ParseBlockTxNFTsInAndOutSerial(nftStartNumber, block)
 
 	// DB更新txin，需要前序和当前区块的txout处理完毕，且依赖从redis查来的utxo。但并不需要txout DB更新完毕
 	serial.SyncBlockTxInputDetail(block)

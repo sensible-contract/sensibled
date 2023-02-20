@@ -26,7 +26,7 @@ func SyncBlockNFT(nfts []*model.NewInscriptionInfo) {
 			nft.TxIdx,
 
 			nft.CreatePoint.IdxInBlock,
-			0, // fixme: missing number
+			nft.Number,
 		); err != nil {
 			logger.Log.Info("sync-nft-err",
 				zap.String("nftid", utils.HashString(nft.TxId)),

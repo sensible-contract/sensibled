@@ -26,7 +26,7 @@ func SyncBlockNFT(startIdx int, nfts []*model.NewInscriptionInfo) {
 			nft.TxIdx,
 
 			nft.CreatePoint.IdxInBlock,
-			0,
+			nft.Number,
 		); err != nil {
 			logger.Log.Info("sync-nft-err",
 				zap.String("sync", "nft err"),

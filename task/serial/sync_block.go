@@ -22,7 +22,7 @@ func SyncBlock(block *model.Block) {
 	// 在普通交易中丢弃，在coinbase中收集的的nft个数
 	nftLostCnt := block.Txs[0].NFTInputsCnt
 
-	nftNewCnt := uint64(0)
+	nftNewCnt := uint64(0) // 包括无效创建的nft个数
 
 	for _, tx := range block.Txs[1:] {
 		txInputsValue += tx.InputsValue
