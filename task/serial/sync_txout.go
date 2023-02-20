@@ -3,6 +3,7 @@ package serial
 import (
 	"sensibled/logger"
 	"sensibled/model"
+	"sensibled/prune"
 	"sensibled/store"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
@@ -22,13 +23,13 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 
 		for vout, output := range tx.TxOuts {
 			// prune false opreturn output
-			if isOpReturnPrune && !tx.IsSensible && scriptDecoder.IsFalseOpreturn(output.ScriptType) {
+			if prune.IsOpReturnPrune && !tx.IsSensible && scriptDecoder.IsFalseOpreturn(output.ScriptType) {
 				continue
 			}
 
 			// prune string(output.Pkscript),
 			pkscript := ""
-			if !isPkScriptPrune || tx.IsSensible || output.Data.HasAddress {
+			if !prune.IsPkScriptPrune || tx.IsSensible || output.Data.HasAddress {
 				pkscript = string(output.PkScript)
 			}
 

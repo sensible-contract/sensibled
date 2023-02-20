@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"sensibled/model"
-
+	"sensibled/prune"
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 )
 
@@ -114,6 +114,9 @@ func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, block *model.Pro
 
 // ParseUpdateAddressInTxParallel address tx历史记录
 func ParseUpdateAddressInTxParallel(txIdx uint64, tx *model.Tx, block *model.ProcessBlock) {
+	if prune.IsHistoryPrune {
+		return
+	}
 	for _, output := range tx.TxOuts {
 		if output.Data.HasAddress {
 			address := string(output.Data.AddressPkh[:])

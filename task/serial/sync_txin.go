@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"sensibled/logger"
 	"sensibled/model"
+    "sensibled/prune"
 	"sensibled/store"
 	"sensibled/utils"
 
@@ -46,7 +47,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			}
 
 			// address tx历史记录
-			if objData.Data.HasAddress {
+			if !prune.IsHistoryPrune && objData.Data.HasAddress {
 				block.ParseData.AddrPkhInTxMap[address] = append(block.ParseData.AddrPkhInTxMap[address], txIdx)
 			}
 
@@ -57,13 +58,13 @@ func SyncBlockTxInputDetail(block *model.Block) {
 
 			// 解锁脚本一般可安全清理
 			scriptsig := ""
-			if !isScriptSigPrune {
+			if !prune.IsScriptSigPrune {
 				scriptsig = string(input.ScriptSig)
 			}
 
 			// 清理非sensible且无地址的锁定脚本
 			pkscript := ""
-			if !isPkScriptPrune || tx.IsSensible || objData.Data.HasAddress {
+			if !prune.IsPkScriptPrune || tx.IsSensible || objData.Data.HasAddress {
 				pkscript = string(objData.PkScript)
 			}
 

@@ -18,6 +18,7 @@ import (
 	memSerial "sensibled/mempool/task/serial"
 	"sensibled/model"
 	"sensibled/parser"
+    "sensibled/prune"
 	"sensibled/rdb"
 	"sensibled/store"
 	"sensibled/task"
@@ -125,7 +126,7 @@ func init() {
 	rdb.RdbUtxoClient = rdb.Init("conf/rdb_utxo.yaml")
 	rdb.RdbAddrTxClient = rdb.Init("conf/rdb_address.yaml")
 	clickhouse.Init()
-	serial.Init()
+	prune.Init()
 }
 
 func logProcessInfo(info processInfo) {
