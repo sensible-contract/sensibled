@@ -268,7 +268,7 @@ func CountNewNFTInRedisBeforeBlockHeight(height int) (nftNumber uint64) {
 		zap.Int("height", height),
 	)
 	ctx := context.Background()
-	strHeight := fmt.Sprintf("%d000000000)", height)
+	strHeight := fmt.Sprintf("(%d000000000", height)
 
 	n, err := rdb.RdbBalanceClient.ZCount(ctx, "nfts", "-inf", strHeight).Result()
 	if err != nil {
