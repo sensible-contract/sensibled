@@ -14,11 +14,17 @@ import (
 	"go.uber.org/zap"
 )
 
-func getTxFee(tx *model.Tx, spentUtxoDataMap map[string]*model.TxoData) (satInputAmount, satOutputAmount uint64) {
+func getTxFee(tx *model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) (satInputAmount, satOutputAmount uint64) {
 	for vin, input := range tx.TxIns {
-		objData, ok := spentUtxoDataMap[input.InputOutpointKey]
-		if !ok {
-			logger.Log.Info("tx-input-err",
+		var objData *model.TxoData
+		if obj, ok := mpNewUtxo[input.InputOutpointKey]; ok {
+			objData = obj
+		} else if obj, ok := removeUtxo[input.InputOutpointKey]; ok {
+			objData = obj
+		} else if obj, ok := mpSpentUtxo[input.InputOutpointKey]; ok {
+			objData = obj
+		} else {
+			logger.Log.Info("tx-fee-input-err",
 				zap.String("txin", "input missing utxo"),
 				zap.String("txid", tx.TxIdHex),
 				zap.Int("vin", vin),
@@ -42,13 +48,20 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 	txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) (nftIndexInBlockAfter uint64, newInscriptions []*model.NewInscriptionInfo) {
 
 	for txIdx, tx := range txs {
-		satInputAmount, satOutputAmount := getTxFee(tx, mpSpentUtxo)
+		satInputAmount, satOutputAmount := getTxFee(tx, mpNewUtxo, removeUtxo, mpSpentUtxo)
 		// invalid exist nft recreate
 		satInputOffset := uint64(0)
 		for vin, input := range tx.TxIns {
-			objData, ok := mpSpentUtxo[input.InputOutpointKey]
-			if !ok {
-				logger.Log.Info("tx-input-err",
+
+			var objData *model.TxoData
+			if obj, ok := mpNewUtxo[input.InputOutpointKey]; ok {
+				objData = obj
+			} else if obj, ok := removeUtxo[input.InputOutpointKey]; ok {
+				objData = obj
+			} else if obj, ok := mpSpentUtxo[input.InputOutpointKey]; ok {
+				objData = obj
+			} else {
+				logger.Log.Info("tx-new-nft-input-err",
 					zap.String("txin", "input missing utxo"),
 					zap.String("txid", tx.TxIdHex),
 					zap.Int("vin", vin),
@@ -123,9 +136,15 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 		// insert exsit NFT
 		satInputOffset = uint64(0)
 		for vin, input := range tx.TxIns {
-			objData, ok := mpSpentUtxo[input.InputOutpointKey]
-			if !ok {
-				logger.Log.Info("tx-input-err",
+			var objData *model.TxoData
+			if obj, ok := mpNewUtxo[input.InputOutpointKey]; ok {
+				objData = obj
+			} else if obj, ok := removeUtxo[input.InputOutpointKey]; ok {
+				objData = obj
+			} else if obj, ok := mpSpentUtxo[input.InputOutpointKey]; ok {
+				objData = obj
+			} else {
+				logger.Log.Info("tx-exist-nft-input-err",
 					zap.String("txin", "input missing utxo"),
 					zap.String("txid", tx.TxIdHex),
 					zap.Int("vin", vin),
@@ -165,10 +184,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 			if output.LockingScriptUnspendable {
 				continue
 			}
-			if objData, ok := mpSpentUtxo[output.OutpointKey]; ok {
-				// not spent in self block
-				objData.CreatePointOfNFTs = output.CreatePointOfNFTs
-			} else if objData, ok := mpNewUtxo[output.OutpointKey]; ok {
+			if objData, ok := mpNewUtxo[output.OutpointKey]; ok {
 				objData.CreatePointOfNFTs = output.CreatePointOfNFTs
 			} else {
 				logger.Log.Info("tx-output-restore-nft-err",
