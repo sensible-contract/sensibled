@@ -244,7 +244,7 @@ func (mp *Mempool) ParseMempool(startIdx int, nftStartNumber uint64) {
 	newCount, newInscriptions := serial.ParseMempoolBatchTxNFTsInAndOutSerial(startIdx, mp.NewInscriptionsWithInvalidCount, nftStartNumber,
 		mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
 
-	mp.NewInscriptionsWithInvalidCount += newCount
+	mp.NewInscriptionsWithInvalidCount = newCount
 	mp.NewInscriptionsCount += uint64(len(newInscriptions))
 	mp.NewInscriptions = append(mp.NewInscriptions, newInscriptions...)
 
