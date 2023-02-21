@@ -374,6 +374,15 @@ func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool) {
 		}
 		logger.Log.Info("redis done")
 	}()
+
+	// cache
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		serial.UpdateNewNFTBodyInCache(mp.NewInscriptions)
+		logger.Log.Info("nft cache done")
+	}()
+
 	wg.Wait()
 
 }

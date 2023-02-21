@@ -122,6 +122,8 @@ func init() {
 	blocksPath = viper.GetString("blocks")
 	blockMagic = viper.GetString("magic")
 
+	rdb.CacheClient = rdb.InitClient("conf/cache.yaml")
+
 	rdb.RdbBalanceClient = rdb.Init("conf/rdb_balance.yaml")
 	rdb.RdbUtxoClient = rdb.Init("conf/rdb_utxo.yaml")
 	rdb.RdbAddrTxClient = rdb.Init("conf/rdb_address.yaml")

@@ -2,7 +2,9 @@ package serial
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
+	"time"
 	"unisatd/logger"
 	"unisatd/model"
 	"unisatd/rdb"
@@ -231,6 +233,25 @@ func UpdateNewNFTInRedis(pipe redis.Pipeliner, newInscriptions []*model.NewInscr
 			Score:  float64(nftData.CreatePoint.Height)*1000000000 + float64(nftData.CreatePoint.IdxInBlock),
 			Member: strInscriptionID}
 		pipe.ZAdd(ctx, "nfts", member) // 有序new nft数据添加
+	}
+}
+
+func UpdateNewNFTBodyInCache(newInscriptions []*model.NewInscriptionInfo) {
+	logger.Log.Info("UpdateNewNFTBodyInCache",
+		zap.Int("new", len(newInscriptions)),
+	)
+	ctx := context.Background()
+
+	for _, nftData := range newInscriptions {
+		strInscriptionID := fmt.Sprintf("nft:%si%d", utils.HashString(nftData.TxId), nftData.IdxInTx)
+
+		var data [2]byte
+		binary.LittleEndian.PutUint16(data[:], uint16(len(nftData.NFTData.ContentType)))
+		rdb.CacheClient.SetNX(ctx, strInscriptionID,
+			string(data[:])+
+				string(nftData.NFTData.ContentType)+
+				string(nftData.NFTData.ContentBody),
+			24*time.Hour) // 有序new nft数据添加
 	}
 }
 

@@ -12,11 +12,45 @@ import (
 
 var (
 	useCluster       bool
+	CacheClient      *redis.Client
 	RdbBalanceClient redis.UniversalClient
 	RdbUtxoClient    redis.UniversalClient
 	RdbAddrTxClient  redis.UniversalClient
 	ctx              = context.Background()
 )
+
+func InitClient(filename string) (rds *redis.Client) {
+	viper.SetConfigFile(filename)
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		} else {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		}
+	}
+
+	addr := viper.GetString("addr")
+	password := viper.GetString("password")
+	database := viper.GetInt("database")
+	dialTimeout := viper.GetDuration("dialTimeout")
+	readTimeout := viper.GetDuration("readTimeout")
+	writeTimeout := viper.GetDuration("writeTimeout")
+	idleTimeout := viper.GetDuration("idleTimeout")
+	idleCheckFrequency := viper.GetDuration("idleCheckFrequency")
+	poolSize := viper.GetInt("poolSize")
+	rds = redis.NewClient(&redis.Options{
+		Addr:               addr,
+		Password:           password,
+		DB:                 database,
+		DialTimeout:        dialTimeout,
+		ReadTimeout:        readTimeout,
+		WriteTimeout:       writeTimeout,
+		PoolSize:           poolSize,
+		IdleTimeout:        idleTimeout,
+		IdleCheckFrequency: idleCheckFrequency,
+	})
+	return rds
+}
 
 func Init(filename string) (rds redis.UniversalClient) {
 	viper.SetConfigFile(filename)
