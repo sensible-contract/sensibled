@@ -4,7 +4,6 @@ go 1.15
 
 require (
 	github.com/ClickHouse/clickhouse-go v1.4.3
-	github.com/btcsuite/btcutil v1.0.2
 	github.com/go-redis/redis/v8 v8.6.0
 	github.com/spf13/viper v1.7.1
 	github.com/ybbus/jsonrpc v2.1.2+incompatible
