@@ -88,7 +88,7 @@ func DeleteKeysWhitchAddressBalanceZero(addressBalanceCmds map[string]*redis.Int
 			return false
 		}
 
-		if balance == 0 {
+		if balance <= 0 {
 			pipe.Del(ctx, keyString)
 		}
 	}
