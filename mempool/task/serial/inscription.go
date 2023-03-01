@@ -263,11 +263,11 @@ func UpdateNewNFTBodyInCache(newInscriptions []*model.NewInscriptionInfo) {
 
 		var data [2]byte
 		binary.LittleEndian.PutUint16(data[:], uint16(len(nftData.NFTData.ContentType)))
-		rdb.CacheClient.SetNX(ctx, strInscriptionID,
+		rdb.CacheClient.Set(ctx, strInscriptionID,
 			string(data[:])+
 				string(nftData.NFTData.ContentType)+
 				string(nftData.NFTData.ContentBody),
-			24*time.Hour) // 有序new nft数据添加
+			7*24*time.Hour) // 有序new nft数据添加
 	}
 }
 
