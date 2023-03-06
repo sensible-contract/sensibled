@@ -246,7 +246,7 @@ func UpdateNewNFTInRedis(pipe redis.Pipeliner, newInscriptions []*model.NewInscr
 
 		// redis有序utxo数据成员
 		member := &redis.Z{
-			Score:  float64(nftData.CreatePoint.Height)*1000000000 + float64(nftData.CreatePoint.IdxInBlock),
+			Score:  float64(nftData.CreatePoint.Height)*model.HEIGHT_MUTIPLY + float64(nftData.CreatePoint.IdxInBlock),
 			Member: strInscriptionID}
 		pipe.ZAdd(ctx, "nfts", member) // 有序new nft数据添加
 	}
@@ -258,7 +258,7 @@ func RemoveNewNFTInRedisStartFromBlockHeight(pipe redis.Pipeliner, height int) {
 		zap.Int("height", height),
 	)
 	ctx := context.Background()
-	strHeight := fmt.Sprintf("%d000000000", height)
+	strHeight := fmt.Sprintf("%d", height*model.HEIGHT_MUTIPLY)
 	pipe.ZRemRangeByScore(ctx, "nfts", strHeight, "+inf") // 有序nft数据清理
 }
 
@@ -268,8 +268,7 @@ func CountNewNFTInRedisBeforeBlockHeight(height int) (nftNumber uint64) {
 		zap.Int("height", height),
 	)
 	ctx := context.Background()
-	strHeight := fmt.Sprintf("(%d000000000", height)
-
+	strHeight := fmt.Sprintf("%d", height*model.HEIGHT_MUTIPLY)
 	n, err := rdb.RdbBalanceClient.ZCount(ctx, "nfts", "-inf", strHeight).Result()
 	if err != nil {
 		logger.Log.Info("get nftNumber from redis failed", zap.Error(err))

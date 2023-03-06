@@ -9,6 +9,7 @@ import (
 )
 
 const MEMPOOL_HEIGHT = 0x3fffff // 4294967295 2^32-1; 3fffff, 2^22-1
+const HEIGHT_MUTIPLY = 1000000000
 
 type Tx struct {
 	Raw          []byte

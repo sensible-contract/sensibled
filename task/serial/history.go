@@ -38,7 +38,7 @@ func UpdateAddrPkhInTxMapSerial(blockHeight uint32, addrPkhInTxMap map[string][]
 			lastTxIdx = txIdx
 
 			key := fmt.Sprintf("%d:%d", blockHeight, txIdx)
-			score := float64(uint64(blockHeight)*1000000000 + uint64(txIdx))
+			score := float64(uint64(blockHeight)*model.HEIGHT_MUTIPLY + uint64(txIdx))
 			member := &redis.Z{Score: score, Member: key}
 			txZSetMembers = append(txZSetMembers, member)
 		}
@@ -103,7 +103,7 @@ func RemoveAddressTxHistoryFromPikaForReorg(height int, utxoToRestore, utxoToRem
 	logger.Log.Info("RemoveAddressTxHistoryFromPikaForReorg",
 		zap.Int("nAddr", len(addressMap)))
 
-	strHeight := fmt.Sprintf("%d000000000", height)
+	strHeight := fmt.Sprintf("%d", height*model.HEIGHT_MUTIPLY)
 
 	ctx := context.Background()
 	pipe := rdb.RdbAddrTxClient.Pipeline()

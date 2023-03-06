@@ -128,7 +128,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
 
 		// redis有序utxo数据成员
-		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
+		member := &redis.Z{Score: float64(data.BlockHeight)*model.HEIGHT_MUTIPLY + float64(data.TxIdx), Member: outpointKey}
 
 		// 识别地址，只记录utxo和balance
 		pipe.ZAdd(ctx, "{au"+strAddressPkh+"}", member)           // 有序address utxo数据添加
@@ -136,7 +136,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 
 		//更新nft的createIdx到current utxo映射记录
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: nftpoint.GetCreateIdxKey()}
+			member := &redis.Z{Score: float64(data.BlockHeight)*model.HEIGHT_MUTIPLY + float64(data.TxIdx), Member: nftpoint.GetCreateIdxKey()}
 			pipe.ZAdd(ctx, "{an"+strAddressPkh+"}", member) // 有序address nft数据添加
 		}
 	}

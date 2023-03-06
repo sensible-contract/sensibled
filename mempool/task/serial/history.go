@@ -26,7 +26,7 @@ func SaveAddressTxHistoryIntoPika(needReset bool, addrPkhInTxMap map[string][]in
 		}
 		logger.Log.Info("reset pika mempool done", zap.Int("nAddrs", len(addrs)))
 
-		strHeight := fmt.Sprintf("%d000000000", model.MEMPOOL_HEIGHT)
+		strHeight := fmt.Sprintf("%d", model.MEMPOOL_HEIGHT*model.HEIGHT_MUTIPLY)
 
 		pipe := rdb.RdbAddrTxClient.Pipeline()
 		for _, strAddressPkh := range addrs {
@@ -59,7 +59,7 @@ func SaveAddressTxHistoryIntoPika(needReset bool, addrPkhInTxMap map[string][]in
 			lastTxIdx = txIdx
 
 			key := fmt.Sprintf("%d:%d", model.MEMPOOL_HEIGHT, txIdx)
-			score := float64(model.MEMPOOL_HEIGHT)*1000000000 + float64(txIdx)
+			score := float64(model.MEMPOOL_HEIGHT)*model.HEIGHT_MUTIPLY + float64(txIdx)
 			// redis有序utxo数据成员
 			member := &redis.Z{Score: score, Member: key}
 			pipe.ZAdd(ctx, "{ah"+strAddressPkh+"}", member) // 有序address tx history数据添加
