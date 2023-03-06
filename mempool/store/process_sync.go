@@ -10,6 +10,14 @@ import (
 var (
 	processAllSQLs = []string{
 		// 删除mempool数据
+		// (2**32-1)/2100 = 2045222
+		// (2**22-1)/2100 = 1997
+		"ALTER TABLE blktx_height DROP PARTITION '1997'",
+		"ALTER TABLE blknft_height DROP PARTITION '1997'",
+		"ALTER TABLE txin_spent DROP PARTITION '1997'",
+		"ALTER TABLE txin DROP PARTITION '1997'",
+		"ALTER TABLE txout DROP PARTITION '1997'",
+
 		"ALTER TABLE blktx_height DROP PARTITION '2045222'",
 		"ALTER TABLE blknft_height DROP PARTITION '2045222'",
 		"ALTER TABLE txin_spent DROP PARTITION '2045222'",

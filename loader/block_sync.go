@@ -133,7 +133,7 @@ func rawtxResultSRF(rows *sql.Rows) (interface{}, error) {
 }
 
 func GetAllMempoolRawTx(txs map[string]*model.TxData) (err error) {
-	psql := "SELECT txid, rawtx FROM blktx_height WHERE height = 4294967295"
+	psql := fmt.Sprintf("SELECT txid, rawtx FROM blktx_height WHERE height = %d", model.MEMPOOL_HEIGHT)
 
 	txsRet, err := clickhouse.ScanAll(psql, rawtxResultSRF)
 	if err != nil {
