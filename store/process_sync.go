@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS blk_height (
 	coinbase_out UInt64,
 	blocktime    UInt32,
 	bits         UInt32,
-	blocksize    UInt32
+	blocksize    UInt32,
+	witsize      UInt32
 ) engine=MergeTree()
 ORDER BY height
 PARTITION BY intDiv(height, 2100)
@@ -52,7 +53,8 @@ CREATE TABLE IF NOT EXISTS blk (
 	coinbase_out UInt64,
 	blocktime    UInt32,
 	bits         UInt32,
-	blocksize    UInt32
+	blocksize    UInt32,
+	witsize      UInt32
 ) engine=MergeTree()
 ORDER BY blkid
 PARTITION BY intDiv(height, 2100)

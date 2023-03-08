@@ -24,6 +24,8 @@ func SyncBlock(block *model.Block) {
 
 	nftNewCnt := uint64(0) // 包括无效创建的nft个数
 
+	witSize := uint32(0)
+
 	for _, tx := range block.Txs[1:] {
 		txInputsValue += tx.InputsValue
 		txOutputsValue += tx.OutputsValue
@@ -31,6 +33,10 @@ func SyncBlock(block *model.Block) {
 		nftNewCnt += uint64(len(tx.NewNFTDataCreated))
 		nftInputsCnt += tx.NFTInputsCnt
 		nftOutputsCnt += tx.NFTOutputsCnt
+
+		if tx.WitOffset > 0 {
+			witSize += (tx.Size - tx.WitOffset - 4)
+		}
 	}
 
 	if _, err := store.SyncStmtBlk.Exec(
@@ -52,6 +58,7 @@ func SyncBlock(block *model.Block) {
 		block.BlockTime,
 		block.Bits,
 		block.Size,
+		witSize,
 	); err != nil {
 		logger.Log.Info("sync-block-err",
 			zap.String("blkid", block.HashHex),

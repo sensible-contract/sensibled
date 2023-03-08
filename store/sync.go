@@ -24,7 +24,7 @@ var (
 )
 
 const (
-	sqlBlkPattern   string = "INSERT INTO %s (height, blkid, previd, merkle, ntx, nftnew, nftin, nftout, nftlost, invalue, outvalue, coinbase_out, blocktime, bits, blocksize) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlBlkPattern   string = "INSERT INTO %s (height, blkid, previd, merkle, ntx, nftnew, nftin, nftout, nftlost, invalue, outvalue, coinbase_out, blocktime, bits, blocksize, witsize) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxPattern    string = "INSERT INTO %s (txid, nin, nout, txsize, witoffset, locktime, nftnew, nftin, nftout, nftlost, invalue, outvalue, rawtx, height, txidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlNFTPattern   string = "INSERT INTO %s (txid, idx, vin, vout, offset, content_type, content_len, content, height, txidx, nftidx, nftnumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	sqlTxOutPattern string = "INSERT INTO %s (utxid, vout, address, code_type, satoshi, script_type, script_pk, nftout, nftpoints, height, utxidx) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
