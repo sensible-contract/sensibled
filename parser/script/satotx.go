@@ -124,6 +124,12 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 			if data[0]%2 == 0 {
 				break // error: invalid tag
 			}
+
+			// official need fix minimal push check
+			if len(data) == 1 && data[0] >= OP_1 && data[0] <= OP_16 {
+				break
+			}
+
 			tagName := string(data)
 			if _, ok := tags[tagName]; ok {
 				break // error: dup tag
