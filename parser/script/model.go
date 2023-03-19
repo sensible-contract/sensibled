@@ -43,12 +43,12 @@ type AddressData struct {
 
 func (u *AddressData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
-		CodeType   uint32
 		HasAddress bool
+		CodeType   uint32
 		AddressPkh string
 	}{
-		CodeType:   u.CodeType,
 		HasAddress: u.HasAddress,
+		CodeType:   u.CodeType,
 		AddressPkh: hex.EncodeToString(u.AddressPkh[:]),
 	})
 }
