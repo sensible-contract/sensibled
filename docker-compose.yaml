@@ -2,7 +2,7 @@ version: '3'
 services:
    sensibled:
      build: .
-     image: jiedo/unisatd:v1.0.6
+     image: jiedo/unisatd:v1.0.7
      entrypoint: ./sensibled
      volumes:
        - /data/bitcoind/data/blocks:/data/blocks:ro
