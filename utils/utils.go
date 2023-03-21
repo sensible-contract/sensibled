@@ -66,10 +66,9 @@ func NewTxWit(txwitraw []byte) (wits []*model.TxWit, offset uint) {
 }
 
 func EncodeTxNFT(tx *model.Tx) {
-	isNFTInLastInput := true
 	for vin, input := range tx.TxIns {
 		// 只支持第一个输入的NFT
-		if !isNFTInLastInput {
+		if vin != 0 {
 			break
 		}
 		if len(input.ScriptWitness) == 0 {
@@ -108,10 +107,7 @@ func EncodeTxNFT(tx *model.Tx) {
 			})
 			tx.NewNFTDataCreated = append(tx.NewNFTDataCreated, nft)
 			tx.GenesisNewNFT = true
-		} else {
-			isNFTInLastInput = false
-			break
-		}
+		} 
 	}
 }
 
