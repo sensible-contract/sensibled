@@ -94,6 +94,8 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 			createPoint := &model.NFTCreatePoint{
 				Height:     uint32(model.MEMPOOL_HEIGHT),
 				IdxInBlock: nftIndexInBlock + uint64(createIdxInTx),
+				HasMoved:   false,
+				IsBRC20:    nft.IsBRC20,
 			}
 			newInscriptionInfo := &model.NewInscriptionInfo{
 				NFTData:     nft,
@@ -164,6 +166,8 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 							Height:     nftpoint.Height,
 							IdxInBlock: nftpoint.IdxInBlock,
 							Offset:     uint64(sat - satOutputOffset),
+							HasMoved:   true,
+							IsBRC20:    nftpoint.IsBRC20,
 						})
 						inFee = false
 						break

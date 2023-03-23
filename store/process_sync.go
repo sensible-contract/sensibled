@@ -97,13 +97,47 @@ CREATE TABLE IF NOT EXISTS blknft_height (
 	vin          UInt32,           -- revaled at input index
 	vout         UInt32,           -- created at output index
 	offset       UInt32,           -- created sat offset at this output
+	satoshi      UInt64,
+	script_pk    String,
+	invalue      UInt64,
+	outvalue     UInt64,
 	content_type String,
 	content_len  UInt32,
 	content      String,
 	height       UInt32,
 	txidx        UInt64,
+	blocktime    UInt32,
 	nftidx       UInt64,            -- nft 在区块中的创建序号
 	nftnumber    UInt64
+) engine=MergeTree()
+ORDER BY (height, nftidx)
+PARTITION BY intDiv(height, 2100)
+`,
+
+		// nft brc20 list
+		// ================================================================
+		// 区块包含的新创建brc20 nft列表，分区内按区块高度height排序、索引。按blk height查询时可确定分区 (快)
+		"DROP TABLE IF EXISTS blkbrc20_height",
+		`
+CREATE TABLE IF NOT EXISTS blkbrc20_height (
+	txid         FixedString(32),  -- inscription create txid
+	idx          UInt32,           -- inscription create index, aka, output sat offset
+	vin          UInt32,           -- revaled at input index
+	vout         UInt32,           -- created at output index
+	offset       UInt32,           -- created sat offset at this output
+	satoshi      UInt64,
+	script_pk    String,
+	invalue      UInt64,
+	outvalue     UInt64,
+	content_type String,
+	content_len  UInt32,
+	content      String,
+	height       UInt32,
+	txidx        UInt64,
+	blocktime    UInt32,
+	nftidx       UInt64,            -- nft 在区块中的创建序号
+	nftnumber    UInt64,
+	nftheight    UInt32             -- nft 在区块中的创建高度，如果>0则是move
 ) engine=MergeTree()
 ORDER BY (height, nftidx)
 PARTITION BY intDiv(height, 2100)
@@ -231,6 +265,7 @@ PARTITION BY substring(utxid, 1, 1)
 
 		"ALTER TABLE blktx_height DELETE WHERE height >= ",
 		"ALTER TABLE blknft_height DELETE WHERE height >= ",
+		"ALTER TABLE blkbrc20_height DELETE WHERE height >= ",
 
 		"ALTER TABLE txin_spent DELETE WHERE height >= ",
 
@@ -242,12 +277,14 @@ PARTITION BY substring(utxid, 1, 1)
 		"DROP TABLE IF EXISTS blk_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",
 		"DROP TABLE IF EXISTS blknft_height_new",
+		"DROP TABLE IF EXISTS blkbrc20_height_new",
 		"DROP TABLE IF EXISTS txout_new",
 		"DROP TABLE IF EXISTS txin_new",
 
 		"CREATE TABLE IF NOT EXISTS blk_height_new AS blk_height",
 		"CREATE TABLE IF NOT EXISTS blktx_height_new AS blktx_height",
 		"CREATE TABLE IF NOT EXISTS blknft_height_new AS blknft_height",
+		"CREATE TABLE IF NOT EXISTS blkbrc20_height_new AS blkbrc20_height",
 		"CREATE TABLE IF NOT EXISTS txout_new AS txout",
 		"CREATE TABLE IF NOT EXISTS txin_new AS txin",
 	}
@@ -272,6 +309,7 @@ PARTITION BY substring(utxid, 1, 1)
 		"INSERT INTO blk_height SELECT * FROM blk_height_new;",
 		"INSERT INTO blktx_height SELECT * FROM blktx_height_new;",
 		"INSERT INTO blknft_height SELECT * FROM blknft_height_new;",
+		"INSERT INTO blkbrc20_height SELECT * FROM blkbrc20_height_new;",
 
 		// 优化blk表，以便统一按height排序查询
 		// "OPTIMIZE TABLE blk_height FINAL",
@@ -285,6 +323,7 @@ PARTITION BY substring(utxid, 1, 1)
 		"DROP TABLE IF EXISTS blk_height_new",
 		"DROP TABLE IF EXISTS blktx_height_new",
 		"DROP TABLE IF EXISTS blknft_height_new",
+		"DROP TABLE IF EXISTS blkbrc20_height_new",
 	}
 )
 

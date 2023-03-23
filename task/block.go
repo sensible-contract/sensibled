@@ -67,6 +67,7 @@ func ParseBlockParallelEnd(block *model.Block) {
 	// DB更新tx, 需要依赖txout、txin执行完毕，以统计Tx Fee
 	serial.SyncBlockTx(block)
 	serial.SyncBlockNFT(block.ParseData.NewInscriptions)
+	serial.SyncBlockBRC20(block.ParseData.NewBRC20Inscriptions)
 
 	block.Txs = nil
 	block.ParseData = nil
@@ -242,8 +243,8 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 	go func() {
 		defer wg.Done()
 
-		// Pika更新addr tx历史
 		if needSaveBlock {
+			// Pika更新新创建的nft
 			if ok := memSerial.UpdateNewNFTDataInPika(model.GlobalNewInscriptions); !ok {
 				model.NeedStop = true
 				return
@@ -252,12 +253,13 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 
 		if needSaveMempool {
 			needReset := true
-
+			// Pika更新新创建的nft
 			if ok := memSerial.UpdateNewNFTDataInPika(mempool.NewInscriptions); !ok {
 				model.NeedStop = true
 				return
 			}
 
+			// Pika更新addr tx历史
 			if ok := memSerial.SaveAddressTxHistoryIntoPika(needReset, mempool.AddrPkhInTxMap); !ok {
 				model.NeedStop = true
 				return

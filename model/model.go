@@ -44,8 +44,8 @@ type TxIn struct {
 	ScriptWitness []byte
 
 	// other:
-	CreatePointOfNewNFTs []*NFTCreatePoint // 新创建的nft, 有些如果是重复创建,则标记invalid
-	CreatePointOfNFTs    []*NFTCreatePoint // 输入的nft
+	CreatePointOfNFTs         []*NFTCreatePoint // 输入的nft
+	CreatePointCountOfNewNFTs uint32            // 新创建的nft, 有些如果是重复创建,则标记invalid
 
 	InputOutpointKey string // 32 + 4
 	InputOutpoint    []byte // 32 + 4
@@ -110,23 +110,27 @@ type BlockCache struct {
 
 // //////////////
 type ProcessBlock struct {
-	Height           uint32
-	AddrPkhInTxMap   map[string][]int
-	SpentUtxoKeysMap map[string]struct{}
-	SpentUtxoDataMap map[string]*TxoData
-	NewUtxoDataMap   map[string]*TxoData
-	NewInscriptions  []*NewInscriptionInfo // index: createBlockNFTIndex;  nft: IncriptionID
+	Height               uint32
+	AddrPkhInTxMap       map[string][]int
+	SpentUtxoKeysMap     map[string]struct{}
+	SpentUtxoDataMap     map[string]*TxoData
+	NewUtxoDataMap       map[string]*TxoData
+	NewInscriptions      []*NewInscriptionInfo // index: createBlockNFTIndex;  nft: IncriptionID
+	NewBRC20Inscriptions []*NewInscriptionInfo
 }
 
 type NewInscriptionInfo struct {
 	NFTData      *scriptDecoder.NFTData // type/data
 	CreatePoint  *NFTCreatePoint
+	Height       uint32 // for brc20 to height
 	TxIdx        uint64 // txidx in block
 	TxId         []byte // create txid
 	IdxInTx      uint32 // nft idx inside tx
 	InTxVout     uint32 // nft outgoing(vout) inside tx
 	InputsValue  uint64
 	OutputsValue uint64
+	Satoshi      uint64
+	PkScript     []byte
 	Ordinal      uint64
 	Number       uint64
 	BlockTime    uint32
@@ -159,6 +163,8 @@ type NFTCreatePoint struct {
 	Height     uint32 // Height of NFT show in block onCreate
 	IdxInBlock uint64 // Index of NFT show in block onCreate
 	Offset     uint64 // sat offset in utxo
+	HasMoved   bool   // the NFT has been moved after created
+	IsBRC20    bool   // the NFT is BRC20
 }
 
 func (p *NFTCreatePoint) GetCreateIdxKey() string {
@@ -206,15 +212,15 @@ func (d *TxoData) Marshal(buf []byte) int {
 
 // no need marshal: ScriptType, CodeType, CodeHash, GenesisId, AddressPkh, DataValue
 func (d *TxoData) Unmarshal(buf []byte) {
-	if buf[3] == 0x01 {
-		buf[3] = 0x00
-		// not compress
-		// d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
-		// d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
-		// d.Satoshi = binary.LittleEndian.Uint64(buf[12:20])  // 8
-		// d.PkScript = buf[20:]
-		// return
-	}
+	// if buf[3] == 0x01 {
+	// 	buf[3] = 0x00
+	// not compress
+	// d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
+	// d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
+	// d.Satoshi = binary.LittleEndian.Uint64(buf[12:20])  // 8
+	// d.PkScript = buf[20:]
+	// return
+	// }
 
 	d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
 	offset := 4
@@ -252,6 +258,15 @@ func DumpNFTCreatePoints(buf []byte, createPointOfNFTs []*NFTCreatePoint) int {
 		offset += scriptDecoder.PutVLQ(buf[offset:], uint64(nft.Height))
 		offset += scriptDecoder.PutVLQ(buf[offset:], nft.IdxInBlock)
 		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Offset)
+		if nft.HasMoved {
+			buf[offset] = 0x01
+		} else {
+			buf[offset] = 0
+		}
+		if nft.IsBRC20 {
+			buf[offset] += 0x02
+		}
+		offset += 1
 	}
 	return offset
 }
@@ -281,10 +296,22 @@ func (d *TxoData) LoadNFTCreatePointsFromRaw(buf []byte) (offset int) {
 		}
 		offset += bytesRead
 
+		hasMoved := false
+		if buf[offset]&0x01 == 0x01 {
+			hasMoved = true
+		}
+		isBRC20 := false
+		if buf[offset]&0x02 == 0x02 {
+			isBRC20 = true
+		}
+		offset += 1
+
 		d.CreatePointOfNFTs = append(d.CreatePointOfNFTs, &NFTCreatePoint{
 			Height:     uint32(height),
 			IdxInBlock: nftIdx,
 			Offset:     satOffset,
+			HasMoved:   hasMoved,
+			IsBRC20:    isBRC20,
 		})
 	}
 }

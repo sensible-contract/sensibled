@@ -55,6 +55,7 @@ func (u *AddressData) MarshalJSON() ([]byte, error) {
 
 type NFTData struct {
 	Invalid     bool
+	IsBRC20     bool
 	InTxVin     uint32 // nft vin inside tx
 	ContentType []byte
 	ContentBody []byte

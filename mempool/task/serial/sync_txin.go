@@ -59,7 +59,7 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				string(input.ScriptWitness),
 				uint32(input.Sequence),
 
-				uint64(len(input.CreatePointOfNewNFTs)), // new nft count
+				uint64(input.CreatePointCountOfNewNFTs), // new nft count
 
 				uint32(objData.BlockHeight),
 				uint64(objData.TxIdx),

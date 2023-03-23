@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"unisatd/model"
 	scriptDecoder "unisatd/parser/script"
 )
@@ -66,10 +68,9 @@ func NewTxWit(txwitraw []byte) (wits []*model.TxWit, offset uint) {
 }
 
 func EncodeTxNFT(tx *model.Tx) {
-	isNFTInLastInput := true
 	for vin, input := range tx.TxIns {
 		// 只支持第一个输入的NFT
-		if !isNFTInLastInput {
+		if vin != 0 {
 			break
 		}
 		if len(input.ScriptWitness) == 0 {
@@ -102,17 +103,59 @@ func EncodeTxNFT(tx *model.Tx) {
 
 		if nft, ok := scriptDecoder.ExtractPkScriptForNFT(nftScript); ok {
 			nft.InTxVin = uint32(vin)
-			satOffset := len(tx.NewNFTDataCreated)
-			input.CreatePointOfNewNFTs = append(input.CreatePointOfNewNFTs, &model.NFTCreatePoint{
-				Offset: uint64(satOffset), // fixme: which sat? if some nft failed
-			})
+			if isBRC20(nft) {
+				nft.IsBRC20 = true
+			}
+
+			input.CreatePointCountOfNewNFTs += 1
 			tx.NewNFTDataCreated = append(tx.NewNFTDataCreated, nft)
 			tx.GenesisNewNFT = true
-		} else {
-			isNFTInLastInput = false
-			break
 		}
 	}
+}
+
+type InscriptionNamePick struct {
+	Proto     string `json:"p"`
+	Operation string `json:"op"`
+
+	BRC20Tick    string `json:"tick"` // brc20
+	BRC20Max     string `json:"max"`  // brc20
+	BRC20Limit   string `json:"lim"`  // brc20
+	BRC20Amount  string `json:"amt"`  // brc20
+	BRC20Decimal string `json:"dec"`  // brc20
+}
+
+func isBRC20(nft *scriptDecoder.NFTData) bool {
+	if len(nft.ContentBody) > 8192 || len(nft.ContentBody) < 40 {
+		return false
+	}
+
+	if !bytes.HasPrefix(nft.ContentType, []byte("text/plain")) &&
+		!bytes.HasPrefix(nft.ContentType, []byte("application/json")) {
+		return false
+	}
+
+	content := bytes.TrimSpace(nft.ContentBody)
+	if !bytes.HasPrefix(content, []byte("{")) {
+		return false
+	}
+	if !bytes.HasSuffix(content, []byte("}")) {
+		return false
+	}
+
+	var namePick InscriptionNamePick
+	if err := json.Unmarshal(nft.ContentBody, &namePick); err != nil {
+		return false
+	}
+	if namePick.Proto != "brc-20" {
+		return false
+	}
+
+	if namePick.BRC20Tick == "" {
+		return false
+	}
+
+	return true
 }
 
 func GetWitnessHash256(data []byte, witOffset uint32) (hash []byte) {

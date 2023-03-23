@@ -119,12 +119,13 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 			defer wg.Done()
 
 			processBlock := &model.ProcessBlock{
-				Height:           uint32(block.Height),
-				AddrPkhInTxMap:   make(map[string][]int, block.TxCnt),
-				NewUtxoDataMap:   make(map[string]*model.TxoData, block.TxCnt),
-				SpentUtxoDataMap: make(map[string]*model.TxoData, block.TxCnt),
-				SpentUtxoKeysMap: make(map[string]struct{}, block.TxCnt),
-				NewInscriptions:  make([]*model.NewInscriptionInfo, 0), // order in block/mempool  nft: nftpoint/nftid
+				Height:               uint32(block.Height),
+				AddrPkhInTxMap:       make(map[string][]int, block.TxCnt),
+				NewUtxoDataMap:       make(map[string]*model.TxoData, block.TxCnt),
+				SpentUtxoDataMap:     make(map[string]*model.TxoData, block.TxCnt),
+				SpentUtxoKeysMap:     make(map[string]struct{}, block.TxCnt),
+				NewInscriptions:      make([]*model.NewInscriptionInfo, 0), // order in block/mempool  nft: nftpoint/nftid
+				NewBRC20Inscriptions: make([]*model.NewInscriptionInfo, 0),
 			}
 			block.ParseData = processBlock
 			block.Txs = NewTxs(bc.BlockData.StripMode, block.Raw[80:])
