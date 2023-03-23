@@ -85,6 +85,7 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 			createPoint := &model.NFTCreatePoint{
 				Height:     uint32(block.Height),
 				IdxInBlock: nftIndexInBlock + uint64(createIdxInTx),
+				HasMoved:   false,
 				IsBRC20:    nft.IsBRC20,
 			}
 			newInscriptionInfo := &model.NewInscriptionInfo{
@@ -118,6 +119,7 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 				tx.NFTLostCnt += 1
 				createPoint.Offset = uint64(createIdxInTx) - satOutputOffset + satFeeOffset // global fee offset in coinbase
 				newInscriptionInfo.InTxVout = tx.TxOutCnt
+				createPoint.HasMoved = true
 				coinbaseCreatePointOfNFTs = append(coinbaseCreatePointOfNFTs, createPoint)
 			}
 			block.ParseData.NewInscriptions = append(block.ParseData.NewInscriptions, newInscriptionInfo)
@@ -145,11 +147,13 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 				satOutputOffset := uint64(0)
 				for _, output := range tx.TxOuts {
 					if uint64(sat) < satOutputOffset+output.Satoshi {
-						output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, &model.NFTCreatePoint{
+						movetoCreatePoint := &model.NFTCreatePoint{
 							Height:     nftpoint.Height,
 							IdxInBlock: nftpoint.IdxInBlock,
 							Offset:     uint64(sat - satOutputOffset),
-						})
+							HasMoved:   true,
+						}
+						output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, movetoCreatePoint)
 						inFee = false
 						break
 					}
@@ -163,6 +167,7 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 						Height:     nftpoint.Height,
 						IdxInBlock: nftpoint.IdxInBlock,
 						Offset:     uint64(sat) - satOutputOffset + satFeeOffset, // global fee offset in coinbase
+						HasMoved:   true,
 					})
 				}
 			}
@@ -207,6 +212,7 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 					Height:     nftpoint.Height,
 					IdxInBlock: nftpoint.IdxInBlock,
 					Offset:     uint64(sat - satOutputOffset),
+					HasMoved:   true,
 				})
 				inFee = false
 				break
