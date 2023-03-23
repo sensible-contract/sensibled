@@ -44,7 +44,7 @@ type TxIn struct {
 	ScriptWitness []byte
 
 	// other:
-	CreatePointOfNFTs    []*NFTCreatePoint // 输入的nft
+	CreatePointOfNFTs         []*NFTCreatePoint // 输入的nft
 	CreatePointCountOfNewNFTs uint32            // 新创建的nft, 有些如果是重复创建,则标记invalid
 
 	InputOutpointKey string // 32 + 4
