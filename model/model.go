@@ -208,15 +208,15 @@ func (d *TxoData) Marshal(buf []byte) int {
 
 // no need marshal: ScriptType, CodeType, CodeHash, GenesisId, AddressPkh, DataValue
 func (d *TxoData) Unmarshal(buf []byte) {
-	if buf[3] == 0x01 {
-		buf[3] = 0x00
-		// not compress
-		// d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
-		// d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
-		// d.Satoshi = binary.LittleEndian.Uint64(buf[12:20])  // 8
-		// d.PkScript = buf[20:]
-		// return
-	}
+	// if buf[3] == 0x01 {
+	// 	buf[3] = 0x00
+	// not compress
+	// d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
+	// d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
+	// d.Satoshi = binary.LittleEndian.Uint64(buf[12:20])  // 8
+	// d.PkScript = buf[20:]
+	// return
+	// }
 
 	d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
 	offset := 4
