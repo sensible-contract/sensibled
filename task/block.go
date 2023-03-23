@@ -252,12 +252,13 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 
 		if needSaveMempool {
 			needReset := true
-
+			// Pika更新新创建的nft
 			if ok := memSerial.UpdateNewNFTDataInPika(mempool.NewInscriptions); !ok {
 				model.NeedStop = true
 				return
 			}
 
+			// Pika更新addr tx历史
 			if ok := memSerial.SaveAddressTxHistoryIntoPika(needReset, mempool.AddrPkhInTxMap); !ok {
 				model.NeedStop = true
 				return

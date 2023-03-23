@@ -130,7 +130,7 @@ func CommitSyncCk() bool {
 		isOK = false
 	}
 	if err := syncNFT.Commit(); err != nil {
-		logger.Log.Error("sync-commit-tx", zap.Error(err))
+		logger.Log.Error("sync-commit-nft", zap.Error(err))
 		isOK = false
 	}
 	if err := syncTxOut.Commit(); err != nil {

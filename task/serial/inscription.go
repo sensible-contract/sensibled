@@ -97,7 +97,7 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 
 				InputsValue:  satInputAmount,
 				OutputsValue: satOutputAmount,
-				Ordinal:      0, // fixme: missing ordinal
+				Ordinal:      0, // fixme: missing ordinal, todo
 				Number:       nftStartNumber,
 				BlockTime:    block.BlockTime,
 			}
@@ -127,7 +127,7 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 		}
 		nftIndexInBlock += uint64(len(tx.NewNFTDataCreated))
 
-		// insert exsit NFT
+		// insert exist NFT
 		satInputOffset := uint64(0)
 		for vin, input := range tx.TxIns {
 			objData, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]
