@@ -243,8 +243,8 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 	go func() {
 		defer wg.Done()
 
-		// Pika更新addr tx历史
 		if needSaveBlock {
+			// Pika更新新创建的nft
 			if ok := memSerial.UpdateNewNFTDataInPika(model.GlobalNewInscriptions); !ok {
 				model.NeedStop = true
 				return
