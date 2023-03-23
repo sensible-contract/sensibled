@@ -101,10 +101,7 @@ func EncodeTxNFT(tx *model.Tx) {
 
 		if nft, ok := scriptDecoder.ExtractPkScriptForNFT(nftScript); ok {
 			nft.InTxVin = uint32(vin)
-			satOffset := len(tx.NewNFTDataCreated)
-			input.CreatePointOfNewNFTs = append(input.CreatePointOfNewNFTs, &model.NFTCreatePoint{
-				Offset: uint64(satOffset), // fixme: which sat? if some nft failed
-			})
+			input.CreatePointCountOfNewNFTs += 1
 			tx.NewNFTDataCreated = append(tx.NewNFTDataCreated, nft)
 			tx.GenesisNewNFT = true
 		} 
