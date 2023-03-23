@@ -159,6 +159,7 @@ type NFTCreatePoint struct {
 	Height     uint32 // Height of NFT show in block onCreate
 	IdxInBlock uint64 // Index of NFT show in block onCreate
 	Offset     uint64 // sat offset in utxo
+	IsBRC20    bool   // the NFT is BRC20
 }
 
 func (p *NFTCreatePoint) GetCreateIdxKey() string {
@@ -252,6 +253,10 @@ func DumpNFTCreatePoints(buf []byte, createPointOfNFTs []*NFTCreatePoint) int {
 		offset += scriptDecoder.PutVLQ(buf[offset:], uint64(nft.Height))
 		offset += scriptDecoder.PutVLQ(buf[offset:], nft.IdxInBlock)
 		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Offset)
+		if nft.IsBRC20 {
+			buf[offset] += 0x02
+		}
+		offset += 1
 	}
 	return offset
 }
@@ -281,10 +286,17 @@ func (d *TxoData) LoadNFTCreatePointsFromRaw(buf []byte) (offset int) {
 		}
 		offset += bytesRead
 
+		isBRC20 := false
+		if buf[offset]&0x02 == 0x02 {
+			isBRC20 = true
+		}
+		offset += 1
+
 		d.CreatePointOfNFTs = append(d.CreatePointOfNFTs, &NFTCreatePoint{
 			Height:     uint32(height),
 			IdxInBlock: nftIdx,
 			Offset:     satOffset,
+			IsBRC20:    isBRC20,
 		})
 	}
 }

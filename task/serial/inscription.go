@@ -85,6 +85,7 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 			createPoint := &model.NFTCreatePoint{
 				Height:     uint32(block.Height),
 				IdxInBlock: nftIndexInBlock + uint64(createIdxInTx),
+				IsBRC20:    nft.IsBRC20,
 			}
 			newInscriptionInfo := &model.NewInscriptionInfo{
 				NFTData:     nft,
