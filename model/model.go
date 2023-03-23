@@ -110,23 +110,27 @@ type BlockCache struct {
 
 // //////////////
 type ProcessBlock struct {
-	Height           uint32
-	AddrPkhInTxMap   map[string][]int
-	SpentUtxoKeysMap map[string]struct{}
-	SpentUtxoDataMap map[string]*TxoData
-	NewUtxoDataMap   map[string]*TxoData
-	NewInscriptions  []*NewInscriptionInfo // index: createBlockNFTIndex;  nft: IncriptionID
+	Height               uint32
+	AddrPkhInTxMap       map[string][]int
+	SpentUtxoKeysMap     map[string]struct{}
+	SpentUtxoDataMap     map[string]*TxoData
+	NewUtxoDataMap       map[string]*TxoData
+	NewInscriptions      []*NewInscriptionInfo // index: createBlockNFTIndex;  nft: IncriptionID
+	NewBRC20Inscriptions []*NewInscriptionInfo
 }
 
 type NewInscriptionInfo struct {
 	NFTData      *scriptDecoder.NFTData // type/data
 	CreatePoint  *NFTCreatePoint
+	Height       uint32 // for brc20 to height
 	TxIdx        uint64 // txidx in block
 	TxId         []byte // create txid
 	IdxInTx      uint32 // nft idx inside tx
 	InTxVout     uint32 // nft outgoing(vout) inside tx
 	InputsValue  uint64
 	OutputsValue uint64
+	Satoshi      uint64
+	PkScript     []byte
 	Ordinal      uint64
 	Number       uint64
 	BlockTime    uint32

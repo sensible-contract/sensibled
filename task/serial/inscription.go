@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"unisatd/logger"
 	"unisatd/model"
+	scriptDecoder "unisatd/parser/script"
 	"unisatd/rdb"
 	"unisatd/utils"
 
@@ -108,8 +109,13 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 				if uint64(createIdxInTx) < satOutputOffset+output.Satoshi {
 					createPoint.Offset = uint64(createIdxInTx) - satOutputOffset
 					newInscriptionInfo.InTxVout = uint32(vout)
+					newInscriptionInfo.Satoshi = output.Satoshi
+					newInscriptionInfo.PkScript = output.PkScript
 					output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, createPoint)
 					inFee = false
+					if nft.IsBRC20 {
+						block.ParseData.NewBRC20Inscriptions = append(block.ParseData.NewBRC20Inscriptions, newInscriptionInfo)
+					}
 					break
 				}
 				satOutputOffset += output.Satoshi
@@ -145,15 +151,39 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 				sat := satInputOffset + nftpoint.Offset
 				inFee := true
 				satOutputOffset := uint64(0)
-				for _, output := range tx.TxOuts {
+				for vout, output := range tx.TxOuts {
 					if uint64(sat) < satOutputOffset+output.Satoshi {
 						movetoCreatePoint := &model.NFTCreatePoint{
 							Height:     nftpoint.Height,
 							IdxInBlock: nftpoint.IdxInBlock,
 							Offset:     uint64(sat - satOutputOffset),
 							HasMoved:   true,
+							IsBRC20:    nftpoint.IsBRC20,
 						}
 						output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, movetoCreatePoint)
+
+						// record brc20 first transfer
+						if !nftpoint.HasMoved && nftpoint.IsBRC20 {
+							newInscriptionInfo := &model.NewInscriptionInfo{
+								NFTData:     &scriptDecoder.NFTData{},
+								CreatePoint: movetoCreatePoint,
+
+								Height: uint32(block.Height),
+								TxIdx:  uint64(txIdx + 1),
+								TxId:   tx.TxId,
+
+								InputsValue:  satInputAmount,
+								OutputsValue: satOutputAmount,
+								Ordinal:      0, // fixme: missing ordinal, todo
+
+								InTxVout:  uint32(vout),
+								Satoshi:   output.Satoshi,
+								PkScript:  output.PkScript,
+								BlockTime: block.BlockTime,
+							}
+							block.ParseData.NewBRC20Inscriptions = append(block.ParseData.NewBRC20Inscriptions, newInscriptionInfo)
+						}
+
 						inFee = false
 						break
 					}
@@ -168,6 +198,7 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 						IdxInBlock: nftpoint.IdxInBlock,
 						Offset:     uint64(sat) - satOutputOffset + satFeeOffset, // global fee offset in coinbase
 						HasMoved:   true,
+						IsBRC20:    nftpoint.IsBRC20,
 					})
 				}
 			}
@@ -213,6 +244,7 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 					IdxInBlock: nftpoint.IdxInBlock,
 					Offset:     uint64(sat - satOutputOffset),
 					HasMoved:   true,
+					IsBRC20:    nftpoint.IsBRC20,
 				})
 				inFee = false
 				break
