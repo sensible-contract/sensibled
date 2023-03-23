@@ -73,6 +73,7 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 	var coinbaseCreatePointOfNFTs []*model.NFTCreatePoint
 	satFeeOffset := utils.CalcBlockSubsidy(block.Height)
 	nftIndexInBlock := uint64(0)
+	// 跳过coinbase
 	for txIdx, tx := range block.Txs[1:] {
 
 		invalidTxRecreateNFT(tx, block.ParseData.SpentUtxoDataMap)
