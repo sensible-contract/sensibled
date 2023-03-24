@@ -38,7 +38,7 @@ func prepareSyncCk(isFull bool) bool {
 	sqlBlk := fmt.Sprintf(sqlBlkPattern, "blk_height_new")
 	sqlTx := fmt.Sprintf(sqlTxPattern, "blktx_height_new")
 	sqlNFT := fmt.Sprintf(sqlNFTPattern, "blknft_height_new")
-	sqlBRC20 := fmt.Sprintf(sqlNFTPattern, "blkbrc20_height_new")
+	sqlBRC20 := fmt.Sprintf(sqlBRC20Pattern, "blkbrc20_height_new")
 	sqlTxOut := fmt.Sprintf(sqlTxOutPattern, "txout_new")
 	sqlTxIn := fmt.Sprintf(sqlTxInPattern, "txin_new")
 	if isFull {
