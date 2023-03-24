@@ -7,6 +7,7 @@ import (
 	"time"
 	"unisatd/logger"
 	"unisatd/model"
+	scriptDecoder "unisatd/parser/script"
 	"unisatd/rdb"
 	"unisatd/utils"
 
@@ -45,7 +46,7 @@ func getTxFee(tx *model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model
 
 // ParseMempoolBatchTxNFTsInAndOutSerial all tx input/output info
 func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftStartNumber uint64,
-	txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) (nftIndexInBlockAfter uint64, newInscriptions []*model.NewInscriptionInfo) {
+	txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) (nftIndexInBlockAfter uint64, newInscriptions, newBRC20Inscriptions []*model.NewInscriptionInfo) {
 
 	for txIdx, tx := range txs {
 		satInputAmount, satOutputAmount := getTxFee(tx, mpNewUtxo, removeUtxo, mpSpentUtxo)
@@ -106,7 +107,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 
 				InputsValue:  satInputAmount,
 				OutputsValue: satOutputAmount,
-				Ordinal:      0, // fixme: missing ordinal
+				Ordinal:      0, // fixme: missing ordinal, todo
 				Number:       nftStartNumber,
 				BlockTime:    0,
 			}
@@ -117,9 +118,14 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 			for vout, output := range tx.TxOuts {
 				if uint64(createIdxInTx) < satOutputOffset+output.Satoshi {
 					createPoint.Offset = uint64(createIdxInTx) - satOutputOffset
-					output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, createPoint)
 					newInscriptionInfo.InTxVout = uint32(vout)
+					newInscriptionInfo.Satoshi = output.Satoshi
+					newInscriptionInfo.PkScript = output.PkScript
+					output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, createPoint)
 					inFee = false
+					if nft.IsBRC20 {
+						newBRC20Inscriptions = append(newBRC20Inscriptions, newInscriptionInfo)
+					}
 					break
 				}
 				satOutputOffset += output.Satoshi
@@ -130,6 +136,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 				tx.NFTLostCnt += 1
 				createPoint.Offset = uint64(createIdxInTx) - satOutputOffset
 				newInscriptionInfo.InTxVout = tx.TxOutCnt
+				createPoint.HasMoved = true
 			}
 			newInscriptions = append(newInscriptions, newInscriptionInfo)
 		}
@@ -160,16 +167,39 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 				sat := satInputOffset + nftpoint.Offset
 				inFee := true
 				satOutputOffset := uint64(0)
-				for _, output := range tx.TxOuts {
+				for vout, output := range tx.TxOuts {
 					if uint64(sat) < satOutputOffset+output.Satoshi {
-						output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, &model.NFTCreatePoint{
+						movetoCreatePoint := &model.NFTCreatePoint{
 							Height:     nftpoint.Height,
 							IdxInBlock: nftpoint.IdxInBlock,
 							Offset:     uint64(sat - satOutputOffset),
 							HasMoved:   true,
 							IsBRC20:    nftpoint.IsBRC20,
-						})
+						}
+						output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, movetoCreatePoint)
 						inFee = false
+
+						// record brc20 first transfer
+						if !nftpoint.HasMoved && nftpoint.IsBRC20 {
+							newInscriptionInfo := &model.NewInscriptionInfo{
+								NFTData:     &scriptDecoder.NFTData{},
+								CreatePoint: movetoCreatePoint,
+
+								Height: uint32(model.MEMPOOL_HEIGHT),
+								TxIdx:  uint64(txIdx + 1),
+								TxId:   tx.TxId,
+
+								InputsValue:  satInputAmount,
+								OutputsValue: satOutputAmount,
+								Ordinal:      0, // fixme: missing ordinal, todo
+
+								InTxVout:  uint32(vout),
+								Satoshi:   output.Satoshi,
+								PkScript:  output.PkScript,
+								BlockTime: 0,
+							}
+							newBRC20Inscriptions = append(newBRC20Inscriptions, newInscriptionInfo)
+						}
 						break
 					}
 					satOutputOffset += output.Satoshi
@@ -200,7 +230,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 		}
 	}
 
-	return nftIndexInBlock, newInscriptions
+	return nftIndexInBlock, newInscriptions, newBRC20Inscriptions
 }
 
 func UpdateNewNFTDataInPika(newInscriptions []*model.NewInscriptionInfo) bool {

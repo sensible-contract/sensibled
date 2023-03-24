@@ -243,12 +243,13 @@ func (mp *Mempool) ParseMempool(startIdx int, nftStartNumber uint64) {
 	serial.ParseGetSpentUtxoDataFromRedisSerial(mp.SpentUtxoKeysMap, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
 
 	// 更新NFT追踪信息，保存在in/out记录上，也更新到utxo中。需要依赖从redis查来的utxo。
-	newCount, newInscriptions := serial.ParseMempoolBatchTxNFTsInAndOutSerial(startIdx, mp.NewInscriptionsWithInvalidCount, nftStartNumber,
+	newCount, newInscriptions, newBRC20Inscriptions := serial.ParseMempoolBatchTxNFTsInAndOutSerial(startIdx, mp.NewInscriptionsWithInvalidCount, nftStartNumber,
 		mp.BatchTxs, mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
 
 	mp.NewInscriptionsWithInvalidCount = newCount
 	mp.NewInscriptionsCount += uint64(len(newInscriptions))
 	mp.NewInscriptions = append(mp.NewInscriptions, newInscriptions...)
+	mp.NewBRC20Inscriptions = append(mp.NewBRC20Inscriptions, newBRC20Inscriptions...)
 
 	// 4 dep 3
 	// SpentUtxoDataMap r
@@ -260,7 +261,8 @@ func (mp *Mempool) ParseMempool(startIdx int, nftStartNumber uint64) {
 	// 5 dep 2 4
 	serial.SyncBlockTx(startIdx, mp.BatchTxs)
 
-	serial.SyncBlockNFT(startIdx, mp.NewInscriptions)
+	serial.SyncBlockNFT(mp.NewInscriptions)
+	serial.SyncBlockBRC20(mp.NewBRC20Inscriptions)
 }
 
 // ParseEnd 最后分析执行
