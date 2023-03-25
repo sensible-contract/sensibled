@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS blkbrc20_height (
 	nftnumber    UInt64,
 	nftheight    UInt32             -- nft 在区块中的创建高度，如果>0则是move
 ) engine=MergeTree()
-ORDER BY (height, nftidx)
+ORDER BY (height, txidx)
 PARTITION BY intDiv(height, 2100)
 `,
 
