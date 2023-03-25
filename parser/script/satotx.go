@@ -107,6 +107,11 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 					}
 					offset += size // consume OP_CODE
 					if isPush {
+						// official need fix minimal push check
+						if len(data) == 1 && data[0] >= OP_1 && data[0] <= OP_16 {
+							break
+						}
+
 						// append content type data
 						nft.ContentBody = append(nft.ContentBody, data...)
 					} else {
@@ -145,6 +150,10 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 				}
 				offset += size // consume OP_CODE
 				if isPush {
+					// official need fix minimal push check
+					if len(data) == 1 && data[0] >= OP_1 && data[0] <= OP_16 {
+						break
+					}
 					// append content type data
 					nft.ContentType = append(nft.ContentType, data...)
 				} else {
@@ -167,6 +176,11 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 					}
 					// check invalid OP_CODE
 					break
+				} else {
+					// official need fix minimal push check
+					if len(data) == 1 && data[0] >= OP_1 && data[0] <= OP_16 {
+						break
+					}
 				}
 			}
 		} // for parse nft tags/body
