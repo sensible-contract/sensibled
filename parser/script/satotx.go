@@ -40,12 +40,12 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 
 	for p < e {
 		// check OP_FALSE
-		size, data, isPush := GetOpcodeFormScript(pkScript[p:])
+		size, data, isPush, isOpcode := GetOpcodeFormScript(pkScript[p:])
 		if data == nil {
 			break
 		}
 		p += size // consume OP_CODE
-		if !isPush || size != 1 || data[0] != OP_FALSE {
+		if !isPush || !isOpcode || size != 1 || data[0] != OP_FALSE {
 			// fmt.Println("skip not OP_FALSE")
 			// skip if not OP_FALSE
 			continue
@@ -57,19 +57,19 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 		}
 
 		// check OP_IF
-		size, data, isPush = GetOpcodeFormScript(pkScript[p:])
+		size, data, isPush, isOpcode = GetOpcodeFormScript(pkScript[p:])
 		if data == nil {
 			break
 		}
 		p += size // consume OP_CODE
-		if isPush || size != 1 || data[0] != OP_IF {
+		if isPush || !isOpcode || size != 1 || data[0] != OP_IF {
 			// fmt.Println("skip not OP_IF")
 			// skip if not OP_IF
 			continue
 		}
 
 		// check OP_PUSH_DATA_3 magic ord
-		size, data, isPush = GetOpcodeFormScript(pkScript[p:])
+		size, data, isPush, isOpcode = GetOpcodeFormScript(pkScript[p:])
 		if data == nil {
 			break
 		}
@@ -84,8 +84,8 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 
 		// parse nft
 		for offset < e {
-			// chech tag name
-			size, data, isPush := GetOpcodeFormScript(pkScript[offset:])
+			// check tag name
+			size, data, isPush, isOpcode := GetOpcodeFormScript(pkScript[offset:])
 			if data == nil {
 				break
 			}
@@ -101,14 +101,14 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 			// body start
 			if size == 1 && data[0] == OP_0 {
 				for offset < e {
-					size, data, isPush := GetOpcodeFormScript(pkScript[offset:])
+					size, data, isPush, isOpcode := GetOpcodeFormScript(pkScript[offset:])
 					if data == nil {
 						break
 					}
 					offset += size // consume OP_CODE
 					if isPush {
 						// official need fix minimal push check
-						if len(data) == 1 && data[0] >= OP_1 && data[0] <= OP_16 {
+						if isOpcode {
 							break
 						}
 
@@ -131,7 +131,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 			}
 
 			// official need fix minimal push check
-			if len(data) == 1 && data[0] >= OP_1 && data[0] <= OP_16 {
+			if isOpcode {
 				break
 			}
 
@@ -144,16 +144,17 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 			// fixme: minimal pushdata content type
 			// if size == 1 && (data[0] == OP_1 || data[0] == OP_DATA_1 ) {
 			if len(data) == 1 && data[0] == OP_DATA_1 {
-				size, data, isPush := GetOpcodeFormScript(pkScript[offset:])
+				size, data, isPush, isOpcode := GetOpcodeFormScript(pkScript[offset:])
 				if data == nil {
 					break
 				}
 				offset += size // consume OP_CODE
 				if isPush {
 					// official need fix minimal push check
-					if len(data) == 1 && data[0] >= OP_1 && data[0] <= OP_16 {
+					if isOpcode {
 						break
 					}
+
 					// append content type data
 					nft.ContentType = append(nft.ContentType, data...)
 				} else {
@@ -164,7 +165,8 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 					break
 				}
 			} else {
-				size, data, isPush := GetOpcodeFormScript(pkScript[offset:])
+				// skip valid tag
+				size, data, isPush, isOpcode := GetOpcodeFormScript(pkScript[offset:])
 				if data == nil {
 					break
 				}
@@ -178,7 +180,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 					break
 				} else {
 					// official need fix minimal push check
-					if len(data) == 1 && data[0] >= OP_1 && data[0] <= OP_16 {
+					if isOpcode {
 						break
 					}
 				}

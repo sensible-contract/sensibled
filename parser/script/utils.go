@@ -48,29 +48,29 @@ func SafeDecodeVarIntForScript(raw []byte) (cnt uint, cnt_size uint) {
 	return 0, 0
 }
 
-func GetOpcodeFormScript(raw []byte) (size uint, data []byte, isPush bool) {
+func GetOpcodeFormScript(raw []byte) (size uint, data []byte, isPush, isOpcode bool) {
 	if len(raw) < 1 {
 		// fmt.Println("push null")
-		return 0, nil, false
+		return 0, nil, false, false
 	}
 
 	c := raw[0]
 	if c > OP_16 {
 		// fmt.Println("code", c)
-		return 1, raw[0:1], false
+		return 1, raw[0:1], false, true
 	}
 	// skip valid tag
 	if 0 < c && c < 0x4f {
 		cnt, cntsize := SafeDecodeVarIntForScript(raw)
 		if int(cntsize+cnt) == 0 || int(cntsize+cnt) > len(raw) {
 			// fmt.Println("invalid push")
-			return cntsize + cnt, nil, false
+			return cntsize + cnt, nil, false, false
 		}
 		// fmt.Println("push_", cnt, string(raw[cntsize:cntsize+cnt]))
-		return cntsize + cnt, raw[cntsize : cntsize+cnt], true
+		return cntsize + cnt, raw[cntsize : cntsize+cnt], true, false
 	} else {
 		// fmt.Println("code", c)
-		return 1, raw[0:1], true
+		return 1, raw[0:1], true, true
 	}
 }
 
