@@ -114,6 +114,34 @@ ORDER BY (height, nftidx)
 PARTITION BY intDiv(height, 2100)
 `,
 
+		// text nft list
+		// ================================================================
+		// 区块包含的新创建text nft列表，分区内按区块高度height排序、索引。按blk height查询时可确定分区 (快)
+		"DROP TABLE IF EXISTS blknft_text_height",
+		`
+CREATE TABLE IF NOT EXISTS blknft_text_height (
+	txid         FixedString(32),  -- inscription create txid
+	idx          UInt32,           -- inscription create index, aka, output sat offset
+	vin          UInt32,           -- revaled at input index
+	vout         UInt32,           -- created at output index
+	offset       UInt32,           -- created sat offset at this output
+	satoshi      UInt64,
+	script_pk    String,
+	invalue      UInt64,
+	outvalue     UInt64,
+	content_type String,
+	content_len  UInt32,
+	content      String,
+	height       UInt32,
+	txidx        UInt64,
+	blocktime    UInt32,
+	nftidx       UInt64,            -- nft 在区块中的创建序号
+	nftnumber    UInt64
+) engine=MergeTree()
+ORDER BY (height, nftidx)
+PARTITION BY intDiv(height, 2100)
+`,
+
 		// nft brc20 list
 		// ================================================================
 		// 区块包含的新创建brc20 nft列表，分区内按区块高度height排序、索引。按blk height查询时可确定分区 (快)
@@ -256,6 +284,8 @@ PARTITION BY substring(utxid, 1, 1)
 		"INSERT INTO txin_spent SELECT height, txid, idx, substring(utxid, 1, 12), vout FROM txin",
 		// 生成txo被花费的tx区块高度索引
 		"INSERT INTO txout_spent_height SELECT height, utxid, vout FROM txin_spent",
+
+		"INSERT INTO blknft_text_height SELECT * FROM blknft_height WHERE content_len < 102400 AND (content_type = 'text/plain;charset=utf-8' OR content_type = 'application/json')",
 	}
 
 	removeOrphanPartSQLs = []string{
@@ -265,6 +295,7 @@ PARTITION BY substring(utxid, 1, 1)
 
 		"ALTER TABLE blktx_height DELETE WHERE height >= ",
 		"ALTER TABLE blknft_height DELETE WHERE height >= ",
+		"ALTER TABLE blknft_text_height DELETE WHERE height >= ",
 		"ALTER TABLE blkbrc20_height DELETE WHERE height >= ",
 
 		"ALTER TABLE txin_spent DELETE WHERE height >= ",
@@ -309,6 +340,7 @@ PARTITION BY substring(utxid, 1, 1)
 		"INSERT INTO blk_height SELECT * FROM blk_height_new;",
 		"INSERT INTO blktx_height SELECT * FROM blktx_height_new;",
 		"INSERT INTO blknft_height SELECT * FROM blknft_height_new;",
+		"INSERT INTO blknft_text_height SELECT * FROM blknft_height_new WHERE content_len < 102400 AND (content_type = 'text/plain;charset=utf-8' OR content_type = 'application/json')",
 		"INSERT INTO blkbrc20_height SELECT * FROM blkbrc20_height_new;",
 
 		// 优化blk表，以便统一按height排序查询
