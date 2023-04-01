@@ -47,9 +47,9 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				addrPkhInTxMap[address] = append(addrPkhInTxMap[address], startIdx+txIdx)
 			}
 
-			nftPointsBuf := make([]byte, len(input.CreatePointOfNFTs)*3*8)
-			model.DumpNFTCreatePoints(nftPointsBuf, input.CreatePointOfNFTs)
-
+			nftPointsBuf := make([]byte, len(input.CreatePointOfNFTs)*3*16)
+			offset := model.DumpNFTCreatePoints(nftPointsBuf, input.CreatePointOfNFTs)
+			nftPointsBuf = nftPointsBuf[:offset]
 			if _, err := store.SyncStmtTxIn.Exec(
 				model.MEMPOOL_HEIGHT, // uint32(block.Height),
 				uint64(startIdx+txIdx),

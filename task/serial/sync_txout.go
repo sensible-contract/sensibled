@@ -35,9 +35,9 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				address = string(output.AddressData.AddressPkh[:]) // 20 bytes
 			}
 
-			nftPointsBuf := make([]byte, len(output.CreatePointOfNFTs)*3*8)
-			model.DumpNFTCreatePoints(nftPointsBuf, output.CreatePointOfNFTs)
-
+			nftPointsBuf := make([]byte, len(output.CreatePointOfNFTs)*3*16)
+			offset := model.DumpNFTCreatePoints(nftPointsBuf, output.CreatePointOfNFTs)
+			nftPointsBuf = nftPointsBuf[:offset]
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.TxId),
 				uint32(vout),
