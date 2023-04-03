@@ -67,7 +67,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				pkscript = string(objData.PkScript)
 			}
 
-			nftPointsBuf := make([]byte, len(input.CreatePointOfNFTs)*3*16)
+			nftPointsBuf := make([]byte, len(input.CreatePointOfNFTs)*32)
 			offset := model.DumpNFTCreatePoints(nftPointsBuf, input.CreatePointOfNFTs)
 			nftPointsBuf = nftPointsBuf[:offset]
 

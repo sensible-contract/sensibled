@@ -139,7 +139,7 @@ func UpdateUtxoInPika(utxoToRestore, utxoToRemove map[string]*model.TxoData) boo
 	for outpointKey, data := range utxoToRestore {
 		buf := make([]byte, 36+20+
 			len(data.PkScript)+
-			len(data.CreatePointOfNFTs)*25)
+			len(data.CreatePointOfNFTs)*32)
 		length := data.Marshal(buf)
 
 		buf = append(buf[:length], []byte(outpointKey)...)

@@ -47,7 +47,7 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				addrPkhInTxMap[address] = append(addrPkhInTxMap[address], startIdx+txIdx)
 			}
 
-			nftPointsBuf := make([]byte, len(input.CreatePointOfNFTs)*3*16)
+			nftPointsBuf := make([]byte, len(input.CreatePointOfNFTs)*32)
 			offset := model.DumpNFTCreatePoints(nftPointsBuf, input.CreatePointOfNFTs)
 			nftPointsBuf = nftPointsBuf[:offset]
 			if _, err := store.SyncStmtTxIn.Exec(
