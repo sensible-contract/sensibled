@@ -8,16 +8,6 @@ func hasSensibleFlag(pkScript []byte) bool {
 	return bytes.HasSuffix(pkScript, []byte("sensible")) || bytes.HasSuffix(pkScript, []byte("oraclesv"))
 }
 
-func DecodeSensibleTxo(pkScript []byte, txo *AddressData) bool {
-	scriptLen := len(pkScript)
-	if scriptLen < 1024 {
-		return false
-	}
-
-	ret := false
-	return ret
-}
-
 // false if ord 1 1 type 0 content endif
 // false false if ord ...
 // false if false if ord ...
@@ -232,7 +222,7 @@ func ExtractPkScriptForTxo(pkScript, scriptType []byte) (txo *AddressData) {
 	if isPayToScriptHash(scriptType) {
 		txo.HasAddress = true
 		txo.CodeType = CodeType_P2SH
-		copy(txo.AddressPkh[:], pkScript[2:22])
+		copy(txo.AddressPkh[:], GetHash160(pkScript))
 		return txo
 	}
 
@@ -253,8 +243,6 @@ func ExtractPkScriptForTxo(pkScript, scriptType []byte) (txo *AddressData) {
 		}
 		return txo
 	}
-
-	DecodeSensibleTxo(pkScript, txo)
 
 	return txo
 }
