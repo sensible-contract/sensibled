@@ -47,6 +47,14 @@ func SyncBlockNFT(nfts []*model.NewInscriptionInfo) {
 // SyncBlockBRC20 all brc20 in block height
 func SyncBlockBRC20(brc20s []*model.NewInscriptionInfo) {
 	for _, brc20 := range brc20s {
+
+		nftheight := brc20.CreatePoint.Height
+		transferNftHeight := brc20.Height
+		if transferNftHeight != 0 {
+			// transfer
+			transferNftHeight, nftheight = nftheight, transferNftHeight
+		}
+
 		if _, err := store.SyncStmtBRC20.Exec(
 			string(brc20.TxId),
 			brc20.IdxInTx,
@@ -63,13 +71,13 @@ func SyncBlockBRC20(brc20s []*model.NewInscriptionInfo) {
 			uint32(len(brc20.NFTData.ContentBody)),
 			string(brc20.NFTData.ContentBody),
 
-			brc20.CreatePoint.Height,
+			nftheight,
 			brc20.TxIdx,
 			brc20.BlockTime,
 
 			brc20.CreatePoint.IdxInBlock,
 			brc20.Number,
-			brc20.Height,
+			transferNftHeight,
 		); err != nil {
 			logger.Log.Info("sync-brc20-err",
 				zap.String("brc20id", utils.HashString(brc20.TxId)),
