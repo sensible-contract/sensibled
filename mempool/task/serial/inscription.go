@@ -112,7 +112,6 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 				BlockTime:    0,
 			}
 			nftStartNumber += 1
-
 			inFee := true
 			satOutputOffset := uint64(0)
 			for vout, output := range tx.TxOuts {
@@ -130,7 +129,6 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 				}
 				satOutputOffset += output.Satoshi
 			}
-
 			// create nft may in fee
 			if inFee {
 				tx.NFTLostCnt += 1
@@ -186,7 +184,7 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 								CreatePoint: movetoCreatePoint,
 
 								Height: uint32(model.MEMPOOL_HEIGHT),
-								TxIdx:  uint64(txIdx + 1),
+								TxIdx:  uint64(startIdx + txIdx),
 								TxId:   tx.TxId,
 
 								InputsValue:  satInputAmount,
