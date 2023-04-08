@@ -251,15 +251,15 @@ func UpdateNewNFTDataInPika(newInscriptions []*model.NewInscriptionInfo) bool {
 
 	maxSize := 1000000
 	for idx := 0; idx < len(items); {
-		pikaPipe := rdb.RdbAddrTxClient.Pipeline()
+		pikaPipe := rdb.RdbUtxoClient.Pipeline()
 		size := 0
 		for ; size < maxSize && idx < len(items); idx++ {
-			// 有序address tx history数据添加
+			// nft key数据添加
 			pikaPipe.Set(ctx, "nb"+items[idx].CreateIdx, items[idx].Data, 0)
 			size += 32 + len(items[idx].Data)
 		}
 		if _, err := pikaPipe.Exec(ctx); err != nil && err != redis.Nil {
-			logger.Log.Error("pika address exec failed", zap.Error(err))
+			logger.Log.Error("pika utxo nft exec failed", zap.Error(err))
 			model.NeedStop = true
 			return false
 		}
