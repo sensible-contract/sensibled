@@ -167,6 +167,8 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 				satOutputOffset := uint64(0)
 				for vout, output := range tx.TxOuts {
 					if uint64(sat) < satOutputOffset+output.Satoshi {
+						inFee = false
+
 						movetoCreatePoint := &model.NFTCreatePoint{
 							Height:     nftpoint.Height,
 							IdxInBlock: nftpoint.IdxInBlock,
@@ -175,7 +177,6 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 							IsBRC20:    nftpoint.IsBRC20,
 						}
 						output.CreatePointOfNFTs = append(output.CreatePointOfNFTs, movetoCreatePoint)
-						inFee = false
 
 						// record brc20 first transfer
 						if !nftpoint.HasMoved && nftpoint.IsBRC20 {
@@ -206,6 +207,36 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 				// create nft may in fee
 				if inFee {
 					tx.NFTLostCnt += 1
+
+					movetoCreatePoint := &model.NFTCreatePoint{
+						Height:     nftpoint.Height,
+						IdxInBlock: nftpoint.IdxInBlock,
+						Offset:     0,
+						HasMoved:   true,
+						IsBRC20:    nftpoint.IsBRC20,
+					}
+
+					// record brc20 first transfer
+					if !nftpoint.HasMoved && nftpoint.IsBRC20 {
+						newInscriptionInfo := &model.NewInscriptionInfo{
+							NFTData:     &scriptDecoder.NFTData{},
+							CreatePoint: movetoCreatePoint,
+
+							Height: uint32(model.MEMPOOL_HEIGHT),
+							TxIdx:  uint64(startIdx + txIdx),
+							TxId:   tx.TxId,
+
+							InputsValue:  satInputAmount,
+							OutputsValue: satOutputAmount,
+							Ordinal:      0, // fixme: missing ordinal, todo
+
+							InTxVout:  tx.TxOutCnt,
+							Satoshi:   0,
+							PkScript:  objData.PkScript,
+							BlockTime: 0,
+						}
+						newBRC20Inscriptions = append(newBRC20Inscriptions, newInscriptionInfo)
+					}
 				}
 			}
 			satInputOffset += objData.Satoshi
