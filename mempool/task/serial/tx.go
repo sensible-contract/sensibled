@@ -233,12 +233,18 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
 
+		// 单独记录非nft余额
+		var mpkeyAU, mpkeyBL string
+		if len(data.CreatePointOfNFTs) == 0 {
+			mpkeyAU = "mp:{au" + strAddressPkh + "}"
+			mpkeyBL = "mp:bl" + strAddressPkh
+		} else {
+			mpkeyAU = "mp:{aU" + strAddressPkh + "}"
+			mpkeyBL = "mp:bL" + strAddressPkh
+		}
 		// redis有序address utxo数据清除
-		mpkeyAU := "mp:{au" + strAddressPkh + "}"
 		pipe.ZRem(ctx, mpkeyAU, outpointKey)
-
 		// balance of address
-		mpkeyBL := "mp:bl" + strAddressPkh
 		pipe.DecrBy(ctx, mpkeyBL, int64(data.Satoshi))
 
 		mpkeyAN := "mp:{an" + strAddressPkh + "}"
@@ -264,13 +270,19 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*model.HEIGHT_MUTIPLY + float64(data.TxIdx), Member: outpointKey}
 
+		// 单独记录非nft余额
+		var mpkeyAU, mpkeyBL string
+		if len(data.CreatePointOfNFTs) == 0 {
+			mpkeyAU = "mp:s:{au" + strAddressPkh + "}"
+			mpkeyBL = "mp:bl" + strAddressPkh
+		} else {
+			mpkeyAU = "mp:s:{aU" + strAddressPkh + "}"
+			mpkeyBL = "mp:bL" + strAddressPkh
+		}
 		// 不是合约tx，则记录address utxo
 		// redis有序address utxo数据添加
-		mpkeyAU := "mp:s:{au" + strAddressPkh + "}"
 		pipe.ZAdd(ctx, mpkeyAU, member)
-
 		// balance of address
-		mpkeyBL := "mp:bl" + strAddressPkh
 		pipe.DecrBy(ctx, mpkeyBL, int64(data.Satoshi))
 
 		//更新nft的createIdx到current utxo映射记录
@@ -301,13 +313,19 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*model.HEIGHT_MUTIPLY + float64(data.TxIdx), Member: outpointKey}
 
+		// 单独记录非nft余额
+		var mpkeyAU, mpkeyBL string
+		if len(data.CreatePointOfNFTs) == 0 {
+			mpkeyAU = "mp:{au" + strAddressPkh + "}"
+			mpkeyBL = "mp:bl" + strAddressPkh
+		} else {
+			mpkeyAU = "mp:{aU" + strAddressPkh + "}"
+			mpkeyBL = "mp:bL" + strAddressPkh
+		}
 		// 不是合约tx，则记录address utxo
 		// redis有序address utxo数据添加
-		mpkeyAU := "mp:{au" + strAddressPkh + "}"
 		pipe.ZAdd(ctx, mpkeyAU, member)
-
 		// balance of address
-		mpkeyBL := "mp:bl" + strAddressPkh
 		pipe.IncrBy(ctx, mpkeyBL, int64(data.Satoshi))
 
 		//更新nft的createIdx到current utxo映射记录
