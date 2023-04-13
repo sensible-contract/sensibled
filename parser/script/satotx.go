@@ -34,7 +34,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 		if data == nil {
 			break
 		}
-		p += size // consume OP_CODE
+		p += size // consume OP_CODE, notice: OP_FALSE is a PUSH and a OPCODE
 		if !isPush || !isOpcode || size != 1 || data[0] != OP_FALSE {
 			// fmt.Println("skip not OP_FALSE")
 			// skip if not OP_FALSE
@@ -99,6 +99,9 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 					if isPush {
 						// official need fix minimal push check
 						if isOpcode {
+							if data[0] == OP_0 { // ? fixme: not sure if ord accept it
+								continue
+							}
 							break
 						}
 
@@ -142,6 +145,9 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 				if isPush {
 					// official need fix minimal push check
 					if isOpcode {
+						if data[0] == OP_0 { // OP_0 is push and opcode, and ord accept it
+							continue
+						}
 						break
 					}
 
@@ -171,6 +177,9 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft *NFTData, hasNFT bool) {
 				} else {
 					// official need fix minimal push check
 					if isOpcode {
+						if data[0] == OP_0 { // OP_0 is push and opcode, and ord accept it
+							continue
+						}
 						break
 					}
 				}
