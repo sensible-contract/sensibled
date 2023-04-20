@@ -2,7 +2,6 @@ package model
 
 import (
 	"encoding/binary"
-	"sync"
 	scriptDecoder "unisatd/parser/script"
 
 	"go.uber.org/zap/zapcore"
@@ -334,10 +333,4 @@ func (d *TxoData) LoadNFTCreatePointsFromRaw(buf []byte) (offset int) {
 			IsBRC20:    isBRC20,
 		})
 	}
-}
-
-var TxoDataPool = sync.Pool{
-	New: func() interface{} {
-		return &TxoData{}
-	},
 }

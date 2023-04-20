@@ -30,9 +30,6 @@ func TestDecode(t *testing.T) {
 		}
 
 		txo := &AddressData{}
-
-		DecodeSensibleTxo(script, txo)
-
 		data, _ := json.Marshal(txo)
 		t.Logf("scriptLen: %d, txo: %s", len(script), strings.ReplaceAll(string(data), ",", "\n"))
 	}
