@@ -22,6 +22,7 @@ import (
 type Mempool struct {
 	Txs                             map[string]struct{} // 所有Tx
 	SkipTxs                         map[string]struct{} // 需要跳过的Tx
+	TxsOpInRBF                      map[string]struct{} // 已开启RBF的Tx
 	NewInscriptionsCount            uint64
 	NewInscriptionsWithInvalidCount uint64
 
@@ -56,6 +57,8 @@ func (mp *Mempool) LoadFromMempool() bool {
 	// 清空
 	mp.Txs = make(map[string]struct{}, 0)
 	mp.SkipTxs = make(map[string]struct{}, 0)
+	mp.TxsOpInRBF = make(map[string]struct{}, 0)
+
 	mp.NewInscriptionsCount = 0
 	mp.NewInscriptionsWithInvalidCount = 0
 
@@ -108,6 +111,11 @@ func (mp *Mempool) LoadFromMempool() bool {
 			)
 			mp.SkipTxs[tx.TxIdHex] = struct{}{}
 			continue
+		}
+
+		if parser.IsTxOptInReplaceByFee(tx, mp.TxsOpInRBF) {
+			mp.TxsOpInRBF[tx.TxIdHex] = struct{}{}
+			tx.OpInRBF = true
 		}
 
 		mp.Txs[tx.TxIdHex] = struct{}{}
@@ -206,6 +214,11 @@ func (mp *Mempool) SyncMempoolFromZmq() (blockReady bool) {
 		if bytes.HasPrefix(rawtx, COINBASE_TX_PREFIX) {
 			blockReady = true
 			return true
+		}
+
+		if parser.IsTxOptInReplaceByFee(tx, mp.TxsOpInRBF) {
+			mp.TxsOpInRBF[tx.TxIdHex] = struct{}{}
+			tx.OpInRBF = true
 		}
 
 		logger.Log.Info("tx: " + tx.TxIdHex)

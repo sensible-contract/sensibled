@@ -56,6 +56,7 @@ func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, mpNewUtxo map[st
 		d.PkScript = output.PkScript
 		d.ScriptType = output.ScriptType
 		d.AddressData = output.AddressData
+		d.OpInRBF = tx.OpInRBF
 
 		mpNewUtxo[output.OutpointKey] = d
 	}

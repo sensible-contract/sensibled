@@ -31,6 +31,7 @@ type Tx struct {
 	NFTOutputsCnt     uint64
 	NFTLostCnt        uint64
 
+	OpInRBF       bool
 	GenesisNewNFT bool
 }
 
@@ -182,6 +183,7 @@ type TxoData struct {
 	Satoshi     uint64
 	PkScript    []byte
 	ScriptType  []byte
+	OpInRBF     bool
 
 	CreatePointOfNFTs []*NFTCreatePoint
 
@@ -200,6 +202,16 @@ func (d *TxoData) Marshal(buf []byte) int {
 	offset += scriptDecoder.PutVLQ(buf[offset:], d.TxIdx)
 	offset += scriptDecoder.PutVLQ(buf[offset:], scriptDecoder.CompressTxOutAmount(d.Satoshi))
 	offset += scriptDecoder.PutCompressedScript(buf[offset:], d.PkScript)
+
+	if d.BlockHeight == MEMPOOL_HEIGHT {
+		if d.OpInRBF {
+			buf[offset] = 0x01
+		} else {
+			buf[offset] = 0x00
+		}
+		offset += 1
+	}
+
 	offset += DumpNFTCreatePoints(buf[offset:], d.CreatePointOfNFTs)
 
 	// binary.LittleEndian.PutUint32(buf, d.BlockHeight)  // 4
@@ -248,6 +260,14 @@ func (d *TxoData) Unmarshal(buf []byte) {
 	d.Satoshi = scriptDecoder.DecompressTxOutAmount(compressedAmount)
 	d.PkScript = scriptDecoder.DecompressScript(buf[offset : offset+scriptSize])
 	offset += scriptSize
+
+	if d.BlockHeight == MEMPOOL_HEIGHT {
+		if buf[offset] == 0x01 {
+			d.OpInRBF = true
+		}
+		offset += 1
+	}
+
 	offset += d.LoadNFTCreatePointsFromRaw(buf[offset:])
 }
 
