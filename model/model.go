@@ -221,16 +221,35 @@ func (d *TxoData) Marshal(buf []byte) int {
 	return offset
 }
 
-// no need marshal: ScriptType, CodeType, CodeHash, GenesisId, AddressPkh, DataValue
+// dump nft
+func DumpNFTCreatePoints(buf []byte, createPointOfNFTs []*NFTCreatePoint) int {
+	offset := 0
+	for _, nft := range createPointOfNFTs {
+		offset += scriptDecoder.PutVLQ(buf[offset:], uint64(nft.Height))
+		offset += scriptDecoder.PutVLQ(buf[offset:], nft.IdxInBlock)
+		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Offset)
+		if nft.HasMoved {
+			buf[offset] = 0x01
+		} else {
+			buf[offset] = 0
+		}
+		if nft.IsBRC20 {
+			buf[offset] += 0x02
+		}
+		offset += 1
+	}
+	return offset
+}
+
 func (d *TxoData) Unmarshal(buf []byte) {
 	// if buf[3] == 0x01 {
 	// 	buf[3] = 0x00
-	// not compress
-	// d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
-	// d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
-	// d.Satoshi = binary.LittleEndian.Uint64(buf[12:20])  // 8
-	// d.PkScript = buf[20:]
-	// return
+	// 	// // not compress
+	// 	// d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
+	// 	// d.TxIdx = binary.LittleEndian.Uint64(buf[4:12])     // 8
+	// 	// d.Satoshi = binary.LittleEndian.Uint64(buf[12:20])  // 8
+	// 	// d.PkScript = buf[20:]
+	// 	// return
 	// }
 
 	d.BlockHeight = binary.LittleEndian.Uint32(buf[:4]) // 4
@@ -268,26 +287,6 @@ func (d *TxoData) Unmarshal(buf []byte) {
 	}
 
 	offset += d.LoadNFTCreatePointsFromRaw(buf[offset:])
-}
-
-// dump nft
-func DumpNFTCreatePoints(buf []byte, createPointOfNFTs []*NFTCreatePoint) int {
-	offset := 0
-	for _, nft := range createPointOfNFTs {
-		offset += scriptDecoder.PutVLQ(buf[offset:], uint64(nft.Height))
-		offset += scriptDecoder.PutVLQ(buf[offset:], nft.IdxInBlock)
-		offset += scriptDecoder.PutVLQ(buf[offset:], nft.Offset)
-		if nft.HasMoved {
-			buf[offset] = 0x01
-		} else {
-			buf[offset] = 0
-		}
-		if nft.IsBRC20 {
-			buf[offset] += 0x02
-		}
-		offset += 1
-	}
-	return offset
 }
 
 // load nft
