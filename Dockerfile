@@ -11,6 +11,7 @@ COPY . .
 # Build binary output
 RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o unisatd -ldflags '-s -w' main.go
 RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o block_graph -ldflags '-s -w' tools/block_graph/main.go
+RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -o rewrite_utxo -ldflags '-s -w' tools/rewrite_utxo/main.go
 
 FROM alpine:latest
 RUN apk add tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone
@@ -20,6 +21,7 @@ RUN adduser -u 1000 -D sato -h /data
 USER sato
 WORKDIR /data/
 
+COPY --chown=sato --from=build /build/rewrite_utxo /data/rewrite_utxo
 COPY --chown=sato --from=build /build/block_graph /data/block_graph
 COPY --chown=sato --from=build /build/unisatd /data/unisatd
 

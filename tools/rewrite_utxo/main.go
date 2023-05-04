@@ -1,4 +1,4 @@
-// go build -v sensibled/tools/rewrite_utxo
+// go build -v unisatd/tools/rewrite_utxo
 
 package main
 
@@ -7,12 +7,12 @@ import (
 	"flag"
 	_ "net/http/pprof"
 	"runtime"
-	"sensibled/loader"
-	"sensibled/loader/clickhouse"
-	"sensibled/logger"
-	memSerial "sensibled/mempool/task/serial"
-	"sensibled/model"
-	"sensibled/rdb"
+	"unisatd/loader"
+	"unisatd/loader/clickhouse"
+	"unisatd/logger"
+	memSerial "unisatd/mempool/task/serial"
+	"unisatd/model"
+	"unisatd/rdb"
 
 	"go.uber.org/zap"
 )
@@ -75,7 +75,6 @@ func main() {
 		startFixHeight = endFixHeight
 
 		// 更新redis
-
 		if ok := memSerial.UpdateUtxoInPika(utxoToRestore, utxoToRemove); !ok {
 			logger.Log.Error("restore/remove utxo from pika failed")
 			break
