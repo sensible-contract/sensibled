@@ -87,6 +87,12 @@ func ParseMempoolBatchTxNFTsInAndOutSerial(startIdx int, nftIndexInBlock, nftSta
 			}
 		}
 
+		if int(satInputOffset) < len(tx.NewNFTDataCreated) {
+			for _, nft := range tx.NewNFTDataCreated[int(satInputOffset):] {
+				nft.Invalid = true
+			}
+		}
+
 		// insert created NFT
 		for createIdxInTx, nft := range tx.NewNFTDataCreated {
 			if nft.Invalid { // nft removed

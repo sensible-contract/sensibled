@@ -66,6 +66,12 @@ func invalidTxRecreateNFT(tx *model.Tx, spentUtxoDataMap map[string]*model.TxoDa
 			break
 		}
 	}
+
+	if int(satInputOffset) < len(tx.NewNFTDataCreated) {
+		for _, nft := range tx.NewNFTDataCreated[int(satInputOffset):] {
+			nft.Invalid = true
+		}
+	}
 }
 
 // ParseBlockTxNFTsInAndOutSerial all tx input/output info
