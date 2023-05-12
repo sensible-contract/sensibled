@@ -48,7 +48,7 @@ func NewBlockchain(stripMode bool, path string, magicHex string) (bc *Blockchain
 }
 
 // ParseLongestChain 两遍遍历区块。先获取header，再遍历区块
-func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount int, nftStartNumber uint64) (lastHeight, txCount int) {
+func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount int, nftStartNumber uint64) (lastBlockId []byte, lastHeight, txCount int) {
 	blocksReady := make(chan *model.Block, 64)
 	blocksDone := make(chan struct{}, 64)
 
@@ -197,10 +197,11 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 }
 
 // ParseLongestChainBlock 再并行分析区块。接下来是无关顺序的收尾工作
-func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) (lastHeight, txCount int) {
+func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) (lastBlockId []byte, lastHeight, txCount int) {
 	var wg sync.WaitGroup
 	blocksLimit := make(chan struct{}, 64)
 	for block := range blocksStage {
+		lastBlockId = block.Hash
 		lastHeight = block.Height
 		txCount += int(block.TxCnt)
 		blocksLimit <- struct{}{}
@@ -213,7 +214,7 @@ func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) (
 	}
 	wg.Wait()
 	logger.Log.Info("consume ok")
-	return lastHeight, txCount
+	return lastBlockId, lastHeight, txCount
 }
 
 // InitLongestChainHeader 初始化block header
