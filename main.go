@@ -20,6 +20,7 @@ import (
 	"sensibled/rdb"
 	"sensibled/store"
 	"sensibled/task"
+	"sensibled/utils"
 	"strconv"
 	"sync"
 	"syscall"
@@ -192,6 +193,7 @@ func syncBlock() {
 			break
 		}
 
+		var stageBlockID []byte
 		needSaveBlock := false
 		stageBlockHeight := 0
 		txCount := 0
@@ -248,7 +250,7 @@ func syncBlock() {
 		}
 
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
-		stageBlockHeight, txCount = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
+		stageBlockID, stageBlockHeight, txCount = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
 		// 按批次处理区块
 		logger.Log.Info("range", zap.Int("start", startBlockHeight), zap.Int("end", stageBlockHeight+1))
 
@@ -265,6 +267,11 @@ func syncBlock() {
 
 			task.SubmitBlocksWithoutMempool(isFull, stageBlockHeight)
 
+			if len(stageBlockID) == 32 {
+				rdb.RdbBalanceClient.HSet(ctx, "info",
+					"block", utils.HashString(stageBlockID),
+				)
+			}
 			isFull = false // 准备继续同步
 			startBlockHeight = -1
 			logger.Log.Info("block finished")
@@ -310,6 +317,11 @@ func syncBlock() {
 
 			if needSaveBlock {
 				task.SubmitBlocksWithMempool(isFull, stageBlockHeight, mempool)
+				if len(stageBlockID) == 32 {
+					rdb.RdbBalanceClient.HSet(ctx, "info",
+						"block", utils.HashString(stageBlockID),
+					)
+				}
 				needSaveBlock = false
 				logger.Log.Info("block finished")
 			} else {
@@ -336,6 +348,11 @@ func syncBlock() {
 		// 未完成同步内存池 且未同步区块
 		if needSaveBlock {
 			task.SubmitBlocksWithoutMempool(isFull, stageBlockHeight)
+			if len(stageBlockID) == 32 {
+				rdb.RdbBalanceClient.HSet(ctx, "info",
+					"block", utils.HashString(stageBlockID),
+				)
+			}
 			logger.Log.Info("block finished")
 		}
 		isFull = false // 准备继续同步
