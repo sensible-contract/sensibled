@@ -126,13 +126,17 @@ type InscriptionNamePick struct {
 }
 
 func isBRC20(nft *scriptDecoder.NFTData) bool {
-	if len(nft.ContentBody) > 8192 || len(nft.ContentBody) < 40 {
+	if len(nft.ContentBody) < 40 {
 		return false
 	}
 
-	if !bytes.HasPrefix(nft.ContentType, []byte("text/plain")) &&
-		!bytes.HasPrefix(nft.ContentType, []byte("application/json")) {
-		return false
+	if !bytes.Equal(nft.ContentType, []byte("text/plain")) &&
+		!bytes.Equal(nft.ContentType, []byte("text/plain;charset=utf-8")) &&
+		!bytes.Equal(nft.ContentType, []byte("text/plain;charset=UTF-8")) &&
+		!bytes.Equal(nft.ContentType, []byte("application/json")) {
+		if !bytes.HasPrefix(nft.ContentType, []byte("text/plain;")) {
+			return false
+		}
 	}
 
 	content := bytes.TrimSpace(nft.ContentBody)
