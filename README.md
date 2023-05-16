@@ -1,7 +1,7 @@
 
-# 节点区块同步程序sensibled
+# 节点区块同步程序unisatd
 
-分析完整的区块数据，解析所有tx信息，并提取sensible相关数据到数据库/redis。为Sensible API Service提供数据。
+分析完整的区块数据，解析所有tx信息，并提取unisat相关数据到数据库/redis。为Unisat API Service提供数据。
 
 通过监听节点zmq，获取新区块确认通知。
 
@@ -36,7 +36,7 @@ redis配置，主要包括addrs、database等。
 
 ## Docker
 
-使用docker-compose可以比较方便运行sensibled。首先设置好db/redis/node配置，然后运行初始化：
+使用docker-compose可以比较方便运行unisatd。首先设置好db/redis/node配置，然后运行初始化：
 
 	$ docker-compose -f docker-compose-init.yaml up -d
 
@@ -65,16 +65,16 @@ redis配置，主要包括addrs、database等。
 
 开始同步命令如下，表示执行初始同步，并在区块高度为100000时停止：
 
-    $ ./sensibled -full -end 100000
+    $ ./unisatd -full -end 100000
 
 当执行完毕后，可以进行批次同步，每批处理1000000个tx，如果内存较小，可适当减少每次同步的tx数量。在区块高度为690000时停止：
 
-    $ ./sensibled -end 690000 -batch=1000000
+    $ ./unisatd -end 690000 -batch=1000000
 
 最后，可以启动连续同步模式，即同步完最近区块后不退出，将继续监听并同步新区块：
 
-    $ ./sensibled
+    $ ./unisatd
 
 程序日志将直接输出到终端，可使用nohup或其他技术将程序放置到后台运行。
 
-sensibled服务在等待新区块到来时可以重启，同步过程中不可随意重启(停止需要发送`SIGINT`触发)。
+unisatd服务在等待新区块到来时可以重启，同步过程中不可随意重启(停止需要发送`SIGINT`触发)。
