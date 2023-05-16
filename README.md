@@ -32,7 +32,7 @@ redis配置，主要包括addrs、database等。
 
 * prune.yaml
 
-存到db时是否裁剪相关数据，以减少db占用。目前BSV区块已超过2TB，裁剪后可以减少到500GB。
+存到db时是否裁剪相关数据，以减少db占用。目前BTC区块已超过500GB，裁剪后可以减少到400GB。
 
 ## Docker
 
