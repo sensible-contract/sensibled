@@ -96,6 +96,7 @@ var (
 
 	startBlockHeight int
 	endBlockHeight   int
+	spanBlockHeight  int
 	batchTxCount     int
 	blocksPath       string
 	blockMagic       string
@@ -119,6 +120,8 @@ func init() {
 	flag.BoolVar(&isFull, "full", false, "start from genesis")
 	flag.IntVar(&startBlockHeight, "start", -1, "start block height")
 	flag.IntVar(&endBlockHeight, "end", -1, "end block height")
+	flag.IntVar(&spanBlockHeight, "span", 0, "span to end block height")
+
 	flag.IntVar(&batchTxCount, "batch", 0, "batch tx count")
 
 	flag.IntVar(&gobFlushFrom, "gob", -1, "gob flush block header cache after fileIdx")
@@ -252,6 +255,22 @@ func syncBlock() {
 					goto WAIT_BLOCK // 无新区块，开始等待
 				}
 				startBlockHeight = commonHeigth + 1 // 从公有块高度（COMMON_HEIGHT）下一个开始扫描
+
+				// span load
+				if spanBlockHeight > 0 {
+					if needRemove {
+						logger.Log.Info("need to reorg, quit.")
+						time.Sleep(time.Second * 60)
+						break
+					}
+					if spanBlockHeight >= newblock {
+						logger.Log.Info("waiting new block...")
+						time.Sleep(time.Second * 60)
+						break
+					}
+					endBlockHeight = startBlockHeight + newblock - spanBlockHeight + 1
+				}
+
 			} else {
 				// 手动指定同步位置
 				needRemove = true
