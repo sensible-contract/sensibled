@@ -119,6 +119,7 @@ type InscriptionNamePick struct {
 	Operation string `json:"op"`
 
 	BRC20Tick    string `json:"tick"` // brc20
+	BRC20Min     string `json:"min"`  // brc20
 	BRC20Max     string `json:"max"`  // brc20
 	BRC20Limit   string `json:"lim"`  // brc20
 	BRC20Amount  string `json:"amt"`  // brc20
