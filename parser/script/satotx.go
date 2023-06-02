@@ -1,13 +1,5 @@
 package script
 
-import (
-	"bytes"
-)
-
-func hasSensibleFlag(pkScript []byte) bool {
-	return bytes.HasSuffix(pkScript, []byte("sensible")) || bytes.HasSuffix(pkScript, []byte("oraclesv"))
-}
-
 // false if ord 1 1 type 0 content endif
 // false false if ord ...
 // false if false if ord ...
@@ -247,9 +239,6 @@ func ExtractPkScriptForTxo(pkScript, scriptType []byte) (txo *AddressData) {
 	// }
 
 	if IsOpreturn(scriptType) {
-		if hasSensibleFlag(pkScript) {
-			txo.CodeType = CodeType_SENSIBLE
-		}
 		return txo
 	}
 
