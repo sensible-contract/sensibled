@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"unisatd/logger"
 	"unisatd/model"
 	scriptDecoder "unisatd/parser/script"
@@ -94,7 +93,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 	for outpointKey, data := range utxoToRemove {
 		// remove nft point to utxo point
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			nftPointKey := fmt.Sprintf("np%s", nftpoint.GetCreateIdxKey())
+			nftPointKey := "np" + nftpoint.GetCreateIdxKey()
 			pipe.Del(ctx, nftPointKey)
 		}
 
@@ -121,7 +120,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 	for outpointKey, data := range utxoToRestore {
 		// add nft point to utxo point
 		for _, nftpoint := range data.CreatePointOfNFTs {
-			nftPointKey := fmt.Sprintf("np%s", nftpoint.GetCreateIdxKey())
+			nftPointKey := "np" + nftpoint.GetCreateIdxKey()
 			var offset [8]byte
 			binary.LittleEndian.PutUint64(offset[:], nftpoint.Offset)
 			pipe.Set(ctx, nftPointKey, outpointKey+string(offset[:]), 0)
