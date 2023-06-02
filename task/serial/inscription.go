@@ -131,6 +131,7 @@ func ParseBlockTxNFTsInAndOutSerial(nftStartNumber uint64, block *model.Block) {
 			if inFee {
 				tx.NFTLostCnt += 1
 				createPoint.Offset = uint64(createIdxInTx) - satOutputOffset + satFeeOffset // global fee offset in coinbase
+				newInscriptionInfo.SpendInFee = true
 				newInscriptionInfo.InTxVout = tx.TxOutCnt
 				createPoint.HasMoved = true
 				coinbaseCreatePointOfNFTs = append(coinbaseCreatePointOfNFTs, createPoint)

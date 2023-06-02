@@ -134,6 +134,7 @@ type NewInscriptionInfo struct {
 	Ordinal      uint64
 	Number       uint64
 	BlockTime    uint32
+	SpendInFee   bool
 }
 
 func (d *NewInscriptionInfo) DumpString() string {
