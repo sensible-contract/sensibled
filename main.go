@@ -35,17 +35,23 @@ import (
 )
 
 type processInfo struct {
-	Start           int64 // 启动开始
-	Header          int64 // 读取索引完成
-	Block           int64 // 新区块头读取完成，block读取开始
-	Mempool         int64 // block读取结束，mempool 同步开始，
-	ZmqFirst        int64 // mempool读取完成，zmq读取开始
-	ZmqLast         int64 // zmq最后一条消息
-	Stop            int64 // 新区块到来，退出
-	Height          int
+	// 时间戳
+	Start    int64 // 启动开始
+	Header   int64 // 读取索引完成
+	Block    int64 // 新区块头读取完成，block读取开始
+	Mempool  int64 // block读取结束，mempool 同步开始，
+	ZmqFirst int64 // mempool读取完成，zmq读取开始
+	ZmqLast  int64 // zmq最后一条消息
+	Stop     int64 // 新区块到来，退出
+
+	// 记录
+	StartHeight     int // 开始高度
+	EndHeight       int // 结束高度
 	ConfirmedTx     int
 	MempoolFirstIdx int
 	MempoolLastIdx  int
+	Reorg           bool
+	ReorgFailed     bool
 	NeedStop        bool
 }
 
@@ -54,9 +60,17 @@ func (info *processInfo) String() string {
 	if info.NeedStop {
 		stopType = "!TRIGGER!"
 	}
-	return fmt.Sprintf("%d StartH:%d idx:%d hdr:%d blk:%d mem:%d zmq:%d nTxInMempool:%d-%d=%d nTxInBlk:%d %s stop:%d",
+	if info.Reorg {
+		stopType = "!reorg!"
+	}
+	if info.ReorgFailed {
+		stopType = "!BAD REORG!"
+	}
+
+	return fmt.Sprintf("%d Hight:%d~%d idx:%d hdr:%d blk:%d mem:%d zmq:%d nTxInMempool:%d-%d=%d nTxInBlk:%d %s stop:%d",
 		info.Start,
-		info.Height,
+		info.StartHeight,
+		info.EndHeight,
 
 		info.Header,
 		info.Block,
@@ -148,6 +162,14 @@ func isPrimary() bool {
 	return label == selfLabel
 }
 
+func isReorg() bool {
+	label, err := rdb.RdbBalanceClient.Get(ctx, "s:reorg").Result()
+	if err != nil {
+		return false
+	}
+	return label == "true"
+}
+
 func switchToSecondary() {
 	rdb.RdbBalanceClient.Set(ctx, "s:switch", "false", 0)
 	rdb.RdbBalanceClient.Set(ctx, "s:primary", otherLabel, 0)
@@ -235,7 +257,13 @@ func syncBlock() {
 				needRemove = true
 			}
 			if needRemove {
+				info.Reorg = true
+				rdb.RdbBalanceClient.Set(ctx, "s:reorg", "true", 0)
+				logger.Log.Info("need to reorg, quit.")
 				if ok := task.RemoveBlocksForReorg(startBlockHeight); !ok {
+					info.ReorgFailed = true
+					logger.Log.Info("reorg failed, quit.")
+					triggerStop()
 					break
 				}
 			}
@@ -267,8 +295,9 @@ func syncBlock() {
 
 		nftStartNumber += uint64(len(model.GlobalNewInscriptions))
 
-		if info.Height == 0 {
-			info.Height = stageBlockHeight
+		if info.StartHeight == 0 {
+			info.StartHeight = startBlockHeight
+			info.EndHeight = stageBlockHeight + 1
 			info.ConfirmedTx = txCount
 			logProcessInfo(info)
 		}
