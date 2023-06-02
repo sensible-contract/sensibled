@@ -227,6 +227,10 @@ func syncBlock() {
 			break
 		}
 
+		if spanBlockHeight > 0 {
+			endBlockHeight = -1
+		}
+
 		var stageBlockID []byte
 		needSaveBlock := false
 		stageBlockHeight := 0
@@ -260,15 +264,15 @@ func syncBlock() {
 				if spanBlockHeight > 0 {
 					if needRemove {
 						logger.Log.Info("need to reorg, quit.")
-						time.Sleep(time.Second * 60)
+						time.Sleep(time.Second * 30)
 						break
 					}
 					if spanBlockHeight >= newblock {
 						logger.Log.Info("waiting new block...")
-						time.Sleep(time.Second * 60)
-						break
+						time.Sleep(time.Second * 30)
+						continue
 					}
-					endBlockHeight = startBlockHeight + newblock - spanBlockHeight + 1
+					endBlockHeight = startBlockHeight + newblock - spanBlockHeight
 				}
 
 			} else {
