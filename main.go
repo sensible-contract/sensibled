@@ -258,7 +258,6 @@ func syncBlock() {
 
 					goto WAIT_BLOCK // 无新区块，开始等待
 				}
-				startBlockHeight = commonHeigth + 1 // 从公有块高度（COMMON_HEIGHT）下一个开始扫描
 
 				// span load
 				if spanBlockHeight > 0 {
@@ -272,7 +271,10 @@ func syncBlock() {
 						time.Sleep(time.Second * 30)
 						continue
 					}
+					startBlockHeight = commonHeigth + 1 // 从公有块高度（COMMON_HEIGHT）下一个开始扫描
 					endBlockHeight = startBlockHeight + newblock - spanBlockHeight
+				} else {
+					startBlockHeight = commonHeigth + 1 // 从公有块高度（COMMON_HEIGHT）下一个开始扫描
 				}
 
 			} else {
