@@ -19,6 +19,10 @@ func UpdateAddrPkhInTxMapSerial(blockHeight uint32, addrPkhInTxMap map[string][]
 		return true
 	}
 
+	logger.Log.Info("UpdateAddrPkhInTxMapSerial",
+		zap.Uint32("height", blockHeight),
+		zap.Int("nAddr", len(addrPkhInTxMap)))
+
 	maxSize := 1000000
 	type Item struct {
 		Members []*redis.Z
