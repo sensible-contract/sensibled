@@ -1,4 +1,4 @@
-// go build -v sensibled/tools/rewrite_utxo_balance
+// go build -v sensibled/tools/rewrite_balance
 
 package main
 
@@ -9,7 +9,6 @@ import (
 	"sensibled/loader"
 	"sensibled/loader/clickhouse"
 	"sensibled/logger"
-	memSerial "sensibled/mempool/task/serial"
 	"sensibled/model"
 	"sensibled/rdb"
 	"sensibled/task/serial"
@@ -25,7 +24,6 @@ var (
 
 func init() {
 	rdb.RdbBalanceClient = rdb.Init("conf/rdb_balance.yaml")
-	rdb.RdbUtxoClient = rdb.Init("conf/rdb_utxo.yaml")
 
 	clickhouse.Init()
 }
@@ -43,7 +41,7 @@ func main() {
 
 	startFixHeight := bestHeightFromRedis + 1
 	for startFixHeight < int(lastBlock.Height)+1 {
-		endFixHeight := startFixHeight + 128
+		endFixHeight := startFixHeight + 2
 		if endFixHeight > int(lastBlock.Height)+1 {
 			endFixHeight = int(lastBlock.Height) + 1
 		}
@@ -62,17 +60,17 @@ func main() {
 			break
 		}
 
-		utxosMapCommon := make(map[string]bool, len(utxoToRemove))
-		for key := range utxoToRemove {
-			if _, ok := utxoToRestore[key]; ok {
-				utxosMapCommon[key] = true
-			}
-		}
-		for key := range utxosMapCommon {
-			delete(utxoToRemove, key)
-			delete(utxoToRestore, key)
-		}
-		utxosMapCommon = nil
+		// utxosMapCommon := make(map[string]bool, len(utxoToRemove))
+		// for key := range utxoToRemove {
+		// 	if _, ok := utxoToRestore[key]; ok {
+		// 		utxosMapCommon[key] = true
+		// 	}
+		// }
+		// for key := range utxosMapCommon {
+		// 	delete(utxoToRemove, key)
+		// 	delete(utxoToRestore, key)
+		// }
+		// utxosMapCommon = nil
 		runtime.GC()
 
 		startFixHeight = endFixHeight
@@ -89,11 +87,6 @@ func main() {
 				logger.Log.Error("redis clean zero balance failed")
 				model.NeedStop = true
 			}
-		}
-
-		if ok := memSerial.UpdateUtxoInPika(utxoToRestore, utxoToRemove); !ok {
-			logger.Log.Error("restore/remove utxo from pika failed")
-			break
 		}
 
 		if model.NeedStop {
