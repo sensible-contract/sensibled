@@ -85,7 +85,7 @@ func (tt TxOuts) MarshalLogArray(arr zapcore.ArrayEncoder) error {
 	return err
 }
 
-////////////////
+// //////////////
 type Block struct {
 	Raw        []byte
 	Hash       []byte // 32 bytes
@@ -116,13 +116,7 @@ type BlockCache struct {
 	Parent     []byte // 32 bytes
 }
 
-////////////////
-
-type TxLocation struct {
-	BlockHeight uint32
-	TxIdx       uint64
-}
-
+// //////////////
 type ProcessBlock struct {
 	Height           uint32
 	AddrPkhInTxMap   map[string][]int

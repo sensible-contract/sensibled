@@ -54,7 +54,7 @@ func ParseBlockSerialStart(withMempool bool, block *model.Block) {
 	serial.UpdateUtxoInMapSerial(block.ParseData)
 
 	// UpdateAddrPkhInTxMapSerial 顺序更新当前区块的address tx history信息变化到程序全局缓存，需要依赖txout、txin执行完毕
-	serial.UpdateAddrPkhInTxMapSerial(block.ParseData)
+	serial.UpdateAddrPkhInTxMapSerial(block.ParseData.Height, block.ParseData.AddrPkhInTxMap)
 }
 
 // ParseBlockParallelEnd 再并行处理区块
@@ -163,18 +163,6 @@ func RemoveBlocksForReorg(startBlockHeight int) bool {
 func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 	var wg sync.WaitGroup
 
-	// address history
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		if ok := serial.SaveGlobalAddressTxHistoryIntoPika(); !ok {
-			model.NeedStop = true
-			return
-		}
-		logger.Log.Info("history done")
-	}()
-
 	// ck
 	wg.Add(1)
 	go func() {
@@ -236,14 +224,6 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
-		// Pika更新addr tx历史
-		if needSaveBlock {
-			if ok := serial.SaveGlobalAddressTxHistoryIntoPika(); !ok {
-				model.NeedStop = true
-				return
-			}
-		}
 
 		if needSaveMempool {
 			needReset := true
