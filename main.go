@@ -9,8 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"runtime/pprof"
-	"runtime/trace"
 	"sensibled/loader/clickhouse"
 	"sensibled/logger"
 	memLoader "sensibled/mempool/loader"
@@ -87,17 +85,9 @@ var (
 	isFull           bool
 	syncOnce         bool
 	gobFlushFrom     int
-
-	cpuProfile   string
-	memProfile   string
-	traceProfile string
 )
 
 func init() {
-	flag.StringVar(&cpuProfile, "cpu", "", "write cpu profile to file")
-	flag.StringVar(&memProfile, "mem", "", "write mem profile to file")
-	flag.StringVar(&traceProfile, "trace", "", "write trace profile to file")
-
 	flag.BoolVar(&blockStrip, "strip", false, "load blocks from striped files")
 	flag.BoolVar(&syncOnce, "once", false, "sync 1 block then stop")
 	flag.BoolVar(&isFull, "full", false, "start from genesis")
@@ -371,26 +361,6 @@ func main() {
 		http.ListenAndServe("0.0.0.0:8000", nil)
 	}()
 
-	//采样cpu运行状态
-	if cpuProfile != "" {
-		cpuf, err := os.Create(cpuProfile)
-		if err != nil {
-			panic(err)
-		}
-		pprof.StartCPUProfile(cpuf)
-		defer pprof.StopCPUProfile()
-	}
-	// 采样goroutine
-	if traceProfile != "" {
-		tracef, err := os.Create(traceProfile)
-		if err != nil {
-			panic(err)
-		}
-		trace.Start(tracef)
-		defer tracef.Close()
-		defer trace.Stop()
-	}
-
 	//创建监听退出
 	sigCtrl := make(chan os.Signal, 1)
 	//监听指定信号 ctrl+c kill
@@ -419,16 +389,6 @@ func main() {
 	logger.SyncLog()
 
 	////////////////
-	//采样memory状态
-	if memProfile != "" {
-		memf, err := os.Create(memProfile)
-		if err != nil {
-			panic(err)
-		}
-		pprof.WriteHeapProfile(memf)
-		memf.Close()
-	}
-
 	if model.NeedStop {
 		os.Exit(1)
 	}
