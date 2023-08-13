@@ -19,7 +19,8 @@ func NewTxs(stripMode bool, txsraw []byte) (txs []*model.Tx) {
 	for i := range txs {
 		txoffset := uint(0)
 		txs[i], txoffset = NewTx(txsraw[offset:])
-		txs[i].Raw = txsraw[offset : offset+txoffset]
+		txs[i].Raw = make([]byte, txoffset)
+		copy(txs[i].Raw, txsraw[offset:offset+txoffset])
 		offset += txoffset
 
 		if stripMode {
