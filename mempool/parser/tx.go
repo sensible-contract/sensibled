@@ -3,6 +3,7 @@ package parser
 import (
 	"encoding/binary"
 	"sensibled/model"
+	"sensibled/prune"
 	"sensibled/utils"
 )
 
@@ -70,7 +71,8 @@ func NewTxIn(txinraw []byte) (txin *model.TxIn, offset uint) {
 		return nil, 0
 	}
 	txin = new(model.TxIn)
-	txin.InputHash = txinraw[0:32]
+	txin.InputHash = make([]byte, 32)
+	copy(txin.InputHash, txinraw[0:32])
 	txin.InputHashHex = utils.HashString(txin.InputHash)
 	txin.InputVout = binary.LittleEndian.Uint32(txinraw[32:36])
 	offset = 36
@@ -93,7 +95,8 @@ func NewTxIn(txinraw []byte) (txin *model.TxIn, offset uint) {
 
 	// process Parallel
 	txin.InputOutpointKey = string(txinraw[0:36])
-	txin.InputOutpoint = txinraw[0:36]
+	txin.InputOutpoint = make([]byte, 36)
+	copy(txin.InputOutpoint, txinraw[0:36])
 	return
 }
 
