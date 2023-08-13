@@ -3,6 +3,7 @@ package parser
 import (
 	"encoding/binary"
 	"sensibled/model"
+	"sensibled/prune"
 	"sensibled/utils"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
@@ -84,8 +85,10 @@ func NewTxIn(txinraw []byte) (txin *model.TxIn, offset uint) {
 	scriptsig, scriptsigsize := utils.DecodeVarIntForBlock(txinraw[offset:])
 	offset += scriptsigsize
 
-	txin.ScriptSig = make([]byte, scriptsig)
-	copy(txin.ScriptSig, txinraw[offset:offset+scriptsig])
+	if !prune.IsScriptSigPrune {
+		txin.ScriptSig = make([]byte, scriptsig)
+		copy(txin.ScriptSig, txinraw[offset:offset+scriptsig])
+	}
 	offset += scriptsig
 
 	txin.Sequence = binary.LittleEndian.Uint32(txinraw[offset : offset+4])

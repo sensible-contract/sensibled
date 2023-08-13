@@ -78,7 +78,10 @@ func NewTxIn(txinraw []byte) (txin *model.TxIn, offset uint) {
 	scriptsig, scriptsigsize := utils.DecodeVarIntForBlock(txinraw[offset:])
 	offset += scriptsigsize
 
-	txin.ScriptSig = txinraw[offset : offset+scriptsig]
+	if !prune.IsScriptSigPrune {
+		txin.ScriptSig = make([]byte, scriptsig)
+		copy(txin.ScriptSig, txinraw[offset:offset+scriptsig])
+	}
 	offset += scriptsig
 
 	// invalid
