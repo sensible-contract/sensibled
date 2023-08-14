@@ -4,9 +4,10 @@ import (
 	"encoding/binary"
 	"sensibled/logger"
 	"sensibled/model"
-    "sensibled/prune"
+	"sensibled/prune"
 	"sensibled/store"
 	"sensibled/utils"
+	"time"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
@@ -20,6 +21,11 @@ func SyncBlockTxInputDetail(block *model.Block) {
 	}
 
 	for txIdx, tx := range block.Txs {
+		for model.NeedPause {
+			logger.Log.Info("SyncBlockTxInputDetail pause ...")
+			time.Sleep(5 * time.Second)
+		}
+
 		isCoinbase := (txIdx == 0)
 
 		for vin, input := range tx.TxIns {

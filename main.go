@@ -370,6 +370,12 @@ func main() {
 			switch s {
 			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
 				triggerStop()
+			case syscall.SIGUSR1:
+				logger.Log.Info("program pause...")
+				model.NeedPause = true
+			case syscall.SIGUSR2:
+				logger.Log.Info("program resume...")
+				model.NeedPause = false
 			default:
 				fmt.Println("other signal", s)
 				logger.Log.Info("other signal", zap.String("sig", s.String()))

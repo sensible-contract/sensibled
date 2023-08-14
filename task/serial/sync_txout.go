@@ -5,6 +5,7 @@ import (
 	"sensibled/model"
 	"sensibled/prune"
 	"sensibled/store"
+	"time"
 
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
@@ -13,6 +14,11 @@ import (
 // SyncBlockTxOutputInfo all tx output info
 func SyncBlockTxOutputInfo(block *model.Block) {
 	for txIdx, tx := range block.Txs {
+		for model.NeedPause {
+			logger.Log.Info("SyncBlockTxOutputInfo pause ...")
+			time.Sleep(5 * time.Second)
+		}
+
 		for _, output := range tx.TxOuts {
 			tx.OutputsValue += output.Satoshi
 			// set sensible flag

@@ -1,3 +1,6 @@
 package model
 
-var NeedStop bool
+var (
+	NeedStop  bool
+	NeedPause bool
+)

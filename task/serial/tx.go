@@ -7,6 +7,7 @@ import (
 	"sensibled/model"
 	"sensibled/rdb"
 	"strconv"
+	"time"
 
 	redis "github.com/go-redis/redis/v8"
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
@@ -19,6 +20,11 @@ import (
 func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 	var utxoOutpointKeysToSpend []string
 	for outpointKey := range block.SpentUtxoKeysMap {
+		for model.NeedPause {
+			logger.Log.Info("ParseGetSpentUtxoDataFromRedisSerial(1/2) pause ...")
+			time.Sleep(5 * time.Second)
+		}
+
 		// 检查是否是区块内自产自花
 		if data, ok := block.NewUtxoDataMap[outpointKey]; ok {
 			block.SpentUtxoDataMap[outpointKey] = data
@@ -88,6 +94,11 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	// 更新到本地新utxo存储
 	for outpointKey, data := range block.NewUtxoDataMap {
+		for model.NeedPause {
+			logger.Log.Info("UpdateUtxoInMapSerial pause ...")
+			time.Sleep(5 * time.Second)
+		}
+
 		model.GlobalNewUtxoDataMap[outpointKey] = data
 	}
 }

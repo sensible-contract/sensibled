@@ -12,6 +12,7 @@ import (
 	"sensibled/task/parallel"
 	"sensibled/task/serial"
 	"sync"
+	"time"
 
 	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
@@ -35,6 +36,11 @@ func ParseBlockParallel(block *model.Block) {
 	)
 
 	for txIdx, tx := range block.Txs {
+		for model.NeedPause {
+			logger.Log.Info("ParseBlockParallel pause ...")
+			time.Sleep(5 * time.Second)
+		}
+
 		isCoinbase := txIdx == 0
 		parallel.ParseTxFirst(tx, isCoinbase, block.ParseData)
 

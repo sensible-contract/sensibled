@@ -7,6 +7,7 @@ import (
 	"sensibled/model"
 	"sensibled/rdb"
 	"sort"
+	"time"
 
 	redis "github.com/go-redis/redis/v8"
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
@@ -36,6 +37,11 @@ func UpdateAddrPkhInTxMapSerial(blockHeight uint32, addrPkhInTxMap map[string][]
 	}
 	items := make([]*Item, 0)
 	for strAddressPkh, listTxidx := range addrPkhInTxMap {
+		for model.NeedPause {
+			logger.Log.Info("UpdateAddrPkhInTxMapSerial(1/2) pause ...")
+			time.Sleep(5 * time.Second)
+		}
+
 		sort.Ints(listTxidx)
 		txZSetMembers := make([]*redis.Z, 0)
 
@@ -72,6 +78,11 @@ func UpdateAddrPkhInTxMapSerial(blockHeight uint32, addrPkhInTxMap map[string][]
 
 	ctx := context.Background()
 	for idx := 0; idx < len(items); {
+		for model.NeedPause {
+			logger.Log.Info("UpdateAddrPkhInTxMapSerial(2/2) pause ...")
+			time.Sleep(5 * time.Second)
+		}
+
 		pikaPipe := rdb.RdbAddrTxClient.Pipeline()
 		size := 0
 		for ; size < maxSize && idx < len(items); idx++ {
