@@ -5,6 +5,7 @@ import (
 	"sensibled/model"
 	"sensibled/prune"
 	"sensibled/store"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -43,6 +44,11 @@ func MarkConfirmedBlockTx(block *model.Block) {
 	model.GlobalConfirmedBlkMap[block.HashHex] = struct{}{}
 	model.GlobalConfirmedBlkMap[block.ParentHex] = struct{}{}
 	for _, tx := range block.Txs {
+		for model.NeedPause {
+			logger.Log.Info("MarkConfirmedBlockTx pause ...")
+			time.Sleep(5 * time.Second)
+		}
+
 		model.GlobalConfirmedTxMap[tx.TxIdHex] = struct{}{}
 	}
 }

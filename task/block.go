@@ -12,6 +12,7 @@ import (
 	"sensibled/task/parallel"
 	"sensibled/task/serial"
 	"sync"
+	"time"
 
 	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
@@ -22,6 +23,11 @@ var ctx = context.Background()
 // ParseBlockParallel 先并行分析区块，不同区块并行，同区块内串行
 func ParseBlockParallel(block *model.Block) {
 	for txIdx, tx := range block.Txs {
+		for model.NeedPause {
+			logger.Log.Info("ParseBlockParallel pause ...")
+			time.Sleep(5 * time.Second)
+		}
+
 		isCoinbase := txIdx == 0
 		parallel.ParseTxFirst(tx, isCoinbase, block.ParseData)
 
