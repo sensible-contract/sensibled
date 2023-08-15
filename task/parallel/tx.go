@@ -2,9 +2,9 @@ package parallel
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"sensibled/model"
 	"sensibled/prune"
+
 	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 )
 
@@ -18,20 +18,11 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 	}
 
 	for idx, output := range tx.TxOuts {
-		key := make([]byte, 36)
-		copy(key, tx.TxId)
+		key := make([]byte, 4)
+		binary.LittleEndian.PutUint32(key, uint32(idx))
 
-		binary.LittleEndian.PutUint32(key[32:], uint32(idx))
-		output.OutpointKey = string(key)
-		output.Outpoint = key
-
+		output.OutpointIdxKey = string(key)
 		output.ScriptType = scriptDecoder.GetLockingScriptType(output.PkScript)
-		output.ScriptTypeHex = hex.EncodeToString(output.ScriptType)
-
-		if scriptDecoder.IsFalseOpreturn(output.ScriptType) {
-			output.LockingScriptUnspendable = true
-		}
-
 		output.Data = scriptDecoder.ExtractPkScriptForTxo(output.PkScript, output.ScriptType)
 
 		if output.Data.CodeType == scriptDecoder.CodeType_NONE || output.Data.CodeType == scriptDecoder.CodeType_SENSIBLE {
@@ -94,7 +85,7 @@ func ParseUpdateTxoSpendByTxParallel(tx *model.Tx, isCoinbase bool, block *model
 // ParseUpdateNewUtxoInTxParallel utxo 信息
 func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, block *model.ProcessBlock) {
 	for _, output := range tx.TxOuts {
-		if output.LockingScriptUnspendable {
+		if scriptDecoder.IsFalseOpreturn(output.ScriptType) {
 			continue
 		}
 
@@ -108,7 +99,7 @@ func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, block *model.Pro
 
 		d.Data = output.Data
 
-		block.NewUtxoDataMap[output.OutpointKey] = d
+		block.NewUtxoDataMap[string(tx.TxId)+output.OutpointIdxKey] = d
 	}
 }
 
