@@ -5,6 +5,8 @@ import (
 	"sensibled/model"
 	"sensibled/prune"
 	"sensibled/utils"
+
+	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 )
 
 func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
@@ -43,7 +45,7 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 	tx.TxOutCnt = uint32(txoutcnt)
 	tx.TxOuts = make([]*model.TxOut, txoutcnt)
 	for i := range tx.TxOuts {
-		tx.TxOuts[i], txoffset = NewTxOut(rawtx[offset:])
+		tx.TxOuts[i], txoffset = NewTxOut(rawtx[offset:], tx.TxOutCnt)
 		// failed
 		if txoffset == 0 {
 			return nil, 0
@@ -100,7 +102,7 @@ func NewTxIn(txinraw []byte) (txin *model.TxIn, offset uint) {
 	return
 }
 
-func NewTxOut(txoutraw []byte) (txout *model.TxOut, offset uint) {
+func NewTxOut(txoutraw []byte, nOuts uint32) (txout *model.TxOut, offset uint) {
 	outLen := len(txoutraw)
 	if outLen < 8+1+1 {
 		return nil, 0
@@ -117,8 +119,12 @@ func NewTxOut(txoutraw []byte) (txout *model.TxOut, offset uint) {
 		return nil, 0
 	}
 
-	txout.PkScript = make([]byte, pkscript)
-	copy(txout.PkScript, txoutraw[offset:offset+pkscript])
+	if nOuts == 1 && prune.IsOpReturnPrune && scriptDecoder.IsFalseOpreturn(txoutraw[offset:offset+pkscript]) {
+		txout.PkScript = model.FALSE_OP_RETURN
+	} else {
+		txout.PkScript = make([]byte, pkscript)
+		copy(txout.PkScript, txoutraw[offset:offset+pkscript])
+	}
 	offset += pkscript
 
 	return

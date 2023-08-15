@@ -65,7 +65,7 @@ func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
 	tx.TxOutCnt = uint32(txoutcnt)
 	tx.TxOuts = make([]*model.TxOut, txoutcnt)
 	for i := range tx.TxOuts {
-		tx.TxOuts[i], txoffset = NewTxOut(rawtx[offset:])
+		tx.TxOuts[i], txoffset = NewTxOut(rawtx[offset:], tx.TxOutCnt)
 		offset += txoffset
 	}
 
@@ -102,7 +102,7 @@ func NewTxIn(txinraw []byte) (txin *model.TxIn, offset uint) {
 	return
 }
 
-func NewTxOut(txoutraw []byte) (txout *model.TxOut, offset uint) {
+func NewTxOut(txoutraw []byte, nOuts uint32) (txout *model.TxOut, offset uint) {
 	txout = new(model.TxOut)
 	txout.Satoshi = binary.LittleEndian.Uint64(txoutraw[0:8])
 	offset = 8
@@ -110,9 +110,12 @@ func NewTxOut(txoutraw []byte) (txout *model.TxOut, offset uint) {
 	pkscript, pkscriptsize := utils.DecodeVarIntForBlock(txoutraw[offset:])
 	offset += pkscriptsize
 
-	txout.PkScript = make([]byte, pkscript)
-	copy(txout.PkScript, txoutraw[offset:offset+pkscript])
-
+	if nOuts == 1 && prune.IsOpReturnPrune && scriptDecoder.IsFalseOpreturn(txoutraw[offset:offset+pkscript]) {
+		txout.PkScript = model.FALSE_OP_RETURN
+	} else {
+		txout.PkScript = make([]byte, pkscript)
+		copy(txout.PkScript, txoutraw[offset:offset+pkscript])
+	}
 	offset += pkscript
 	return
 }

@@ -28,15 +28,15 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 		}
 
 		for vout, output := range tx.TxOuts {
-			// prune false opreturn output
-			if prune.IsOpReturnPrune && !tx.IsSensible && scriptDecoder.IsFalseOpreturn(output.ScriptType) {
-				continue
-			}
-
 			// prune string(output.Pkscript),
 			pkscript := ""
 			if !prune.IsPkScriptPrune || tx.IsSensible || output.Data.HasAddress {
 				pkscript = string(output.PkScript)
+			}
+
+			// prune false opreturn output
+			if prune.IsOpReturnPrune && !tx.IsSensible && scriptDecoder.IsFalseOpreturn(output.ScriptType) {
+				pkscript = string(model.FALSE_OP_RETURN)
 			}
 
 			address := ""

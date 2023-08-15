@@ -11,6 +11,8 @@ import (
 
 const MEMPOOL_HEIGHT = 4294967295
 
+var FALSE_OP_RETURN []byte = []byte("\x00\x6a")
+
 type Tx struct {
 	Raw          []byte
 	TxIdHex      string // 64
