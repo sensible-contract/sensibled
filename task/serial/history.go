@@ -37,7 +37,7 @@ func UpdateAddrPkhInTxMapSerial(blockHeight uint32, addrPkhInTxMap map[string][]
 	}
 	items := make([]*Item, 0)
 	for strAddressPkh, listTxidx := range addrPkhInTxMap {
-		for model.NeedPause {
+		for model.NeedPauseStage < 5 {
 			logger.Log.Info("UpdateAddrPkhInTxMapSerial(1/2) pause ...")
 			time.Sleep(5 * time.Second)
 		}
@@ -78,7 +78,7 @@ func UpdateAddrPkhInTxMapSerial(blockHeight uint32, addrPkhInTxMap map[string][]
 
 	ctx := context.Background()
 	for idx := 0; idx < len(items); {
-		for model.NeedPause {
+		for model.NeedPauseStage < 5 {
 			logger.Log.Info("UpdateAddrPkhInTxMapSerial(2/2) pause ...")
 			time.Sleep(5 * time.Second)
 		}

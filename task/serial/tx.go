@@ -20,7 +20,7 @@ import (
 func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 	var utxoOutpointKeysToSpend []string
 	for outpointKey := range block.SpentUtxoKeysMap {
-		for model.NeedPause {
+		for model.NeedPauseStage < 2 {
 			logger.Log.Info("ParseGetSpentUtxoDataFromRedisSerial(1/2) pause ...")
 			time.Sleep(5 * time.Second)
 		}
@@ -94,7 +94,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	// 更新到本地新utxo存储
 	for outpointKey, data := range block.NewUtxoDataMap {
-		for model.NeedPause {
+		for model.NeedPauseStage < 4 {
 			logger.Log.Info("UpdateUtxoInMapSerial pause ...")
 			time.Sleep(5 * time.Second)
 		}
