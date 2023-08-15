@@ -364,11 +364,11 @@ func main() {
 	//创建监听退出
 	sigCtrl := make(chan os.Signal, 1)
 	//监听指定信号 ctrl+c kill
-	signal.Notify(sigCtrl, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	signal.Notify(sigCtrl, syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		for s := range sigCtrl {
 			switch s {
-			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
+			case syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
 				triggerStop()
 			case syscall.SIGUSR1:
 				logger.Log.Info("program pause...")
