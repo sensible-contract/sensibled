@@ -22,6 +22,19 @@ var ctx = context.Background()
 
 // ParseBlockParallel 先并行分析区块，不同区块并行，同区块内串行
 func ParseBlockParallel(block *model.Block) {
+	ntxin := 0
+	ntxout := 0
+	for _, tx := range block.Txs {
+		ntxin += len(tx.TxIns)
+		ntxout += len(tx.TxOuts)
+	}
+	logger.Log.Info("ParseBlockParallel summary",
+		zap.Int("height", block.Height),
+		zap.Int("ntx", int(block.TxCnt)),
+		zap.Int("ntxin", ntxin),
+		zap.Int("ntxout", ntxout),
+	)
+
 	for txIdx, tx := range block.Txs {
 		for model.NeedPause {
 			logger.Log.Info("ParseBlockParallel pause ...")
