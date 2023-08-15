@@ -50,14 +50,10 @@ type TxOut struct {
 	Satoshi  uint64
 	PkScript []byte
 
-	Outpoint      []byte // 32 + 4
-	OutpointKey   string // 32 + 4
-	ScriptType    []byte
-	ScriptTypeHex string
+	OutpointIdxKey string // 4
+	ScriptType     []byte
 
 	Data *scriptDecoder.TxoData
-
-	LockingScriptUnspendable bool
 }
 
 func (t *TxOut) MarshalLogObject(enc zapcore.ObjectEncoder) error {
