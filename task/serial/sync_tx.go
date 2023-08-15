@@ -44,7 +44,7 @@ func MarkConfirmedBlockTx(block *model.Block) {
 	model.GlobalConfirmedBlkMap[block.HashHex] = struct{}{}
 	model.GlobalConfirmedBlkMap[block.ParentHex] = struct{}{}
 	for _, tx := range block.Txs {
-		for model.NeedPause {
+		for model.NeedPauseStage < 1 {
 			logger.Log.Info("MarkConfirmedBlockTx pause ...")
 			time.Sleep(5 * time.Second)
 		}

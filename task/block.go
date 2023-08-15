@@ -36,7 +36,7 @@ func ParseBlockParallel(block *model.Block) {
 	)
 
 	for txIdx, tx := range block.Txs {
-		for model.NeedPause {
+		for model.NeedPauseStage < 1 {
 			logger.Log.Info("ParseBlockParallel pause ...")
 			time.Sleep(5 * time.Second)
 		}

@@ -14,7 +14,7 @@ import (
 // SyncBlockTxOutputInfo all tx output info
 func SyncBlockTxOutputInfo(block *model.Block) {
 	for txIdx, tx := range block.Txs {
-		for model.NeedPause {
+		for model.NeedPauseStage < 2 {
 			logger.Log.Info("SyncBlockTxOutputInfo pause ...")
 			time.Sleep(5 * time.Second)
 		}

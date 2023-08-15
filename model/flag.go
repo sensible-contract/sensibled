@@ -1,6 +1,6 @@
 package model
 
 var (
-	NeedStop  bool
-	NeedPause bool
+	NeedStop       bool
+	NeedPauseStage int
 )

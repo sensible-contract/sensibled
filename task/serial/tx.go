@@ -24,7 +24,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 	ctx := context.Background()
 
 	for outpointKey := range block.SpentUtxoKeysMap {
-		for model.NeedPause {
+		for model.NeedPauseStage < 2 {
 			logger.Log.Info("ParseGetSpentUtxoDataFromRedisSerial(1/2) pause ...")
 			time.Sleep(5 * time.Second)
 		}
@@ -55,7 +55,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 		panic(err)
 	}
 	for outpointKey, v := range m {
-		for model.NeedPause {
+		for model.NeedPauseStage < 2 {
 			logger.Log.Info("ParseGetSpentUtxoDataFromRedisSerial(2/2) pause ...")
 			time.Sleep(5 * time.Second)
 		}
@@ -84,7 +84,7 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	// 更新到本地新utxo存储
 	for outpointKey, data := range block.NewUtxoDataMap {
-		for model.NeedPause {
+		for model.NeedPauseStage < 4 {
 			logger.Log.Info("UpdateUtxoInMapSerial pause ...")
 			time.Sleep(5 * time.Second)
 		}

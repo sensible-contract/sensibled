@@ -372,10 +372,10 @@ func main() {
 				triggerStop()
 			case syscall.SIGUSR1:
 				logger.Log.Info("program pause...")
-				model.NeedPause = true
+				model.NeedPauseStage = 0
 			case syscall.SIGUSR2:
-				logger.Log.Info("program resume...")
-				model.NeedPause = false
+				logger.Log.Info("program resume...", zap.Int("n", model.NeedPauseStage))
+				model.NeedPauseStage += 1
 			default:
 				fmt.Println("other signal", s)
 				logger.Log.Info("other signal", zap.String("sig", s.String()))

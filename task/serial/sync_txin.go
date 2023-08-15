@@ -21,7 +21,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 	}
 
 	for txIdx, tx := range block.Txs {
-		for model.NeedPause {
+		for model.NeedPauseStage < 3 {
 			logger.Log.Info("SyncBlockTxInputDetail pause ...")
 			time.Sleep(5 * time.Second)
 		}
