@@ -5,7 +5,12 @@ ARG GO_ARCH="amd64"
 # see: https://stackoverflow.com/questions/42500973/compiling-go-library-without-gco-to-run-on-alpine-error-in-libczmq
 RUN apk add --no-cache czmq-dev build-base util-linux-dev
 
-WORKDIR /build/
+WORKDIR /usr/local/build/
+COPY ./go.mod .
+COPY ./go.sum .
+
+RUN GOPROXY=https://goproxy.cn,direct GOOS=${GO_OS} GOARCH=${GO_ARCH} go mod download
+
 COPY . .
 
 # Build binary output
@@ -25,11 +30,11 @@ RUN adduser -u 1000 -D sato -h /data
 USER sato
 WORKDIR /data/
 
-COPY --chown=sato --from=build /build/sensibled /data/sensibled
-COPY --chown=sato --from=build /build/strip_block /data/strip_block
-COPY --chown=sato --from=build /build/rewrite_utxo /data/rewrite_utxo
-COPY --chown=sato --from=build /build/rewrite_balance /data/rewrite_balance
-COPY --chown=sato --from=build /build/submit_blocks /data/submit_blocks
-COPY --chown=sato --from=build /build/delete_ft_utxo /data/delete_ft_utxo
+COPY --chown=sato --from=build /usr/local/build/sensibled /data/sensibled
+COPY --chown=sato --from=build /usr/local/build/strip_block /data/strip_block
+COPY --chown=sato --from=build /usr/local/build/rewrite_utxo /data/rewrite_utxo
+COPY --chown=sato --from=build /usr/local/build/rewrite_balance /data/rewrite_balance
+COPY --chown=sato --from=build /usr/local/build/submit_blocks /data/submit_blocks
+COPY --chown=sato --from=build /usr/local/build/delete_ft_utxo /data/delete_ft_utxo
 
 ENTRYPOINT ["./sensibled"]
