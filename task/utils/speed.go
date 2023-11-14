@@ -69,10 +69,9 @@ func ParseBlockSpeed(nTx, lenGlobalNewUtxoDataMap, lenGlobalSpentUtxoDataMap, ne
 		zap.Int("utxo", lenGlobalNewUtxoDataMap),
 
 		zap.String("mAlloc", byteCountBinary(rtm.HeapAlloc)),
-		zap.String("mIdle", byteCountBinary(rtm.HeapIdle-rtm.HeapReleased)),
 
 		zap.Int("time", timeLeft),
-		zap.Duration("elapse", time.Since(start)),
+		zap.Int("elapse", int(time.Since(start).Seconds())),
 	)
 
 	lastBlockHeight = nextBlockHeight
