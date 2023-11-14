@@ -17,11 +17,7 @@ import (
 // 部分utxo信息在程序内存，missing的utxo将从redis查询
 // 区块同步结束时会批量更新缓存的utxo到redis
 func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
-	pipe := rdb.RdbUtxoClient.Pipeline()
-	m := map[string]*redis.StringCmd{}
-	needExec := false
-	ctx := context.Background()
-
+	var utxoOutpointKeysToSpend []string
 	for outpointKey := range block.SpentUtxoKeysMap {
 		// 检查是否是区块内自产自花
 		if data, ok := block.NewUtxoDataMap[outpointKey]; ok {
@@ -36,36 +32,55 @@ func ParseGetSpentUtxoDataFromRedisSerial(block *model.ProcessBlock) {
 			continue
 		}
 		// 剩余utxo需要查询redis
-		needExec = true
-		m[outpointKey] = pipe.Get(ctx, "u"+outpointKey)
+		utxoOutpointKeysToSpend = append(utxoOutpointKeysToSpend, outpointKey)
 	}
-
-	if !needExec {
+	if len(utxoOutpointKeysToSpend) == 0 {
 		return
 	}
 
-	_, err := pipe.Exec(ctx)
-	if err != nil && err != redis.Nil {
-		panic(err)
-	}
-	for outpointKey, v := range m {
-		res, err := v.Result()
-		if err == redis.Nil {
-			logger.Log.Error("parse block, but missing utxo from redis",
-				zap.String("outpoint", hex.EncodeToString([]byte(outpointKey))))
-			continue
-		} else if err != nil {
+	// fetch utxo batch
+	sliceLen := 10000
+	for idx := 0; idx < (len(utxoOutpointKeysToSpend)-1)/sliceLen+1; idx++ {
+
+		pipe := rdb.RdbUtxoClient.Pipeline()
+		ctx := context.Background()
+
+		m := map[string]*redis.StringCmd{}
+
+		n := 0
+		for _, outpointKey := range utxoOutpointKeysToSpend[idx*sliceLen:] {
+			if n == sliceLen {
+				break
+			}
+
+			m[outpointKey] = pipe.Get(ctx, "u"+outpointKey)
+
+			n++
+		}
+		if _, err := pipe.Exec(ctx); err != nil && err != redis.Nil {
+			logger.Log.Error("utxo spend fetch failed", zap.Error(err))
 			panic(err)
 		}
-		d := &model.TxoData{}
-		d.Unmarshal([]byte(res))
 
-		// 从redis获取utxo的script，解码以备程序使用
-		d.ScriptType = scriptDecoder.GetLockingScriptType(d.PkScript)
-		d.Data = scriptDecoder.ExtractPkScriptForTxo(d.PkScript, d.ScriptType)
+		for outpointKey, v := range m {
+			res, err := v.Result()
+			if err == redis.Nil {
+				logger.Log.Error("parse block, but missing utxo from redis",
+					zap.String("outpoint", hex.EncodeToString([]byte(outpointKey))))
+				continue
+			} else if err != nil {
+				panic(err)
+			}
+			d := &model.TxoData{}
+			d.Unmarshal([]byte(res))
 
-		block.SpentUtxoDataMap[outpointKey] = d
-		model.GlobalSpentUtxoDataMap[outpointKey] = d
+			// 从redis获取utxo的script，解码以备程序使用
+			d.ScriptType = scriptDecoder.GetLockingScriptType(d.PkScript)
+			d.Data = scriptDecoder.ExtractPkScriptForTxo(d.PkScript, d.ScriptType)
+
+			block.SpentUtxoDataMap[outpointKey] = d
+			model.GlobalSpentUtxoDataMap[outpointKey] = d
+		}
 	}
 }
 
