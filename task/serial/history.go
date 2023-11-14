@@ -19,9 +19,15 @@ func UpdateAddrPkhInTxMapSerial(blockHeight uint32, addrPkhInTxMap map[string][]
 		return true
 	}
 
+	nTxId := 0
+	for _, listTxidx := range addrPkhInTxMap {
+		nTxId += len(listTxidx)
+	}
 	logger.Log.Info("UpdateAddrPkhInTxMapSerial",
 		zap.Uint32("height", blockHeight),
-		zap.Int("nAddr", len(addrPkhInTxMap)))
+		zap.Int("nAddr", len(addrPkhInTxMap)),
+		zap.Int("nTxId", nTxId),
+	)
 
 	maxSize := 1000000
 	type Item struct {
