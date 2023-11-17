@@ -4,11 +4,11 @@ import (
 	"encoding/binary"
 	"sensibled/logger"
 	"sensibled/model"
-    "sensibled/prune"
+	scriptDecoder "sensibled/parser/script"
+	"sensibled/prune"
 	"sensibled/store"
 	"sensibled/utils"
 
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
 )
 

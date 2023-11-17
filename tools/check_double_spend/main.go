@@ -11,9 +11,9 @@ import (
 	"sensibled/logger"
 	"sensibled/model"
 	"sensibled/parser"
+	scriptDecoder "sensibled/parser/script"
 	"sensibled/utils"
 
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )

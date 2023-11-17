@@ -4,8 +4,8 @@ import (
 	"sensibled/logger"
 	"sensibled/mempool/store"
 	"sensibled/model"
+	scriptDecoder "sensibled/parser/script"
 
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
 )
 

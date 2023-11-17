@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"sensibled/model"
 
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
+	scriptDecoder "sensibled/parser/script"
 )
 
 // ParseTx 同区块内串行

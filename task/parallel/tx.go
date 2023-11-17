@@ -3,9 +3,8 @@ package parallel
 import (
 	"encoding/binary"
 	"sensibled/model"
+	scriptDecoder "sensibled/parser/script"
 	"sensibled/prune"
-
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 )
 
 // ParseTx 先并行分析交易tx，不同区块并行，同区块内串行

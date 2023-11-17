@@ -6,7 +6,6 @@ require (
 	github.com/ClickHouse/clickhouse-go v1.4.3
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/go-redis/redis/v8 v8.11.4
-	github.com/sensible-contract/sensible-script-decoder v1.12.8
 	github.com/spf13/viper v1.7.1
 	github.com/ybbus/jsonrpc v2.1.2+incompatible
 	github.com/ybbus/jsonrpc/v2 v2.1.6
