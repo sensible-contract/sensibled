@@ -9,11 +9,11 @@ import (
 	"sensibled/loader/clickhouse"
 	"sensibled/logger"
 	"sensibled/model"
+	scriptDecoder "sensibled/parser/script"
 	"sensibled/rdb"
 	"sensibled/utils"
 
 	redis "github.com/go-redis/redis/v8"
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
 )
 
@@ -41,7 +41,7 @@ func GetLatestBlockFromDB() (blkRsp *model.BlockDO, err error) {
 	return blkRsp, nil
 }
 
-////////////////
+// //////////////
 func GetBestBlockHeightFromRedis() (height int, err error) {
 	// get decimal from f info
 	ctx := context.Background()
@@ -64,7 +64,7 @@ func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 		return nil, err
 	}
 
-	ret.Data = scriptDecoder.ExtractPkScriptForTxo(ret.PkScript, ret.ScriptType)
+	ret.AddressData = scriptDecoder.ExtractPkScriptForTxo(ret.PkScript, ret.ScriptType)
 	return &ret, nil
 }
 

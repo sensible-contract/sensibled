@@ -3,10 +3,9 @@ package parser
 import (
 	"encoding/binary"
 	"sensibled/model"
+	scriptDecoder "sensibled/parser/script"
 	"sensibled/prune"
 	"sensibled/utils"
-
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 )
 
 func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {

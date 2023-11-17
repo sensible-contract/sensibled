@@ -4,8 +4,8 @@ import (
 	"sensibled/logger"
 	"sensibled/mempool/store"
 	"sensibled/model"
+	scriptDecoder "sensibled/parser/script"
 
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
 )
 
@@ -18,21 +18,21 @@ func SyncBlockTxOutputInfo(startIdx int, txs []*model.Tx) {
 			address := ""
 			codehash := ""
 			genesis := ""
-			if output.Data.HasAddress {
-				address = string(output.Data.AddressPkh[:]) // 20 bytes
+			if output.AddressData.HasAddress {
+				address = string(output.AddressData.AddressPkh[:]) // 20 bytes
 			}
-			if output.Data.CodeType != scriptDecoder.CodeType_NONE && output.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
-				codehash = string(output.Data.CodeHash[:])                         // 20 bytes
-				genesis = string(output.Data.GenesisId[:output.Data.GenesisIdLen]) // 20/36/40 bytes
+			if output.AddressData.CodeType != scriptDecoder.CodeType_NONE && output.AddressData.CodeType != scriptDecoder.CodeType_SENSIBLE {
+				codehash = string(output.AddressData.SensibleData.CodeHash[:])                                             // 20 bytes
+				genesis = string(output.AddressData.SensibleData.GenesisId[:output.AddressData.SensibleData.GenesisIdLen]) // 20/36/40 bytes
 			}
 
 			var dataValue uint64
-			if output.Data.CodeType == scriptDecoder.CodeType_NFT {
-				dataValue = output.Data.NFT.TokenIndex
-			} else if output.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
-				dataValue = output.Data.NFTSell.TokenIndex
-			} else if output.Data.CodeType == scriptDecoder.CodeType_FT {
-				dataValue = output.Data.FT.Amount
+			if output.AddressData.CodeType == scriptDecoder.CodeType_NFT {
+				dataValue = output.AddressData.SensibleData.NFT.TokenIndex
+			} else if output.AddressData.CodeType == scriptDecoder.CodeType_NFT_SELL {
+				dataValue = output.AddressData.SensibleData.NFTSell.TokenIndex
+			} else if output.AddressData.CodeType == scriptDecoder.CodeType_FT {
+				dataValue = output.AddressData.SensibleData.FT.Amount
 			}
 
 			if _, err := store.SyncStmtTxOut.Exec(
@@ -41,7 +41,7 @@ func SyncBlockTxOutputInfo(startIdx int, txs []*model.Tx) {
 				address,
 				codehash,
 				genesis,
-				uint32(output.Data.CodeType),
+				uint32(output.AddressData.CodeType),
 				dataValue,
 				output.Satoshi,
 				string(output.ScriptType),

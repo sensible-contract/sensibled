@@ -4,15 +4,15 @@ import (
 	"sensibled/logger"
 	"sensibled/mempool/store"
 	"sensibled/model"
+	scriptDecoder "sensibled/parser/script"
 
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/zap"
 )
 
 // SyncBlockTxInputDetail all tx input info
 func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData, addrPkhInTxMap map[string][]int) {
 	var commonObjData *model.TxoData = &model.TxoData{
-		Data: &scriptDecoder.TxoData{},
+		AddressData: &scriptDecoder.AddressData{},
 	}
 
 	for txIdx, tx := range txs {
@@ -37,29 +37,29 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 			tx.InputsValue += objData.Satoshi
 
 			address := ""
-			if objData.Data.HasAddress {
-				address = string(objData.Data.AddressPkh[:]) // 20 bytes
+			if objData.AddressData.HasAddress {
+				address = string(objData.AddressData.AddressPkh[:]) // 20 bytes
 			}
 
 			// address tx历史记录
-			if objData.Data.HasAddress {
+			if objData.AddressData.HasAddress {
 				addrPkhInTxMap[address] = append(addrPkhInTxMap[address], startIdx+txIdx)
 			}
 
 			codehash := ""
 			genesis := ""
-			if objData.Data.CodeType != scriptDecoder.CodeType_NONE && objData.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
-				codehash = string(objData.Data.CodeHash[:])                          // 20 bytes
-				genesis = string(objData.Data.GenesisId[:objData.Data.GenesisIdLen]) // 20/36/40 bytes
+			if objData.AddressData.CodeType != scriptDecoder.CodeType_NONE && objData.AddressData.CodeType != scriptDecoder.CodeType_SENSIBLE {
+				codehash = string(objData.AddressData.SensibleData.CodeHash[:])                                              // 20 bytes
+				genesis = string(objData.AddressData.SensibleData.GenesisId[:objData.AddressData.SensibleData.GenesisIdLen]) // 20/36/40 bytes
 			}
 
 			var dataValue uint64
-			if objData.Data.CodeType == scriptDecoder.CodeType_NFT {
-				dataValue = objData.Data.NFT.TokenIndex
-			} else if objData.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
-				dataValue = objData.Data.NFTSell.TokenIndex
-			} else if objData.Data.CodeType == scriptDecoder.CodeType_FT {
-				dataValue = objData.Data.FT.Amount
+			if objData.AddressData.CodeType == scriptDecoder.CodeType_NFT {
+				dataValue = objData.AddressData.SensibleData.NFT.TokenIndex
+			} else if objData.AddressData.CodeType == scriptDecoder.CodeType_NFT_SELL {
+				dataValue = objData.AddressData.SensibleData.NFTSell.TokenIndex
+			} else if objData.AddressData.CodeType == scriptDecoder.CodeType_FT {
+				dataValue = objData.AddressData.SensibleData.FT.Amount
 			}
 
 			if _, err := store.SyncStmtTxIn.Exec(
@@ -77,7 +77,7 @@ func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo
 				address,
 				codehash,
 				genesis,
-				uint32(objData.Data.CodeType),
+				uint32(objData.AddressData.CodeType),
 				dataValue,
 				objData.Satoshi,
 				string(objData.ScriptType),

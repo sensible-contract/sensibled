@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"sensibled/model"
 
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
+	scriptDecoder "sensibled/parser/script"
 )
 
 // ParseTx 同区块内串行
@@ -22,7 +22,7 @@ func ParseTxFirst(tx *model.Tx) {
 
 		output.OutpointIdxKey = string(key)
 		output.ScriptType = scriptDecoder.GetLockingScriptType(output.PkScript)
-		output.Data = scriptDecoder.ExtractPkScriptForTxo(output.PkScript, output.ScriptType)
+		output.AddressData = scriptDecoder.ExtractPkScriptForTxo(output.PkScript, output.ScriptType)
 	}
 }
 
@@ -47,7 +47,7 @@ func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, mpNewUtxo map[st
 		d.Satoshi = output.Satoshi
 		d.PkScript = output.PkScript
 		d.ScriptType = output.ScriptType
-		d.Data = output.Data
+		d.AddressData = output.AddressData
 
 		mpNewUtxo[string(tx.TxId)+output.OutpointIdxKey] = d
 	}
@@ -56,8 +56,8 @@ func ParseUpdateNewUtxoInTxParallel(txIdx uint64, tx *model.Tx, mpNewUtxo map[st
 // ParseUpdateAddressInTxParallel address tx历史记录
 func ParseUpdateAddressInTxParallel(txIdx uint64, tx *model.Tx, addrPkhInTxMap map[string][]int) {
 	for _, output := range tx.TxOuts {
-		if output.Data.HasAddress {
-			address := string(output.Data.AddressPkh[:])
+		if output.AddressData.HasAddress {
+			address := string(output.AddressData.AddressPkh[:])
 			addrPkhInTxMap[address] = append(addrPkhInTxMap[address], int(txIdx))
 		}
 	}

@@ -2,9 +2,9 @@ package model
 
 import (
 	"encoding/binary"
+	scriptDecoder "sensibled/parser/script"
 	"sync"
 
-	scriptDecoder "github.com/sensible-contract/sensible-script-decoder"
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 )
@@ -55,7 +55,7 @@ type TxOut struct {
 	OutpointIdxKey string // 4
 	ScriptType     []byte
 
-	Data *scriptDecoder.TxoData
+	AddressData *scriptDecoder.AddressData
 }
 
 func (t *TxOut) MarshalLogObject(enc zapcore.ObjectEncoder) error {
@@ -150,7 +150,7 @@ type TxoData struct {
 	PkScript    []byte
 	ScriptType  []byte
 
-	Data *scriptDecoder.TxoData
+	AddressData *scriptDecoder.AddressData
 }
 
 func (d *TxoData) Marshal(buf []byte) int {
