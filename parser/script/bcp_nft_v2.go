@@ -5,7 +5,7 @@ import (
 )
 
 // nft
-func decodeNFT(scriptLen int, pkScript []byte, txo *TxoData) bool {
+func decodeNFT(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	dataLen := 0
 	protoVersionLen := 0
 	genesisIdLen := 76 // nft v2

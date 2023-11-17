@@ -16,8 +16,8 @@ func SyncBlockTxContract(block *model.Block) {
 			continue
 		}
 
-		var swapIn *scriptDecoder.TxoData
-		var swapOut *scriptDecoder.TxoData
+		var swapIn *scriptDecoder.AddressData
+		var swapOut *scriptDecoder.AddressData
 		for _, input := range tx.TxIns {
 			objData, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]
 			if !ok {

@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 )
 
-func decodeNFTIssue(scriptLen int, pkScript []byte, txo *TxoData) bool {
+func decodeNFTIssue(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	// nft issue
 	txo.CodeType = CodeType_NFT
 	genesisIdLen := 40
@@ -30,7 +30,7 @@ func decodeNFTIssue(scriptLen int, pkScript []byte, txo *TxoData) bool {
 	return true
 }
 
-func decodeNFTTransfer(scriptLen int, pkScript []byte, txo *TxoData) bool {
+func decodeNFTTransfer(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	// nft transfer
 	txo.CodeType = CodeType_NFT
 	genesisIdLen := 40

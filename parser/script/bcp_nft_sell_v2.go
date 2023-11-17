@@ -5,7 +5,7 @@ import (
 )
 
 // nft sell
-func decodeNFTSellV2(scriptLen int, pkScript []byte, txo *TxoData) bool {
+func decodeNFTSellV2(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	// dataLen := 0
 	if pkScript[scriptLen-133-1-1-1] == OP_RETURN &&
 		pkScript[scriptLen-133-1-1] == 0x4c &&

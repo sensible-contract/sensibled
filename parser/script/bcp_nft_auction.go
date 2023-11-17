@@ -5,7 +5,7 @@ import (
 )
 
 // nft Auction
-func decodeNFTAuction(scriptLen int, pkScript []byte, txo *TxoData) bool {
+func decodeNFTAuction(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	protoVersionOffset := scriptLen - 8 - 4 - 4
 	sensibleOffset := protoVersionOffset - 36
 	bidderAddressOffset := sensibleOffset - 20

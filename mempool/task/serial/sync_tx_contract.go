@@ -12,8 +12,8 @@ import (
 // SyncBlockTxContract all tx in block height
 func SyncBlockTxContract(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData) {
 	for txIdx, tx := range txs {
-		var swapIn *scriptDecoder.TxoData
-		var swapOut *scriptDecoder.TxoData
+		var swapIn *scriptDecoder.AddressData
+		var swapOut *scriptDecoder.AddressData
 		for _, input := range tx.TxIns {
 			var objData *model.TxoData
 			if obj, ok := mpNewUtxo[input.InputOutpointKey]; ok {

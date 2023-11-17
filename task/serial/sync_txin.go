@@ -16,7 +16,7 @@ import (
 func SyncBlockTxInputDetail(block *model.Block) {
 	var commonObjData *model.TxoData = &model.TxoData{
 		Satoshi:     utils.CalcBlockSubsidy(block.Height),
-		AddressData: &scriptDecoder.TxoData{},
+		AddressData: &scriptDecoder.AddressData{},
 	}
 
 	for txIdx, tx := range block.Txs {

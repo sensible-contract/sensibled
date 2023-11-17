@@ -198,7 +198,7 @@ func (u *UniqueData) MarshalJSON() ([]byte, error) {
 	})
 }
 
-type TxoData struct {
+type AddressData struct {
 	CodeType     uint32
 	CodeHash     [20]byte
 	GenesisId    [40]byte // for search: codehash + genesis
@@ -213,7 +213,7 @@ type TxoData struct {
 	NFTAuction   *NFTAuctionData
 }
 
-func (u *TxoData) MarshalJSON() ([]byte, error) {
+func (u *AddressData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		CodeType     uint32
 		CodeHash     string

@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 )
 
-func decodeFT(scriptLen int, pkScript []byte, txo *TxoData) bool {
+func decodeFT(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	dataLen := 0
 	protoVersionLen := 0
 	genesisIdLen := 0

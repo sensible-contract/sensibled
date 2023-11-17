@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 )
 
-func decodeUnique(scriptLen int, pkScript []byte, txo *TxoData) bool {
+func decodeUnique(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	// <unique data> = <unique custom data> + <custom data length(4 bytes)> + <genesisFlag(1 bytes)> + <rabinPubKeyHashArrayHash(20 bytes)> + <sensibleID(36 bytes)> + <protoType(4 bytes)> + <protoFlag(8 bytes)>
 	genesisIdLen := 56 // ft unique
 	sensibleIdLen := 36
@@ -38,7 +38,7 @@ func decodeUnique(scriptLen int, pkScript []byte, txo *TxoData) bool {
 	return true
 }
 
-func decodeUniqueV2(scriptLen int, pkScript []byte, txo *TxoData) bool {
+func decodeUniqueV2(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	// <unique data> = <unique custom data> + <custom data length(4 bytes)> + <genesisFlag(1 bytes)> + <rabinPubKeyHashArrayHash(20 bytes)> + <sensibleID(36 bytes)> + <protoVersion(4 bytes)> + <protoType(4 bytes)> + <protoFlag(8 bytes)>
 	protoVersionLen := 4
 	genesisIdLen := 56 // ft unique

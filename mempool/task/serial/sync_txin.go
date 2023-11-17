@@ -12,7 +12,7 @@ import (
 // SyncBlockTxInputDetail all tx input info
 func SyncBlockTxInputDetail(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, mpSpentUtxo map[string]*model.TxoData, addrPkhInTxMap map[string][]int) {
 	var commonObjData *model.TxoData = &model.TxoData{
-		AddressData: &scriptDecoder.TxoData{},
+		AddressData: &scriptDecoder.AddressData{},
 	}
 
 	for txIdx, tx := range txs {
