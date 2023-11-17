@@ -49,10 +49,9 @@ func NewBlockchain(stripMode bool, path string, magicHex string) (bc *Blockchain
 
 // ParseLongestChain 两遍遍历区块。先获取header，再遍历区块
 func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount int) (lastBlockId []byte, lastHeight, txCount int) {
-	blocksReady := make(chan *model.Block, 64)
-	blocksDone := make(chan struct{}, 64)
-
-	blocksStage := make(chan *model.Block, 64)
+	blocksReady := make(chan *model.Block, 2)
+	blocksDone := make(chan struct{}, 2)
+	blocksStage := make(chan *model.Block, 2)
 
 	// 并行解码区块，生产者
 	go bc.InitLongestChainBlockByHeader(blocksDone, blocksReady, startBlockHeight, endBlockHeight, batchTxCount)
