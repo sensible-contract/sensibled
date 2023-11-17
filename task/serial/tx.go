@@ -115,9 +115,11 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		}
 
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
-		strCodeHash := string(data.AddressData.SensibleData.CodeHash[:])
-		strGenesisId := string(data.AddressData.SensibleData.GenesisId[:data.AddressData.SensibleData.GenesisIdLen])
-
+		var strCodeHash, strGenesisId string
+		if data.AddressData.SensibleData != nil {
+			strCodeHash = string(data.AddressData.SensibleData.CodeHash[:])
+			strGenesisId = string(data.AddressData.SensibleData.GenesisId[:data.AddressData.SensibleData.GenesisIdLen])
+		}
 		// redis有序utxo数据成员
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
@@ -214,8 +216,11 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		}
 
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
-		strCodeHash := string(data.AddressData.SensibleData.CodeHash[:])
-		strGenesisId := string(data.AddressData.SensibleData.GenesisId[:data.AddressData.SensibleData.GenesisIdLen])
+		var strCodeHash, strGenesisId string
+		if data.AddressData.SensibleData != nil {
+			strCodeHash = string(data.AddressData.SensibleData.CodeHash[:])
+			strGenesisId = string(data.AddressData.SensibleData.GenesisId[:data.AddressData.SensibleData.GenesisIdLen])
+		}
 
 		// 非合约信息清理
 		if data.AddressData.CodeType == scriptDecoder.CodeType_NONE {

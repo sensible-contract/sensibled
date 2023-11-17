@@ -220,8 +220,11 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		}
 
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
-		strCodeHash := string(data.AddressData.SensibleData.CodeHash[:])
-		strGenesisId := string(data.AddressData.SensibleData.GenesisId[:data.AddressData.SensibleData.GenesisIdLen])
+		var strCodeHash, strGenesisId string
+		if data.AddressData.SensibleData != nil {
+			strCodeHash = string(data.AddressData.SensibleData.CodeHash[:])
+			strGenesisId = string(data.AddressData.SensibleData.GenesisId[:data.AddressData.SensibleData.GenesisIdLen])
+		}
 
 		// redis有序utxo数据添加
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
@@ -356,9 +359,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	addrToRemove := make(map[string]struct{}, 1)
 	tokenToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
-		strAddressPkh := string(data.AddressData.AddressPkh[:])
-		strCodeHash := string(data.AddressData.SensibleData.CodeHash[:])
-		strGenesisId := string(data.AddressData.SensibleData.GenesisId[:data.AddressData.SensibleData.GenesisIdLen])
 
 		if data.AddressData.CodeType == scriptDecoder.CodeType_NONE {
 			// redis有序utxo数据清除
@@ -367,7 +367,16 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 				// pipe.ZRem(ctx, "mp:utxo", outpointKey)
 				continue
 			}
+		}
 
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
+		var strCodeHash, strGenesisId string
+		if data.AddressData.SensibleData != nil {
+			strCodeHash = string(data.AddressData.SensibleData.CodeHash[:])
+			strGenesisId = string(data.AddressData.SensibleData.GenesisId[:data.AddressData.SensibleData.GenesisIdLen])
+		}
+
+		if data.AddressData.CodeType == scriptDecoder.CodeType_NONE {
 			// 不是合约tx，则记录address utxo
 			// redis有序address utxo数据清除
 			mpkeyAU := "mp:{au" + strAddressPkh + "}"
@@ -447,20 +456,25 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	}
 
 	for outpointKey, data := range utxoToSpend {
-		strAddressPkh := string(data.AddressData.AddressPkh[:])
-		strCodeHash := string(data.AddressData.SensibleData.CodeHash[:])
-		strGenesisId := string(data.AddressData.SensibleData.GenesisId[:data.AddressData.SensibleData.GenesisIdLen])
-
-		// redis有序utxo数据添加
-		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
-
 		if data.AddressData.CodeType == scriptDecoder.CodeType_NONE {
 			if !data.AddressData.HasAddress {
 				// 无法识别地址，暂不记录utxo
 				// pipe.ZAdd(ctx, "mp:s:utxo", member)
 				continue
 			}
+		}
 
+		strAddressPkh := string(data.AddressData.AddressPkh[:])
+		var strCodeHash, strGenesisId string
+		if data.AddressData.SensibleData != nil {
+			strCodeHash = string(data.AddressData.SensibleData.CodeHash[:])
+			strGenesisId = string(data.AddressData.SensibleData.GenesisId[:data.AddressData.SensibleData.GenesisIdLen])
+		}
+
+		// redis有序utxo数据添加
+		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
+
+		if data.AddressData.CodeType == scriptDecoder.CodeType_NONE {
 			// 不是合约tx，则记录address utxo
 			// redis有序address utxo数据添加
 			mpkeyAU := "mp:s:{au" + strAddressPkh + "}"
