@@ -25,9 +25,9 @@ func SyncBlockTxContract(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, m
 			} else {
 				continue
 			}
-			if objData.Data.CodeType == scriptDecoder.CodeType_UNIQUE {
-				if objData.Data.Uniq.Swap != nil {
-					swapIn = objData.Data
+			if objData.AddressData.CodeType == scriptDecoder.CodeType_UNIQUE {
+				if objData.AddressData.Uniq.Swap != nil {
+					swapIn = objData.AddressData
 					break
 				}
 			}
@@ -37,9 +37,9 @@ func SyncBlockTxContract(startIdx int, txs []*model.Tx, mpNewUtxo, removeUtxo, m
 		}
 
 		for _, output := range tx.TxOuts {
-			if output.Data.CodeType == scriptDecoder.CodeType_UNIQUE {
-				if output.Data.Uniq.Swap != nil {
-					swapOut = output.Data
+			if output.AddressData.CodeType == scriptDecoder.CodeType_UNIQUE {
+				if output.AddressData.Uniq.Swap != nil {
+					swapOut = output.AddressData
 					break
 				}
 			}

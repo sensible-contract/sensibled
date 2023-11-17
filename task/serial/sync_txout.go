@@ -16,7 +16,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 		for _, output := range tx.TxOuts {
 			tx.OutputsValue += output.Satoshi
 			// set sensible flag
-			if output.Data.CodeType != scriptDecoder.CodeType_NONE {
+			if output.AddressData.CodeType != scriptDecoder.CodeType_NONE {
 				tx.IsSensible = true
 			}
 		}
@@ -24,7 +24,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 		for vout, output := range tx.TxOuts {
 			// prune string(output.Pkscript),
 			pkscript := ""
-			if !prune.IsPkScriptPrune || tx.IsSensible || output.Data.HasAddress {
+			if !prune.IsPkScriptPrune || tx.IsSensible || output.AddressData.HasAddress {
 				pkscript = string(output.PkScript)
 			}
 
@@ -36,21 +36,21 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 			address := ""
 			codehash := ""
 			genesis := ""
-			if output.Data.HasAddress {
-				address = string(output.Data.AddressPkh[:]) // 20 bytes
+			if output.AddressData.HasAddress {
+				address = string(output.AddressData.AddressPkh[:]) // 20 bytes
 			}
-			if output.Data.CodeType != scriptDecoder.CodeType_NONE && output.Data.CodeType != scriptDecoder.CodeType_SENSIBLE {
-				codehash = string(output.Data.CodeHash[:])                         // 20 bytes
-				genesis = string(output.Data.GenesisId[:output.Data.GenesisIdLen]) // 20/36/40 bytes
+			if output.AddressData.CodeType != scriptDecoder.CodeType_NONE && output.AddressData.CodeType != scriptDecoder.CodeType_SENSIBLE {
+				codehash = string(output.AddressData.CodeHash[:])                                // 20 bytes
+				genesis = string(output.AddressData.GenesisId[:output.AddressData.GenesisIdLen]) // 20/36/40 bytes
 			}
 
 			var dataValue uint64
-			if output.Data.CodeType == scriptDecoder.CodeType_NFT {
-				dataValue = output.Data.NFT.TokenIndex
-			} else if output.Data.CodeType == scriptDecoder.CodeType_NFT_SELL {
-				dataValue = output.Data.NFTSell.TokenIndex
-			} else if output.Data.CodeType == scriptDecoder.CodeType_FT {
-				dataValue = output.Data.FT.Amount
+			if output.AddressData.CodeType == scriptDecoder.CodeType_NFT {
+				dataValue = output.AddressData.NFT.TokenIndex
+			} else if output.AddressData.CodeType == scriptDecoder.CodeType_NFT_SELL {
+				dataValue = output.AddressData.NFTSell.TokenIndex
+			} else if output.AddressData.CodeType == scriptDecoder.CodeType_FT {
+				dataValue = output.AddressData.FT.Amount
 			}
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.TxId),
@@ -58,7 +58,7 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				address,
 				codehash,
 				genesis,
-				uint32(output.Data.CodeType),
+				uint32(output.AddressData.CodeType),
 				dataValue,
 				output.Satoshi,
 				string(output.ScriptType),

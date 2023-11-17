@@ -55,7 +55,7 @@ type TxOut struct {
 	OutpointIdxKey string // 4
 	ScriptType     []byte
 
-	Data *scriptDecoder.TxoData
+	AddressData *scriptDecoder.TxoData
 }
 
 func (t *TxOut) MarshalLogObject(enc zapcore.ObjectEncoder) error {
@@ -150,7 +150,7 @@ type TxoData struct {
 	PkScript    []byte
 	ScriptType  []byte
 
-	Data *scriptDecoder.TxoData
+	AddressData *scriptDecoder.TxoData
 }
 
 func (d *TxoData) Marshal(buf []byte) int {
