@@ -76,7 +76,7 @@ func decodeNFTAuction(scriptLen int, pkScript []byte, txo *AddressData) bool {
 		nft.FeeAmount = binary.LittleEndian.Uint64(pkScript[feeAmountOffset : feeAmountOffset+8]) // v1
 
 	}
-	txo.NFTAuction = nft
+	txo.SensibleData.NFTAuction = nft
 
 	copy(nft.SensibleId[:], pkScript[sensibleOffset:sensibleOffset+36])
 	copy(nft.NFTCodeHash[:], pkScript[nftCodeHashOffset:nftCodeHashOffset+20])
@@ -85,9 +85,9 @@ func decodeNFTAuction(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	copy(nft.SenderAddressPkh[:], pkScript[senderAddressOffset:senderAddressOffset+20])
 	copy(nft.BidderAddressPkh[:], pkScript[bidderAddressOffset:bidderAddressOffset+20])
 
-	copy(txo.CodeHash[:], GetHash160(pkScript[:scriptLen-dataLen]))
-	txo.GenesisIdLen = 20
-	copy(txo.GenesisId[:], nft.NFTID[:])
+	copy(txo.SensibleData.CodeHash[:], GetHash160(pkScript[:scriptLen-dataLen]))
+	txo.SensibleData.GenesisIdLen = 20
+	copy(txo.SensibleData.GenesisId[:], nft.NFTID[:])
 	txo.HasAddress = true
 	copy(txo.AddressPkh[:], nft.SenderAddressPkh[:]) // sender
 	return true

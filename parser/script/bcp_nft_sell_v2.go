@@ -47,12 +47,12 @@ func decodeNFTSellV2(scriptLen int, pkScript []byte, txo *AddressData) bool {
 		Price:      binary.LittleEndian.Uint64(pkScript[priceOffset : priceOffset+8]),
 		FeeRate:    pkScript[feeRateOffset],
 	}
-	txo.NFTSellV2 = nftsell
+	txo.SensibleData.NFTSellV2 = nftsell
 	// txo.CodeHash = GetHash160(pkScript[:scriptLen-dataLen])
 
-	txo.GenesisIdLen = 20
-	copy(txo.CodeHash[:], pkScript[codehashOffset:codehashOffset+20])
-	copy(txo.GenesisId[:], pkScript[genesisOffset:genesisOffset+20])
+	txo.SensibleData.GenesisIdLen = 20
+	copy(txo.SensibleData.CodeHash[:], pkScript[codehashOffset:codehashOffset+20])
+	copy(txo.SensibleData.GenesisId[:], pkScript[genesisOffset:genesisOffset+20])
 	copy(nftsell.FeeAddressPkh[:], pkScript[feeAddressOffset:feeAddressOffset+20])
 	copy(nftsell.NFTID[:], pkScript[nftIdOffset:nftIdOffset+20])
 	txo.HasAddress = true

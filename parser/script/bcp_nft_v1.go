@@ -20,11 +20,11 @@ func decodeNFTIssue(scriptLen int, pkScript []byte, txo *AddressData) bool {
 		TokenIndex:  binary.LittleEndian.Uint64(pkScript[tokenIndexOffset : tokenIndexOffset+8]),
 	}
 	nft.TokenIndex = nft.TokenSupply
-	txo.NFT = nft
+	txo.SensibleData.NFT = nft
 
-	txo.GenesisIdLen = uint8(genesisIdLen)
-	copy(txo.CodeHash[:], GetHash160(pkScript[:scriptLen-dataLen]))
-	copy(txo.GenesisId[:], pkScript[genesisOffset:genesisOffset+genesisIdLen])
+	txo.SensibleData.GenesisIdLen = uint8(genesisIdLen)
+	copy(txo.SensibleData.CodeHash[:], GetHash160(pkScript[:scriptLen-dataLen]))
+	copy(txo.SensibleData.GenesisId[:], pkScript[genesisOffset:genesisOffset+genesisIdLen])
 	copy(txo.AddressPkh[:], pkScript[addressOffset:addressOffset+20])
 	txo.HasAddress = true
 	return true
@@ -44,10 +44,10 @@ func decodeNFTTransfer(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	nft := &NFTData{
 		TokenIndex: binary.LittleEndian.Uint64(pkScript[tokenIndexOffset : tokenIndexOffset+8]),
 	}
-	txo.NFT = nft
-	txo.GenesisIdLen = uint8(genesisIdLen)
-	copy(txo.CodeHash[:], GetHash160(pkScript[:scriptLen-dataLen]))
-	copy(txo.GenesisId[:], pkScript[genesisOffset:genesisOffset+genesisIdLen])
+	txo.SensibleData.NFT = nft
+	txo.SensibleData.GenesisIdLen = uint8(genesisIdLen)
+	copy(txo.SensibleData.CodeHash[:], GetHash160(pkScript[:scriptLen-dataLen]))
+	copy(txo.SensibleData.GenesisId[:], pkScript[genesisOffset:genesisOffset+genesisIdLen])
 	copy(nft.MetaTxId[:], pkScript[metaTxIdOffset:metaTxIdOffset+32])
 	copy(txo.AddressPkh[:], pkScript[addressOffset:addressOffset+20])
 	txo.HasAddress = true

@@ -25,13 +25,13 @@ func decodeUnique(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	txo.CodeType = CodeType_UNIQUE
 
 	uniq := &UniqueData{}
-	txo.Uniq = uniq
+	txo.SensibleData.Uniq = uniq
 
-	copy(txo.CodeHash[:], GetHash160(pkScript[:scriptLen-dataLen]))
+	copy(txo.SensibleData.CodeHash[:], GetHash160(pkScript[:scriptLen-dataLen]))
 
 	// GenesisId is tokenIdHash
-	txo.GenesisIdLen = 20
-	copy(txo.GenesisId[:], GetHash160(pkScript[genesisOffset:genesisOffset+genesisIdLen]))
+	txo.SensibleData.GenesisIdLen = 20
+	copy(txo.SensibleData.GenesisId[:], GetHash160(pkScript[genesisOffset:genesisOffset+genesisIdLen]))
 
 	uniq.SensibleId = make([]byte, sensibleIdLen)
 	copy(uniq.SensibleId, pkScript[sensibleOffset:sensibleOffset+sensibleIdLen])
@@ -60,13 +60,13 @@ func decodeUniqueV2(scriptLen int, pkScript []byte, txo *AddressData) bool {
 	txo.CodeType = CodeType_UNIQUE
 
 	uniq := &UniqueData{}
-	txo.Uniq = uniq
+	txo.SensibleData.Uniq = uniq
 
-	copy(txo.CodeHash[:], GetHash160(pkScript[:scriptLen-dataLen]))
+	copy(txo.SensibleData.CodeHash[:], GetHash160(pkScript[:scriptLen-dataLen]))
 
 	// GenesisId is tokenIdHash
-	txo.GenesisIdLen = 20
-	copy(txo.GenesisId[:], GetHash160(pkScript[genesisOffset:genesisOffset+genesisIdLen]))
+	txo.SensibleData.GenesisIdLen = 20
+	copy(txo.SensibleData.GenesisId[:], GetHash160(pkScript[genesisOffset:genesisOffset+genesisIdLen]))
 
 	uniq.CustomData = make([]byte, customDataSize)
 	copy(uniq.CustomData, pkScript[customDataSizeOffset-customDataSize:customDataSizeOffset])

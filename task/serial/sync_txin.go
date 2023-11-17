@@ -71,8 +71,8 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			codehash := ""
 			genesis := ""
 			if objData.AddressData.CodeType != scriptDecoder.CodeType_NONE && objData.AddressData.CodeType != scriptDecoder.CodeType_SENSIBLE {
-				codehash = string(objData.AddressData.CodeHash[:])                                 // 20 bytes
-				genesis = string(objData.AddressData.GenesisId[:objData.AddressData.GenesisIdLen]) // 20/36/40 bytes
+				codehash = string(objData.AddressData.SensibleData.CodeHash[:])                                              // 20 bytes
+				genesis = string(objData.AddressData.SensibleData.GenesisId[:objData.AddressData.SensibleData.GenesisIdLen]) // 20/36/40 bytes
 			}
 
 			var dataValue uint64
@@ -84,20 +84,20 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				binary.LittleEndian.PutUint32(buf, objData.AddressData.CodeType)
 
 				if objData.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-					binary.LittleEndian.PutUint64(buf[4:], objData.AddressData.NFT.TokenIndex)
-					tokenIndex = objData.AddressData.NFT.TokenIndex
+					binary.LittleEndian.PutUint64(buf[4:], objData.AddressData.SensibleData.NFT.TokenIndex)
+					tokenIndex = objData.AddressData.SensibleData.NFT.TokenIndex
 					dataValue = tokenIndex
 				} else if objData.AddressData.CodeType == scriptDecoder.CodeType_NFT_SELL {
-					binary.LittleEndian.PutUint64(buf[4:], objData.AddressData.NFTSell.TokenIndex)
-					tokenIndex = objData.AddressData.NFTSell.TokenIndex
+					binary.LittleEndian.PutUint64(buf[4:], objData.AddressData.SensibleData.NFTSell.TokenIndex)
+					tokenIndex = objData.AddressData.SensibleData.NFTSell.TokenIndex
 					dataValue = tokenIndex
 				} else if objData.AddressData.CodeType == scriptDecoder.CodeType_FT {
-					decimal = objData.AddressData.FT.Decimal
-					dataValue = objData.AddressData.FT.Amount
+					decimal = objData.AddressData.SensibleData.FT.Decimal
+					dataValue = objData.AddressData.SensibleData.FT.Amount
 				}
 
-				buf = append(buf, objData.AddressData.CodeHash[:]...)
-				buf = append(buf, objData.AddressData.GenesisId[:objData.AddressData.GenesisIdLen]...)
+				buf = append(buf, objData.AddressData.SensibleData.CodeHash[:]...)
+				buf = append(buf, objData.AddressData.SensibleData.GenesisId[:objData.AddressData.SensibleData.GenesisIdLen]...)
 
 				tokenKey := string(buf)
 
@@ -107,8 +107,8 @@ func SyncBlockTxInputDetail(block *model.Block) {
 						CodeType:  objData.AddressData.CodeType,
 						NFTIdx:    tokenIndex,
 						Decimal:   decimal,
-						CodeHash:  objData.AddressData.CodeHash[:],
-						GenesisId: objData.AddressData.GenesisId[:objData.AddressData.GenesisIdLen],
+						CodeHash:  objData.AddressData.SensibleData.CodeHash[:],
+						GenesisId: objData.AddressData.SensibleData.GenesisId[:objData.AddressData.SensibleData.GenesisIdLen],
 					}
 					block.ParseData.TokenSummaryMap[tokenKey] = tokenSummary
 				}

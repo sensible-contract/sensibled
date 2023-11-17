@@ -20,6 +20,8 @@ func DecodeSensibleTxo(pkScript []byte, txo *AddressData) bool {
 		protoTypeOffset := scriptLen - 8 - 4
 		protoType := binary.LittleEndian.Uint32(pkScript[protoTypeOffset : protoTypeOffset+4])
 
+		txo.SensibleData = &SensibleData{}
+
 		switch protoType {
 		case CodeType_FT:
 			ret = decodeFT(scriptLen, pkScript, txo)
@@ -49,12 +51,16 @@ func DecodeSensibleTxo(pkScript []byte, txo *AddressData) bool {
 		pkScript[scriptLen-37-1] == 37 &&
 		pkScript[scriptLen-37-1-40-1] == 40 &&
 		pkScript[scriptLen-37-1-40-1-1] == OP_RETURN {
+
+		txo.SensibleData = &SensibleData{}
 		ret = decodeNFTIssue(scriptLen, pkScript, txo)
 
 	} else if pkScript[scriptLen-1] == 1 &&
 		pkScript[scriptLen-61-1] == 61 &&
 		pkScript[scriptLen-61-1-40-1] == 40 &&
 		pkScript[scriptLen-61-1-40-1-1] == OP_RETURN {
+
+		txo.SensibleData = &SensibleData{}
 		ret = decodeNFTTransfer(scriptLen, pkScript, txo)
 	}
 

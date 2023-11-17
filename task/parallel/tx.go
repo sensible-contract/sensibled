@@ -33,23 +33,23 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 		buf := make([]byte, 12, 12+20+40)
 		binary.LittleEndian.PutUint32(buf, output.AddressData.CodeType)
 		if output.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-			binary.LittleEndian.PutUint64(buf[4:], output.AddressData.NFT.TokenIndex)
+			binary.LittleEndian.PutUint64(buf[4:], output.AddressData.SensibleData.NFT.TokenIndex)
 		} else if output.AddressData.CodeType == scriptDecoder.CodeType_NFT_SELL {
-			binary.LittleEndian.PutUint64(buf[4:], output.AddressData.NFTSell.TokenIndex)
+			binary.LittleEndian.PutUint64(buf[4:], output.AddressData.SensibleData.NFTSell.TokenIndex)
 		}
 
-		buf = append(buf, output.AddressData.CodeHash[:]...)
-		buf = append(buf, output.AddressData.GenesisId[:output.AddressData.GenesisIdLen]...)
+		buf = append(buf, output.AddressData.SensibleData.CodeHash[:]...)
+		buf = append(buf, output.AddressData.SensibleData.GenesisId[:output.AddressData.SensibleData.GenesisIdLen]...)
 
 		var tokenIndex uint64
 		var decimal uint8
 		switch output.AddressData.CodeType {
 		case scriptDecoder.CodeType_NFT:
-			tokenIndex = output.AddressData.NFT.TokenIndex
+			tokenIndex = output.AddressData.SensibleData.NFT.TokenIndex
 		case scriptDecoder.CodeType_NFT_SELL:
-			tokenIndex = output.AddressData.NFTSell.TokenIndex
+			tokenIndex = output.AddressData.SensibleData.NFTSell.TokenIndex
 		case scriptDecoder.CodeType_FT:
-			decimal = output.AddressData.FT.Decimal
+			decimal = output.AddressData.SensibleData.FT.Decimal
 		}
 
 		tokenKey := string(buf)
@@ -60,8 +60,8 @@ func ParseTxFirst(tx *model.Tx, isCoinbase bool, block *model.ProcessBlock) {
 				CodeType:  output.AddressData.CodeType,
 				NFTIdx:    tokenIndex,
 				Decimal:   decimal,
-				CodeHash:  output.AddressData.CodeHash[:],
-				GenesisId: output.AddressData.GenesisId[:output.AddressData.GenesisIdLen],
+				CodeHash:  output.AddressData.SensibleData.CodeHash[:],
+				GenesisId: output.AddressData.SensibleData.GenesisId[:output.AddressData.SensibleData.GenesisIdLen],
 			}
 			block.TokenSummaryMap[tokenKey] = tokenSummary
 		}

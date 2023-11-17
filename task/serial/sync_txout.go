@@ -40,17 +40,17 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				address = string(output.AddressData.AddressPkh[:]) // 20 bytes
 			}
 			if output.AddressData.CodeType != scriptDecoder.CodeType_NONE && output.AddressData.CodeType != scriptDecoder.CodeType_SENSIBLE {
-				codehash = string(output.AddressData.CodeHash[:])                                // 20 bytes
-				genesis = string(output.AddressData.GenesisId[:output.AddressData.GenesisIdLen]) // 20/36/40 bytes
+				codehash = string(output.AddressData.SensibleData.CodeHash[:])                                             // 20 bytes
+				genesis = string(output.AddressData.SensibleData.GenesisId[:output.AddressData.SensibleData.GenesisIdLen]) // 20/36/40 bytes
 			}
 
 			var dataValue uint64
 			if output.AddressData.CodeType == scriptDecoder.CodeType_NFT {
-				dataValue = output.AddressData.NFT.TokenIndex
+				dataValue = output.AddressData.SensibleData.NFT.TokenIndex
 			} else if output.AddressData.CodeType == scriptDecoder.CodeType_NFT_SELL {
-				dataValue = output.AddressData.NFTSell.TokenIndex
+				dataValue = output.AddressData.SensibleData.NFTSell.TokenIndex
 			} else if output.AddressData.CodeType == scriptDecoder.CodeType_FT {
-				dataValue = output.AddressData.FT.Amount
+				dataValue = output.AddressData.SensibleData.FT.Amount
 			}
 			if _, err := store.SyncStmtTxOut.Exec(
 				string(tx.TxId),

@@ -198,13 +198,10 @@ func (u *UniqueData) MarshalJSON() ([]byte, error) {
 	})
 }
 
-type AddressData struct {
-	CodeType     uint32
+type SensibleData struct {
 	CodeHash     [20]byte
 	GenesisId    [40]byte // for search: codehash + genesis
 	GenesisIdLen uint8
-	HasAddress   bool
-	AddressPkh   [20]byte
 	NFT          *NFTData
 	FT           *FTData
 	Uniq         *UniqueData
@@ -213,7 +210,20 @@ type AddressData struct {
 	NFTAuction   *NFTAuctionData
 }
 
+type AddressData struct {
+	CodeType   uint32
+	HasAddress bool
+	AddressPkh [20]byte
+
+	SensibleData *SensibleData
+}
+
 func (u *AddressData) MarshalJSON() ([]byte, error) {
+	sData := &SensibleData{}
+	if u.SensibleData != nil {
+		sData = u.SensibleData
+	}
+
 	return json.Marshal(&struct {
 		CodeType     uint32
 		CodeHash     string
@@ -229,16 +239,16 @@ func (u *AddressData) MarshalJSON() ([]byte, error) {
 		NFTAuction   *NFTAuctionData
 	}{
 		CodeType:     u.CodeType,
-		CodeHash:     hex.EncodeToString(u.CodeHash[:]),
-		GenesisId:    hex.EncodeToString(u.GenesisId[:]),
-		GenesisIdLen: u.GenesisIdLen,
+		CodeHash:     hex.EncodeToString(sData.CodeHash[:]),
+		GenesisId:    hex.EncodeToString(sData.GenesisId[:]),
+		GenesisIdLen: sData.GenesisIdLen,
 		HasAddress:   u.HasAddress,
 		AddressPkh:   hex.EncodeToString(u.AddressPkh[:]),
-		NFT:          u.NFT,
-		FT:           u.FT,
-		Uniq:         u.Uniq,
-		NFTSell:      u.NFTSell,
-		NFTSellV2:    u.NFTSellV2,
-		NFTAuction:   u.NFTAuction,
+		NFT:          sData.NFT,
+		FT:           sData.FT,
+		Uniq:         sData.Uniq,
+		NFTSell:      sData.NFTSell,
+		NFTSellV2:    sData.NFTSellV2,
+		NFTAuction:   sData.NFTAuction,
 	})
 }
