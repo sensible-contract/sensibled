@@ -213,6 +213,12 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 	// 更新内存池数据
 	mpkeys := make([]string, 5*(len(utxoToRestore)+len(utxoToRemove)+len(utxoToSpend)))
 	for outpointKey, data := range utxoToRestore {
+		if data.AddressData.CodeType == scriptDecoder.CodeType_NONE {
+			if !data.AddressData.HasAddress {
+				continue
+			}
+		}
+
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
 		strCodeHash := string(data.AddressData.CodeHash[:])
 		strGenesisId := string(data.AddressData.GenesisId[:data.AddressData.GenesisIdLen])
@@ -221,14 +227,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxo
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
 		if data.AddressData.CodeType == scriptDecoder.CodeType_NONE {
-			if !data.AddressData.HasAddress {
-				// 无法识别地址，暂不记录utxo
-				// logger.Log.Info("ignore mp:utxo", zap.String("key", hex.EncodeToString([]byte(outpointKey))),
-				// 	zap.Float64("score", member.Score))
-				// pipe.ZAdd(ctx, "mp:utxo", member)
-				continue
-			}
-
 			// 不是合约tx，则记录address utxo
 			// redis有序address utxo数据添加
 			// logger.Log.Info("ZAdd mp:au",

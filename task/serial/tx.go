@@ -107,6 +107,13 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 	)
 
 	for outpointKey, data := range utxoToRestore {
+		if data.AddressData.CodeType == scriptDecoder.CodeType_NONE {
+			if !data.AddressData.HasAddress {
+				// 无法识别地址，暂不记录utxo
+				continue
+			}
+		}
+
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
 		strCodeHash := string(data.AddressData.CodeHash[:])
 		strGenesisId := string(data.AddressData.GenesisId[:data.AddressData.GenesisIdLen])
@@ -115,11 +122,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		member := &redis.Z{Score: float64(data.BlockHeight)*1000000000 + float64(data.TxIdx), Member: outpointKey}
 
 		// 非合约信息记录
-			if !data.Data.HasAddress {
-				// 无法识别地址，暂不记录utxo
-				// pipe.ZAdd(ctx, "utxo", member)
-				continue
-			}
 		if data.AddressData.CodeType == scriptDecoder.CodeType_NONE {
 			// 识别地址，只记录utxo和balance
 			pipe.ZAdd(ctx, "{au"+strAddressPkh+"}", member)           // 有序address utxo数据添加
@@ -204,6 +206,13 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 	addrToRemove := make(map[string]struct{}, 1)
 	tokenToRemove := make(map[string]struct{}, 1)
 	for outpointKey, data := range utxoToRemove {
+		// 非合约信息清理
+		if data.AddressData.CodeType == scriptDecoder.CodeType_NONE {
+			if !data.AddressData.HasAddress {
+				continue
+			}
+		}
+
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
 		strCodeHash := string(data.AddressData.CodeHash[:])
 		strGenesisId := string(data.AddressData.GenesisId[:data.AddressData.GenesisIdLen])
@@ -211,11 +220,6 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		// 非合约信息清理
 		if data.AddressData.CodeType == scriptDecoder.CodeType_NONE {
 			// redis有序utxo数据清除
-			if !data.AddressData.HasAddress {
-				// 无法识别地址，暂不记录utxo
-				// pipe.ZRem(ctx, "utxo", outpointKey)
-				continue
-			}
 			// 识别地址，只记录utxo和balance
 			pipe.ZRem(ctx, "{au"+strAddressPkh+"}", outpointKey)                                               // 有序address utxo数据清除
 			addressBalanceCmds["bl"+strAddressPkh] = pipe.DecrBy(ctx, "bl"+strAddressPkh, int64(data.Satoshi)) // balance of address
