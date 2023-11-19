@@ -223,6 +223,10 @@ func syncBlock() {
 				needRemove = true
 			}
 			if needRemove {
+				if !model.NeedDBWrite {
+					logger.Log.Error("skip db write, but need reorg")
+					break
+				}
 				if ok := task.RemoveBlocksForReorg(startBlockHeight); !ok {
 					break
 				}
