@@ -349,12 +349,12 @@ PARTITION BY substring(address, 1, 1)
 
 func CreateAllSyncCk() bool {
 	logger.Log.Info("create sql: all")
-	return ProcessSyncCk(createAllSQLs)
+	return processSyncCkExec(createAllSQLs)
 }
 
 func ProcessAllSyncCk() bool {
 	logger.Log.Info("sync sql: all")
-	return ProcessSyncCk(processAllSQLs)
+	return processSyncCkExec(processAllSQLs)
 }
 
 func RemoveOrphanPartSyncCk(startBlockHeight int) bool {
@@ -365,26 +365,26 @@ func RemoveOrphanPartSyncCk(startBlockHeight int) bool {
 			psql+strconv.Itoa(startBlockHeight),
 		)
 	}
-	return ProcessSyncCk(removeOrphanPartSQLsWithHeight)
+	return processSyncCkExec(removeOrphanPartSQLsWithHeight)
 }
 
 func CreatePartSyncCk() bool {
 	logger.Log.Info("create sql: part")
-	return ProcessSyncCk(createPartSQLs)
+	return processSyncCkExec(createPartSQLs)
 }
 
 func ProcessPartSyncCk() bool {
 	logger.Log.Info("sync sql: part")
-	if !ProcessSyncCk(processPartSQLs) {
+	if !processSyncCkExec(processPartSQLs) {
 		return false
 	}
-	if !ProcessSyncCk(processPartSQLsForTxIn) {
+	if !processSyncCkExec(processPartSQLsForTxIn) {
 		return false
 	}
-	return ProcessSyncCk(processPartSQLsForTxOut)
+	return processSyncCkExec(processPartSQLsForTxOut)
 }
 
-func ProcessSyncCk(processSQLs []string) bool {
+func processSyncCkExec(processSQLs []string) bool {
 	for _, psql := range processSQLs {
 		partLen := len(psql)
 		if partLen > 96 {
