@@ -57,6 +57,21 @@ func GetBestBlockHeightFromRedis() (height int, err error) {
 	return height, nil
 }
 
+func GetBestBlockIdFromRedis() (blockId string, err error) {
+	// get decimal from f info
+	ctx := context.Background()
+	blockId, err = rdb.RdbBalanceClient.HGet(ctx, "info", "block").Result()
+	if err == redis.Nil {
+		blockId = ""
+		logger.Log.Info("GetBestBlockIdFromRedis, but info missing")
+	} else if err != nil {
+		logger.Log.Info("GetBestBlockIdFromRedis, but redis failed", zap.Error(err))
+		return
+	}
+
+	return blockId, nil
+}
+
 func utxoResultSRF(rows *sql.Rows) (interface{}, error) {
 	var ret model.TxoData
 	err := rows.Scan(&ret.UTxid, &ret.Vout, &ret.Satoshi, &ret.ScriptType, &ret.PkScript, &ret.BlockHeight, &ret.TxIdx)
