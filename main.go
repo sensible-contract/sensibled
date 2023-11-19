@@ -84,10 +84,12 @@ var (
 	blockStrip       bool
 	isFull           bool
 	syncOnce         bool
+	skipDBWrite      bool
 	gobFlushFrom     int
 )
 
 func init() {
+	flag.BoolVar(&skipDBWrite, "nodb", false, "skip db write")
 	flag.BoolVar(&blockStrip, "strip", false, "load blocks from striped files")
 	flag.BoolVar(&syncOnce, "once", false, "sync 1 block then stop")
 	flag.BoolVar(&isFull, "full", false, "start from genesis")
@@ -99,6 +101,8 @@ func init() {
 
 	flag.Parse()
 
+	model.NeedDBWrite = !skipDBWrite
+	// conf
 	viper.SetConfigFile("conf/chain.yaml")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -221,14 +225,17 @@ func syncBlock() {
 					break
 				}
 			}
-
-			store.CreatePartSyncCk() // 初始化同步数据库表
-			store.PreparePartSyncCk()
+			if model.NeedDBWrite {
+				store.CreatePartSyncCk() // 初始化同步数据库表
+				store.PreparePartSyncCk()
+			}
 		} else {
-			startBlockHeight = 0    // 重新全量扫描
-			rdb.FlushdbInRedis()    // 清空redis
-			store.CreateAllSyncCk() // 初始化同步数据库表
-			store.PrepareFullSyncCk()
+			startBlockHeight = 0 // 重新全量扫描
+			rdb.FlushdbInRedis() // 清空redis
+			if model.NeedDBWrite {
+				store.CreateAllSyncCk() // 初始化同步数据库表
+				store.PrepareFullSyncCk()
+			}
 		}
 
 		needSaveBlock = true

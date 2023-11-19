@@ -12,8 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// SyncBlockTxInputDetail all tx input info
-func SyncBlockTxInputDetail(block *model.Block) {
+// UpdateBlockTxInputDetail all tx input info
+func UpdateBlockTxInputDetail(block *model.Block) {
 	var commonObjData *model.TxoData = &model.TxoData{
 		Satoshi:     utils.CalcBlockSubsidy(block.Height),
 		AddressData: &scriptDecoder.AddressData{},
@@ -54,6 +54,42 @@ func SyncBlockTxInputDetail(block *model.Block) {
 			// set sensible flag
 			if objData.AddressData.CodeType != scriptDecoder.CodeType_NONE {
 				tx.IsSensible = true
+			}
+		}
+	}
+}
+
+// SyncBlockTxInputDetail all tx input info
+func SyncBlockTxInputDetail(block *model.Block) {
+	var commonObjData *model.TxoData = &model.TxoData{
+		Satoshi:     utils.CalcBlockSubsidy(block.Height),
+		AddressData: &scriptDecoder.AddressData{},
+	}
+
+	for txIdx, tx := range block.Txs {
+		isCoinbase := (txIdx == 0)
+
+		for vin, input := range tx.TxIns {
+			objData := commonObjData
+			if !isCoinbase {
+				objData.Satoshi = 0
+				if obj, ok := block.ParseData.SpentUtxoDataMap[input.InputOutpointKey]; ok {
+					objData = obj
+				} else {
+					logger.Log.Info("tx-input-err",
+						zap.String("txin", "input missing utxo"),
+						zap.String("txid", tx.TxIdHex),
+						zap.Int("vin", vin),
+
+						zap.String("utxid", input.InputHashHex),
+						zap.Uint32("vout", input.InputVout),
+					)
+				}
+			}
+
+			address := ""
+			if objData.AddressData.HasAddress {
+				address = string(objData.AddressData.AddressPkh[:]) // 20 bytes
 			}
 
 			// 解锁脚本一般可安全清理
@@ -100,7 +136,7 @@ func SyncBlockTxInputDetail(block *model.Block) {
 				buf = append(buf, objData.AddressData.SensibleData.GenesisId[:objData.AddressData.SensibleData.GenesisIdLen]...)
 
 				tokenKey := string(buf)
-
+				// skip if no db write
 				tokenSummary, ok := block.ParseData.TokenSummaryMap[tokenKey]
 				if !ok {
 					tokenSummary = &model.TokenData{
