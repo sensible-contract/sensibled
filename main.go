@@ -197,6 +197,7 @@ func syncBlock() {
 		needSaveBlock := false
 		stageBlockHeight := 0
 		txCount := 0
+		processBytes := 0
 
 		if !isFull {
 			// 现有追加扫描
@@ -254,9 +255,14 @@ func syncBlock() {
 		}
 
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
-		stageBlockID, stageBlockHeight, txCount = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
+		stageBlockID, stageBlockHeight, txCount, processBytes = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
 		// 按批次处理区块
-		logger.Log.Info("range", zap.Int("start", startBlockHeight), zap.Int("end", stageBlockHeight+1))
+		logger.Log.Info("range",
+			zap.Int("ntx", txCount),
+			zap.Int("bytes", processBytes),
+
+			zap.Int("start", startBlockHeight),
+			zap.Int("end", stageBlockHeight+1))
 
 		if info.Height == 0 {
 			info.Height = stageBlockHeight

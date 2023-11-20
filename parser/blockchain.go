@@ -48,10 +48,10 @@ func NewBlockchain(stripMode bool, path string, magicHex string) (bc *Blockchain
 }
 
 // ParseLongestChain 两遍遍历区块。先获取header，再遍历区块
-func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount int) (lastBlockId []byte, lastHeight, txCount int) {
 	blocksReady := make(chan *model.Block, 2)
 	blocksDone := make(chan struct{}, 2)
 	blocksStage := make(chan *model.Block, 2)
+func (bc *Blockchain) ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount int) (lastBlockId []byte, lastHeight, txCount, processBytes int) {
 
 	// 并行解码区块，生产者
 	go bc.InitLongestChainBlockByHeader(blocksDone, blocksReady, startBlockHeight, endBlockHeight, batchTxCount)
@@ -71,6 +71,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 		endBlockHeight = len(bc.BlocksOfChainByHeight)
 	}
 
+	var processBytes int
 	var txCount int
 	for nextBlockHeight := startBlockHeight; nextBlockHeight < endBlockHeight; nextBlockHeight++ {
 		if model.NeedStop {
@@ -83,8 +84,13 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 			break
 		}
 
-		if batchTxCount > 0 && txCount > batchTxCount {
-			break
+		if batchTxCount > 0 {
+			if txCount > batchTxCount {
+				break
+			}
+			if processBytes > 256*1024*1024 { // 128MB
+				break
+			}
 		}
 		txCount += int(block.TxCnt)
 
@@ -110,6 +116,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksDone chan struct{}, bl
 				zap.Int("fileOffset", block.FileOffset))
 			break
 		}
+		processBytes += int(block.Size)
 
 		blocksDone <- struct{}{}
 
@@ -193,13 +200,14 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksDone chan struct{}, bloc
 }
 
 // ParseLongestChainBlock 再并行分析区块。接下来是无关顺序的收尾工作
-func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) (lastBlockId []byte, lastHeight, txCount int) {
+func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) (lastBlockId []byte, lastHeight, txCount, processBytes int) {
 	var wg sync.WaitGroup
 	blocksLimit := make(chan struct{}, 64)
 	for block := range blocksStage {
 		lastBlockId = block.Hash
 		lastHeight = block.Height
 		txCount += int(block.TxCnt)
+		processBytes += int(block.Size)
 		blocksLimit <- struct{}{}
 		wg.Add(1)
 		go func(block *model.Block) {
@@ -210,7 +218,7 @@ func (bc *Blockchain) ParseLongestChainBlockEnd(blocksStage chan *model.Block) (
 	}
 	wg.Wait()
 	logger.Log.Info("consume ok")
-	return lastBlockId, lastHeight, txCount
+	return lastBlockId, lastHeight, txCount, processBytes
 }
 
 // InitLongestChainHeader 初始化block header
