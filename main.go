@@ -20,6 +20,7 @@ import (
 	"sensibled/rdb"
 	"sensibled/store"
 	"sensibled/task"
+	"sensibled/utils"
 	"strconv"
 	"sync"
 	"syscall"
@@ -84,10 +85,12 @@ var (
 	blockStrip       bool
 	isFull           bool
 	syncOnce         bool
+	skipDBWrite      bool
 	gobFlushFrom     int
 )
 
 func init() {
+	flag.BoolVar(&skipDBWrite, "nodb", false, "skip db write")
 	flag.BoolVar(&blockStrip, "strip", false, "load blocks from striped files")
 	flag.BoolVar(&syncOnce, "once", false, "sync 1 block then stop")
 	flag.BoolVar(&isFull, "full", false, "start from genesis")
@@ -99,6 +102,8 @@ func init() {
 
 	flag.Parse()
 
+	model.NeedDBWrite = !skipDBWrite
+	// conf
 	viper.SetConfigFile("conf/chain.yaml")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -188,9 +193,11 @@ func syncBlock() {
 			break
 		}
 
+		var stageBlockID []byte
 		needSaveBlock := false
 		stageBlockHeight := 0
 		txCount := 0
+		processBytes := 0
 
 		if !isFull {
 			// 现有追加扫描
@@ -217,18 +224,25 @@ func syncBlock() {
 				needRemove = true
 			}
 			if needRemove {
+				if !model.NeedDBWrite {
+					logger.Log.Error("skip db write, but need reorg")
+					break
+				}
 				if ok := task.RemoveBlocksForReorg(startBlockHeight); !ok {
 					break
 				}
 			}
-
-			store.CreatePartSyncCk() // 初始化同步数据库表
-			store.PreparePartSyncCk()
+			if model.NeedDBWrite {
+				store.CreatePartSyncCk() // 初始化同步数据库表
+				store.PreparePartSyncCk()
+			}
 		} else {
-			startBlockHeight = 0    // 重新全量扫描
-			rdb.FlushdbInRedis()    // 清空redis
-			store.CreateAllSyncCk() // 初始化同步数据库表
-			store.PrepareFullSyncCk()
+			startBlockHeight = 0 // 重新全量扫描
+			rdb.FlushdbInRedis() // 清空redis
+			if model.NeedDBWrite {
+				store.CreateAllSyncCk() // 初始化同步数据库表
+				store.PrepareFullSyncCk()
+			}
 		}
 
 		needSaveBlock = true
@@ -241,9 +255,14 @@ func syncBlock() {
 		}
 
 		// 开始扫描区块，包括start，不包括end，满batchTxCount后终止
-		stageBlockHeight, txCount = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
+		stageBlockID, stageBlockHeight, txCount, processBytes = blockchain.ParseLongestChain(startBlockHeight, endBlockHeight, batchTxCount)
 		// 按批次处理区块
-		logger.Log.Info("range", zap.Int("start", startBlockHeight), zap.Int("end", stageBlockHeight+1))
+		logger.Log.Info("range",
+			zap.Int("ntx", txCount),
+			zap.Int("bytes", processBytes),
+
+			zap.Int("start", startBlockHeight),
+			zap.Int("end", stageBlockHeight+1))
 
 		if info.Height == 0 {
 			info.Height = stageBlockHeight
@@ -258,6 +277,11 @@ func syncBlock() {
 
 			task.SubmitBlocksWithoutMempool(isFull, stageBlockHeight)
 
+			if len(stageBlockID) == 32 {
+				rdb.RdbBalanceClient.HSet(ctx, "info",
+					"block", utils.HashString(stageBlockID),
+				)
+			}
 			isFull = false // 准备继续同步
 			startBlockHeight = -1
 			logger.Log.Info("block finished")
@@ -303,6 +327,11 @@ func syncBlock() {
 
 			if needSaveBlock {
 				task.SubmitBlocksWithMempool(isFull, stageBlockHeight, mempool)
+				if len(stageBlockID) == 32 {
+					rdb.RdbBalanceClient.HSet(ctx, "info",
+						"block", utils.HashString(stageBlockID),
+					)
+				}
 				needSaveBlock = false
 				logger.Log.Info("block finished")
 			} else {
@@ -329,6 +358,11 @@ func syncBlock() {
 		// 未完成同步内存池 且未同步区块
 		if needSaveBlock {
 			task.SubmitBlocksWithoutMempool(isFull, stageBlockHeight)
+			if len(stageBlockID) == 32 {
+				rdb.RdbBalanceClient.HSet(ctx, "info",
+					"block", utils.HashString(stageBlockID),
+				)
+			}
 			logger.Log.Info("block finished")
 		}
 		isFull = false // 准备继续同步

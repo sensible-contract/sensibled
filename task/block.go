@@ -21,19 +21,6 @@ var ctx = context.Background()
 
 // ParseBlockParallel 先并行分析区块，不同区块并行，同区块内串行
 func ParseBlockParallel(block *model.Block) {
-	ntxin := 0
-	ntxout := 0
-	for _, tx := range block.Txs {
-		ntxin += int(tx.TxInCnt)
-		ntxout += int(tx.TxOutCnt)
-	}
-	logger.Log.Info("ParseBlockParallel summary",
-		zap.Int("height", block.Height),
-		zap.Int("ntx", int(block.TxCnt)),
-		zap.Int("ntxin", ntxin),
-		zap.Int("ntxout", ntxout),
-	)
-
 	for txIdx, tx := range block.Txs {
 		isCoinbase := txIdx == 0
 		parallel.ParseTxFirst(tx, isCoinbase, block.ParseData)
@@ -49,7 +36,10 @@ func ParseBlockParallel(block *model.Block) {
 	}
 
 	// DB更新txout，比较独立，可以并行更新
-	serial.SyncBlockTxOutputInfo(block)
+	serial.UpdateBlockTxOutputInfo(block)
+	if model.NeedDBWrite {
+		serial.SyncBlockTxOutputInfo(block)
+	}
 }
 
 // ParseBlockSerialStart 再串行处理区块
@@ -61,8 +51,11 @@ func ParseBlockSerialStart(withMempool bool, block *model.Block) {
 	serial.ParseGetSpentUtxoDataFromRedisSerial(block.ParseData)
 
 	// DB更新txin，需要前序和当前区块的txout处理完毕，且依赖从redis查来的utxo。
-	serial.SyncBlockTxInputDetail(block)
 
+	serial.UpdateBlockTxInputDetail(block)
+	if model.NeedDBWrite {
+		serial.SyncBlockTxInputDetail(block)
+	}
 	// 需要串行，更新当前区块的utxo信息变化到程序内存缓存
 	serial.UpdateUtxoInMapSerial(block.ParseData)
 
@@ -72,11 +65,14 @@ func ParseBlockSerialStart(withMempool bool, block *model.Block) {
 
 // ParseBlockParallelEnd 再并行处理区块
 func ParseBlockParallelEnd(block *model.Block) {
-	// DB更新block, 需要依赖txout、txin执行完毕，以统计区块Fee
-	serial.SyncBlock(block)
-	// DB更新tx, 需要依赖txout、txin执行完毕，以统计Tx Fee
-	serial.SyncBlockTx(block)
-	serial.SyncBlockTxContract(block)
+	if model.NeedDBWrite {
+		// DB更新block, 需要依赖txout、txin执行完毕，以统计区块Fee
+		serial.SyncBlock(block)
+		// DB更新tx, 需要依赖txout、txin执行完毕，以统计Tx Fee
+		serial.SyncBlockTx(block)
+
+		serial.SyncBlockTxContract(block)
+	}
 
 	block.Txs = nil
 	block.ParseData = nil
@@ -84,6 +80,10 @@ func ParseBlockParallelEnd(block *model.Block) {
 
 // ParseEnd 最后分析执行
 func ParseEnd(isFull bool) bool {
+	if !model.NeedDBWrite {
+		return true
+	}
+
 	// 提交DB
 	if ok := store.CommitSyncCk(); !ok {
 		return false

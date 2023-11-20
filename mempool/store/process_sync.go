@@ -54,26 +54,26 @@ var (
 
 func ProcessAllSyncCk() bool {
 	logger.Log.Info("sync mempool sql: all")
-	return ProcessSyncCk(processAllSQLs)
+	return processSyncCkExec(processAllSQLs)
 }
 
 func CreatePartSyncCk() bool {
 	logger.Log.Info("create mempool sql: part")
-	return ProcessSyncCk(createPartSQLs)
+	return processSyncCkExec(createPartSQLs)
 }
 
 func ProcessPartSyncCk() bool {
 	logger.Log.Info("sync mempool sql: part")
-	if !ProcessSyncCk(processPartSQLs) {
+	if !processSyncCkExec(processPartSQLs) {
 		return false
 	}
-	if !ProcessSyncCk(processPartSQLsForTxIn) {
+	if !processSyncCkExec(processPartSQLsForTxIn) {
 		return false
 	}
-	return ProcessSyncCk(processPartSQLsForTxOut)
+	return processSyncCkExec(processPartSQLsForTxOut)
 }
 
-func ProcessSyncCk(processSQLs []string) bool {
+func processSyncCkExec(processSQLs []string) bool {
 	for _, psql := range processSQLs {
 		partLen := len(psql)
 		if partLen > 96 {

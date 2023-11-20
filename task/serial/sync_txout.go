@@ -10,9 +10,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// SyncBlockTxOutputInfo all tx output info
-func SyncBlockTxOutputInfo(block *model.Block) {
-	for txIdx, tx := range block.Txs {
+// UpdateBlockTxOutputInfo all tx output info
+func UpdateBlockTxOutputInfo(block *model.Block) {
+	for _, tx := range block.Txs {
 		for _, output := range tx.TxOuts {
 			tx.OutputsValue += output.Satoshi
 			// set sensible flag
@@ -20,7 +20,12 @@ func SyncBlockTxOutputInfo(block *model.Block) {
 				tx.IsSensible = true
 			}
 		}
+	}
+}
 
+// SyncBlockTxOutputInfo all tx output info
+func SyncBlockTxOutputInfo(block *model.Block) {
+	for txIdx, tx := range block.Txs {
 		for vout, output := range tx.TxOuts {
 			// prune string(output.Pkscript),
 			pkscript := ""
