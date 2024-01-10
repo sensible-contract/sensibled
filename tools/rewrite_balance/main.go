@@ -78,7 +78,7 @@ func main() {
 		// 更新redis
 		rdsPipe := rdb.RdbBalanceClient.Pipeline()
 		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
-		serial.UpdateUtxoInRedis(rdsPipe, endFixHeight-1, addressBalanceCmds, utxoToRestore, utxoToRemove, true)
+		serial.UpdateBalanceInRedis(rdsPipe, endFixHeight-1, addressBalanceCmds, utxoToRestore, utxoToRemove, true)
 		if _, err = rdsPipe.Exec(ctx); err != nil {
 			logger.Log.Error("restore/remove utxo from redis failed", zap.Error(err))
 			panic(err)

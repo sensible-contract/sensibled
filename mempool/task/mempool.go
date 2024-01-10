@@ -337,7 +337,7 @@ func (mp *Mempool) SubmitMempoolWithoutBlocks(initSyncMempool bool) {
 		rdsPipe := rdb.RdbBalanceClient.TxPipeline()
 		// for txin dump
 		// 6 dep 2 4
-		serial.UpdateUtxoInRedis(rdsPipe, initSyncMempool,
+		serial.UpdateBalanceInRedis(rdsPipe, initSyncMempool,
 			mp.NewUtxoDataMap, mp.RemoveUtxoDataMap, mp.SpentUtxoDataMap)
 
 		ctx := context.Background()

@@ -92,9 +92,9 @@ func UpdateUtxoInMapSerial(block *model.ProcessBlock) {
 	}
 }
 
-// UpdateUtxoInRedis 批量更新redis utxo
-func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) {
-	logger.Log.Info("UpdateUtxoInRedis",
+// UpdateBalanceInRedis 批量更新redis utxo
+func UpdateBalanceInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds map[string]*redis.IntCmd, utxoToRestore, utxoToRemove map[string]*model.TxoData, isReorg bool) {
+	logger.Log.Info("UpdateBalanceInRedis",
 		zap.Int("add", len(utxoToRestore)),
 		zap.Int("del", len(utxoToRemove)))
 
@@ -293,7 +293,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		pipe.ZRemRangeByScore(ctx, "{nas"+addr+"}", "0", "0")
 	}
 
-	logger.Log.Info("UpdateUtxoInRedis finished",
+	logger.Log.Info("UpdateBalanceInRedis finished",
 		zap.Int("add", nUtxoToRestore),
 		zap.Int("del", nUtxoToRemove))
 }

@@ -152,7 +152,7 @@ func RemoveBlocksForReorg(startBlockHeight int) bool {
 		// 更新redis
 		rdsPipe := rdb.RdbBalanceClient.TxPipeline()
 		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
-		serial.UpdateUtxoInRedis(rdsPipe, startBlockHeight, addressBalanceCmds, utxoToRestore, utxoToRemove, true)
+		serial.UpdateBalanceInRedis(rdsPipe, startBlockHeight, addressBalanceCmds, utxoToRestore, utxoToRemove, true)
 		if _, err = rdsPipe.Exec(ctx); err != nil {
 			logger.Log.Error("redis exec failed", zap.Error(err))
 			model.NeedStop = true
@@ -207,7 +207,7 @@ func SubmitBlocksWithoutMempool(isFull bool, stageBlockHeight int) {
 		rdsPipe := rdb.RdbBalanceClient.TxPipeline()
 		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 		// 批量更新redis utxo
-		serial.UpdateUtxoInRedis(rdsPipe, stageBlockHeight, addressBalanceCmds,
+		serial.UpdateBalanceInRedis(rdsPipe, stageBlockHeight, addressBalanceCmds,
 			model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
 		if _, err := rdsPipe.Exec(ctx); err != nil {
 			logger.Log.Error("redis exec failed", zap.Error(err))
@@ -301,7 +301,7 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 		addressBalanceCmds := make(map[string]*redis.IntCmd, 0)
 		if needSaveBlock {
 			// 批量更新redis utxo
-			serial.UpdateUtxoInRedis(rdsPipe, stageBlockHeight, addressBalanceCmds,
+			serial.UpdateBalanceInRedis(rdsPipe, stageBlockHeight, addressBalanceCmds,
 				model.GlobalNewUtxoDataMap, model.GlobalSpentUtxoDataMap, false)
 
 		}
@@ -309,7 +309,7 @@ func SubmitBlocksWithMempool(isFull bool, stageBlockHeight int, mempool *memTask
 		// 6 dep 2 4
 		initSyncMempool := true
 		if needSaveMempool {
-			memSerial.UpdateUtxoInRedis(rdsPipe, initSyncMempool,
+			memSerial.UpdateBalanceInRedis(rdsPipe, initSyncMempool,
 				mempool.NewUtxoDataMap, mempool.RemoveUtxoDataMap, mempool.SpentUtxoDataMap)
 		}
 		if _, err := rdsPipe.Exec(ctx); err != nil {

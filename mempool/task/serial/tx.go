@@ -174,9 +174,9 @@ func UpdateUtxoInPika(utxoToRestore, utxoToRemove map[string]*model.TxoData) boo
 	// }
 }
 
-// UpdateUtxoInRedis 批量更新redis utxo
-func UpdateUtxoInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxoToRemove, utxoToSpend map[string]*model.TxoData) {
-	logger.Log.Info("UpdateUtxoInRedis",
+// UpdateBalanceInRedis 批量更新redis utxo
+func UpdateBalanceInRedis(pipe redis.Pipeliner, needReset bool, utxoToRestore, utxoToRemove, utxoToSpend map[string]*model.TxoData) {
+	logger.Log.Info("UpdateBalanceInRedis",
 		zap.Int("nStore", len(utxoToRestore)),
 		zap.Int("nRemove", len(utxoToRemove)),
 		zap.Int("nSpend", len(utxoToSpend)))
