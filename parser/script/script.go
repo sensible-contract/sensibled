@@ -41,7 +41,7 @@ func isPayToScriptHash(scriptType []byte) bool {
 // isPubkeyHash returns true if the script passed is a pay-to-pubkey-hash
 // transaction, false otherwise.
 func isPubkeyHash(scriptType []byte) bool {
-	return len(scriptType) >= 5 &&
+	return len(scriptType) == 5 &&
 		scriptType[0] == OP_DUP &&
 		scriptType[1] == OP_HASH160 &&
 		scriptType[2] == OP_DATA_20 &&

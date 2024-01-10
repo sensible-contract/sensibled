@@ -98,6 +98,9 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		zap.Int("add", len(utxoToRestore)),
 		zap.Int("del", len(utxoToRemove)))
 
+	nUtxoToRestore := 0
+	nUtxoToRemove := 0
+
 	ctx := context.Background()
 	pipe.HSet(ctx, "info",
 		"blocks_total", blocksTotal,
@@ -113,6 +116,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 				continue
 			}
 		}
+		nUtxoToRestore++
 
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
 		var strCodeHash, strGenesisId string
@@ -215,6 +219,8 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 			}
 		}
 
+		nUtxoToRemove++
+
 		strAddressPkh := string(data.AddressData.AddressPkh[:])
 		var strCodeHash, strGenesisId string
 		if data.AddressData.SensibleData != nil {
@@ -287,5 +293,7 @@ func UpdateUtxoInRedis(pipe redis.Pipeliner, blocksTotal int, addressBalanceCmds
 		pipe.ZRemRangeByScore(ctx, "{nas"+addr+"}", "0", "0")
 	}
 
-	logger.Log.Info("UpdateUtxoInRedis finished")
+	logger.Log.Info("UpdateUtxoInRedis finished",
+		zap.Int("add", nUtxoToRestore),
+		zap.Int("del", nUtxoToRemove))
 }
